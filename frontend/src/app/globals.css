@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+@theme {
+  /* Dark Navy Theme based on the screenshots */
+  --color-bg-base: #0B1121; /* Darkest background */
+  --color-bg-surface: #131B2F; /* Sidebar and cards */
+  --color-bg-surface-hover: #1E293B;
+  
+  --color-border-subtle: #1E2B4D;
+  --color-border-strong: #334155;
+  
+  --color-brand-primary: #0066FF; /* Bright blue accent */
+  --color-brand-primary-hover: #0052CC;
+  
+  --color-text-primary: #F8FAFC;
+  --color-text-secondary: #94A3B8;
+  --color-text-muted: #64748B;
+  
+  --color-accent-purple: #8B5CF6; /* Disertasi icon */
+  --color-accent-teal: #14B8A6;   /* Tesis icon */
+  --color-accent-red: #EF4444;    /* Scopus icon */
+}
+
+@layer base {
+  body {
+    background-color: var(--color-bg-base);
+    color: var(--color-text-primary);
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+}
+
+/* Custom Scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-bg-base);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
