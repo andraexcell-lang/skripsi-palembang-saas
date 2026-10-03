@@ -9,14 +9,40 @@ const db = () => supabaseAdmin || supabaseAnon;
 
 const BAB_LIST = ['bab1', 'bab2', 'bab3', 'bab4', 'bab5'];
 
-function babPrompt(bab: string, p: any) {
+// Crossref gratis (tanpa key): referensi nyata ber-DOI untuk sitasi.
+export async function crossrefTop(query: string, rows = 6): Promise<{ doi: string; title: string; authors: string; year: string; url: string }[]> {
+  try {
+    const q = encodeURIComponent(String(query).slice(0, 200));
+    const res = await fetch(`https://api.crossref.org/works?query.bibliographic=${q}&rows=${rows}&select=DOI,title,author,published,URL&mailto=admin@skripsiplg.my.id`);
+    if (!res.ok) return [];
+    const j: any = await res.json();
+    return (j.message?.items || []).map((it: any) => ({
+      doi: it.DOI || '',
+      title: (it.title || [''])[0],
+      authors: (it.author || []).map((a: any) => `${a.family || ''}${a.given ? ', ' + a.given : ''}`).join('; ').slice(0, 200),
+      year: String(it.published?.['date-parts']?.[0]?.[0] || ''),
+      url: it.URL || (it.DOI ? `https://doi.org/${it.DOI}` : ''),
+    })).filter((r: any) => r.title && r.doi);
+  } catch { return []; }
+}
+
+function refBlock(refs: { doi: string; title: string; authors: string; year: string; url: string }[]) {
+  if (!refs.length) return ' (tidak ada referensi eksternal tersedia — gunakan teori standar bila perlu).';
+  return '\nDAFTAR REFERENSI WAJIB (gunakan untuk bodynote + Daftar Pustaka, format APA 7th, URL bisa diklik):\n' +
+    refs.map((r, i) => `${i + 1}. ${r.authors} (${r.year}). ${r.title}. https://doi.org/${r.doi}`).join('\n');
+}
+
+const SITASI = `Wajib: (1) bodynote APA (Nama, Tahun) di setiap sub-bab yang memakai teori/temuan, (2) akhiri dengan sub-bagian "Daftar Pustaka Bab Ini" berisi referensi di atas dalam format APA 7th lengkap dengan link DOI yang bisa diklik. Jangan mengarang DOI/judul di luar daftar.`;
+
+function babPrompt(bab: string, p: any, refs: { doi: string; title: string; authors: string; year: string; url: string }[]) {
   const base = `Judul: ${p.judul}\nJenis: ${p.jenis}\nMetode: ${p.metode}\n`;
+  const ref = refBlock(refs);
   const map: Record<string, string> = {
-    bab1: `Susun BAB I PENDAHULUAN (latar belakang, rumusan masalah, tujuan, manfaat, batasan) untuk skripsi berikut.\n${base}Tulis akademik formal Indonesia, siap tempel ke Word.`,
-    bab2: `Susun BAB II TINJAUAN PUSTAKA (teori utama, penelitian terdahulu, kerangka berpikir, hipotesis bila kuantitatif).\n${base}Sertakan bodynote gaya APA (Nama, Tahun) di tiap sub-bab.`,
-    bab3: `Susun BAB III METODE PENELITIAN (pendekatan, populasi/sampel, variabel & indikator, teknik pengumpulan data, uji/analisis).\n${base}Ikuti kaidah metodologi standar Indonesia.`,
-    bab4: `Susun BAB IV HASIL DAN PEMBAHASAN (deskripsi data, hasil analisis, pembahasan dikaitkan teori Bab II).\n${base}Gunakan tabel Markdown bila perlu.`,
-    bab5: `Susun BAB V PENUTUP (kesimpulan menjawab rumusan masalah + saran praktis/metodologis).\n${base}Ringkas dan tegas.`,
+    bab1: `Susun BAB I PENDAHULUAN (latar belakang, rumusan masalah, tujuan, manfaat, batasan) untuk skripsi berikut.\n${base}${ref}\nTulis akademik formal Indonesia, siap tempel ke Word.\n${SITASI}`,
+    bab2: `Susun BAB II TINJAUAN PUSTAKA (teori utama, penelitian terdahulu, kerangka berpikir, hipotesis bila kuantitatif).\n${base}${ref}\n${SITASI}`,
+    bab3: `Susun BAB III METODE PENELITIAN (pendekatan, populasi/sampel, variabel & indikator, teknik pengumpulan data, uji/analisis).\n${base}${ref}\nIkuti kaidah metodologi standar Indonesia.\n${SITASI}`,
+    bab4: `Susun BAB IV HASIL DAN PEMBAHASAN (deskripsi data, hasil analisis, pembahasan dikaitkan teori Bab II).\n${base}${ref}\nGunakan tabel Markdown bila perlu.\n${SITASI}`,
+    bab5: `Susun BAB V PENUTUP (kesimpulan menjawab rumusan masalah + saran praktis/metodologis).\n${base}${ref}\nRingkas dan tegas.\n${SITASI}`,
   };
   return map[bab] || map.bab1;
 }
@@ -59,10 +85,18 @@ router.post('/:id/generate-bab', requireAuth, async (req: AuthRequest, res) => {
       if (e.code === 'INSUFFICIENT_CREDITS') return res.status(402).json({ error: e.message, remaining: e.remaining });
       throw e;
     }
-    const text = await generateContent(babPrompt(bab, p));
+    const refs = await crossrefTop(p.judul);
+    let text: string;
+    try {
+      text = await generateContent(babPrompt(bab, p, refs));
+    } catch (e: any) {
+      const { addCredits } = await import('../services/credits.service');
+      await addCredits(req.userId!, 10, `refund:${id}:${bab}-gagal`).catch(() => {});
+      throw e;
+    }
     const content = { ...(p.content || {}), [bab]: text };
     await db().from('projects').update({ content, updated_at: new Date().toISOString() }).eq('id', id);
-    res.json({ bab, text });
+    res.json({ bab, text, refs });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
@@ -79,11 +113,12 @@ router.post('/:id/generate-artikel', requireAuth, async (req: AuthRequest, res) 
       throw e;
     }
     const lang = scopus ? 'English (akademik, siap submit Scopus Q1-Q4)' : 'Indonesia (akademik, siap submit Sinta)';
+    const refs = await crossrefTop(p.judul, 10);
     const text = await generateContent(
-      `Susun artikel jurnal lengkap berbahasa ${lang} dengan struktur: Judul, Abstrak + kata kunci, Pendahuluan, Metode, Hasil & Pembahasan, Kesimpulan, Daftar Pustaka (APA, 10+ referensi dengan bodynote). Judul: ${p.judul}. Metode: ${p.metode}. Tulis siap submit.`
+      `Susun artikel jurnal lengkap berbahasa ${lang} dengan struktur: Judul, Abstrak + kata kunci, Pendahuluan, Metode, Hasil & Pembahasan, Kesimpulan, Daftar Pustaka (APA, gunakan referensi nyata di bawah + bodynote di tiap bagian). Judul: ${p.judul}. Metode: ${p.metode}.${refBlock(refs)}\nJangan mengarang DOI/judul di luar daftar. Tulis siap submit.`
     );
     await db().from('projects').update({ content: { ...(p.content || {}), artikel: text }, updated_at: new Date().toISOString() }).eq('id', id);
-    res.json({ text });
+    res.json({ text, refs });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 

@@ -13,17 +13,23 @@ export default function ArtikelPage() {
 
   const handleCari = async () => {
     if (!isFormValid) return;
-    
+
     setLoading(true);
     setHasil("");
-    
-    const prompt = `Carikan 5 referensi artikel jurnal akademik terkait topik: "${query}". Format output berupa daftar Markdown. Untuk setiap artikel, sertakan Judul, Penulis, Nama Jurnal, Tahun, dan simulasi link DOI (jika tidak tahu aslinya, buat format standar DOI).`;
 
     try {
-      const data = await aiGenerate(prompt, "cari_artikel");
-      setHasil(data.result);
+      const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const res = await fetch(`${API}/api/files/referensi?q=${encodeURIComponent(query)}`);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Gagal mencari referensi.");
+      const items = json.items || [];
+      if (!items.length) {
+        setHasil("Tidak ditemukan referensi ber-DOI untuk topik ini. Coba kata kunci lain (Indonesia/Inggris).");
+      } else {
+        setHasil(items.map((r: any, i: number) => `${i + 1}. ${r.authors} (${r.year}). ${r.title}.\n   DOI: https://doi.org/${r.doi}`).join("\n\n"));
+      }
     } catch (error: any) {
-      setHasil("Error: " + error.message + (/kredit kurang/i.test(error.message || "") ? " Buka Billing untuk top-up." : ""));
+      setHasil("Error: " + error.message);
     } finally {
       setLoading(false);
     }

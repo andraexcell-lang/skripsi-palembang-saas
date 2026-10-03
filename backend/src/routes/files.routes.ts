@@ -4,6 +4,7 @@ import * as XLSX from 'xlsx';
 import { AuthRequest, requireAuth } from '../middleware/auth';
 import { consumeCredits, addCredits } from '../services/credits.service';
 import { generateContent } from '../services/ai.service';
+import { crossrefTop } from './projects.routes';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -29,8 +30,7 @@ async function extractText(file: Express.Multer.File): Promise<string> {
   return file.buffer.toString('utf-8').slice(0, 20000);
 }
 
-router.post('/extract', requireAuth, upload.single('file'), async (req: AuthRequest, res) => {
-  try {
+router.post('/extract', requireAuth, upload.single('file'), async (req: AuthRequest, res) => {  try {
     if (!req.file) return res.status(400).json({ error: 'File wajib (pdf/docx/xlsx/csv/txt, maks 10MB)' });
     res.json({ filename: req.file.originalname, text: await extractText(req.file) });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
@@ -111,6 +111,15 @@ router.post('/spss', requireAuth, upload.single('file'), async (req: AuthRequest
       throw e;
     }
     res.json({ deskriptif: desc, n: rows.length - 1, interpretasi });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// Pencarian referensi nyata ber-DOI via Crossref (gratis, tanpa kredit, tanpa login)
+router.get('/referensi', async (req, res) => {
+  try {
+    const q = String(req.query.q || '');
+    if (q.trim().length < 3) return res.status(400).json({ error: 'q minimal 3 karakter' });
+    res.json({ items: await crossrefTop(q, 10) });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
