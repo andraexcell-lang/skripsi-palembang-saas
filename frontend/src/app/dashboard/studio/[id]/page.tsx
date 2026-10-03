@@ -41,7 +41,12 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
 
   function downloadWord() {
     const label = BABS.find((b) => b.id === active)?.label || active;
-    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${label}</title></head><body><h1>${proyek?.judul || ''}</h1><h2>${label}</h2>${String(text).split('\n').map((p) => `<p>${p.replace(/</g, '&lt;')}</p>`).join('')}</body></html>`;
+    const ident = proyek?.identitas || {};
+    const logoImg = ident.logo ? `<img src="${ident.logo}" width="90"/><br/>` : '';
+    const cover = (ident.nama || ident.kampus || proyek?.judul)
+      ? `<div style="text-align:center">${logoImg}<h2>${String(proyek?.judul || '').replace(/</g, '&lt;')}</h2><br/><p>${String(ident.nama || '').replace(/</g, '&lt;')}</p><p>NIM: ${String(ident.nim || '').replace(/</g, '&lt;')}</p><p>${String(ident.kampus || '').replace(/</g, '&lt;')} — ${String(ident.jurusan || '').replace(/</g, '&lt;')} — ${String(ident.fakultas || '').replace(/</g, '&lt;')}</p><br style="mso-special-character:line-break;page-break-before:always"/></div>`
+      : '';
+    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${label}</title></head><body>${cover}<h1>${label}</h1>${String(text).split('\n').map((p) => `<p>${p.replace(/</g, '&lt;')}</p>`).join('')}</body></html>`;
     const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);

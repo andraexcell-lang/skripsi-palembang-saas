@@ -7,7 +7,7 @@ import { generateContent } from '../services/ai.service';
 import { crossrefTop } from './projects.routes';
 
 const router = Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
 
 async function extractText(file: Express.Multer.File): Promise<string> {
   const name = file.originalname.toLowerCase();
