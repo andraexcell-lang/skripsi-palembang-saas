@@ -38,8 +38,10 @@ export async function addCredits(userId: string, amount: number, ref: string, me
 
 export async function consumeCredits(userId: string, feature: string, ref = '') {
   const cost = FEATURE_COSTS[feature] ?? 1;
-  if (cost === 0) return { cost, remaining: (await getBalance(userId)).credits };
   const bal = await getBalance(userId);
+  // Admin: semua fitur gratis tanpa potong kredit
+  if (bal.plan === 'admin') return { cost: 0, remaining: bal.credits };
+  if (cost === 0) return { cost, remaining: bal.credits };
   if (bal.credits < cost) {
     const err: any = new Error(`Kredit kurang. Butuh ${cost}, sisa ${bal.credits}.`);
     err.code = 'INSUFFICIENT_CREDITS';
