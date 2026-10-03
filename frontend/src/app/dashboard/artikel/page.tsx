@@ -2,12 +2,22 @@
 
 import { aiGenerate } from "@/lib/api";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function ArtikelPage() {
   const [query, setQuery] = useState("");
+  const [tahun, setTahun] = useState("");
+  const [bahasa, setBahasa] = useState("");
   const [loading, setLoading] = useState(false);
-  const [hasil, setHasil] = useState<string>("");
+  const [hasil, setHasil] = useState<any[]>([]);
+  const [saved, setSaved] = useState<any[]>([]);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    try {
+      setSaved(JSON.parse(localStorage.getItem('sp-referensi') || '[]'));
+    } catch { /* abaikan */ }
+  }, []);
 
   const isFormValid = query.trim().length > 0;
 
@@ -15,25 +25,31 @@ export default function ArtikelPage() {
     if (!isFormValid) return;
 
     setLoading(true);
-    setHasil("");
+    setHasil([]);
+    setErr("");
 
     try {
       const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-      const res = await fetch(`${API}/api/files/referensi?q=${encodeURIComponent(query)}`);
+      const params = new URLSearchParams({ q: query });
+      if (tahun) params.set('since', tahun);
+      if (bahasa) params.set('lang', bahasa);
+      const res = await fetch(`${API}/api/files/referensi?${params.toString()}`);
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Gagal mencari referensi.");
-      const items = json.items || [];
-      if (!items.length) {
-        setHasil("Tidak ditemukan referensi ber-DOI untuk topik ini. Coba kata kunci lain (Indonesia/Inggris).");
-      } else {
-        setHasil(items.map((r: any, i: number) => `${i + 1}. ${r.authors} (${r.year}). ${r.title}.\n   DOI: https://doi.org/${r.doi}`).join("\n\n"));
-      }
+      setHasil(json.items || []);
     } catch (error: any) {
-      setHasil("Error: " + error.message);
+      setErr("Error: " + error.message);
     } finally {
       setLoading(false);
     }
   };
+
+  function tambah(r: any) {
+    if (saved.some((s) => s.doi && s.doi === r.doi)) return;
+    const next = [...saved, r];
+    setSaved(next);
+    try { localStorage.setItem('sp-referensi', JSON.stringify(next)); } catch { /* abaikan */ }
+  }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -94,20 +110,34 @@ export default function ArtikelPage() {
             </div>
             
             <div className="grid grid-cols-3 gap-3 mb-6">
-              <select className="bg-bg-base border border-border-strong rounded-lg p-2.5 text-text-primary text-sm focus:border-brand-primary focus:outline-none appearance-none">
-                <option>Semua tahun</option>
+              <select value={tahun} onChange={(e) => setTahun(e.target.value)} className="bg-bg-base border border-border-strong rounded-lg p-2.5 text-text-primary text-sm focus:border-brand-primary focus:outline-none appearance-none">
+                <option value="">Semua tahun</option>
+                {[2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015].map((y) => <option key={y} value={y}>Sejak {y}</option>)}
               </select>
-              <select className="bg-bg-base border border-border-strong rounded-lg p-2.5 text-text-primary text-sm focus:border-brand-primary focus:outline-none appearance-none">
-                <option>Semua bahasa</option>
+              <select value={bahasa} onChange={(e) => setBahasa(e.target.value)} className="bg-bg-base border border-border-strong rounded-lg p-2.5 text-text-primary text-sm focus:border-brand-primary focus:outline-none appearance-none">
+                <option value="">Semua bahasa</option>
+                <option value="id">Indonesia</option>
+                <option value="en">Inggris</option>
               </select>
               <select className="bg-bg-base border border-border-strong rounded-lg p-2.5 text-text-primary text-sm focus:border-brand-primary focus:outline-none appearance-none">
                 <option>Semua indeks</option>
               </select>
             </div>
 
-            {hasil ? (
-              <div className="flex-1 border-t border-border-subtle pt-4 text-sm text-text-primary whitespace-pre-wrap leading-relaxed">
-                {hasil}
+            {err && <p className="text-sm text-accent-red mb-4">{err}</p>}
+            {hasil.length > 0 ? (
+              <div className="flex-1 border-t border-border-subtle pt-4 space-y-5">
+                {hasil.map((r: any, i: number) => (
+                  <div key={i} className="text-sm">
+                    <div className="font-bold text-text-primary">{r.title}</div>
+                    <div className="text-xs text-text-secondary mt-1">{r.authors} · {r.year}{r.venue ? ` · ${r.venue}` : ''}</div>
+                    {r.abstract && <p className="text-xs text-text-secondary mt-2 leading-relaxed">{r.abstract.slice(0, 500)}{r.abstract.length > 500 ? '…' : ''}</p>}
+                    <div className="flex gap-2 mt-2">
+                      <button onClick={() => tambah(r)} className="text-xs font-bold text-brand-primary border border-brand-primary/40 rounded-lg px-3 py-1.5 hover:bg-brand-primary/10">Tambah</button>
+                      {r.doi && <a href={`https://doi.org/${r.doi}`} target="_blank" rel="noreferrer" className="text-xs text-text-secondary border border-border-strong rounded-lg px-3 py-1.5">DOI</a>}
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : (
               <div className="flex-1 border-t border-border-subtle flex flex-col items-center justify-center text-center mt-4">
@@ -123,7 +153,7 @@ export default function ArtikelPage() {
               <div className="flex items-center gap-2">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-brand-primary"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
                 <h3 className="font-bold text-text-primary">Daftar Referensi</h3>
-                <span className="bg-border-strong text-text-primary text-xs font-bold px-2 py-0.5 rounded ml-1">0</span>
+                <span className="bg-border-strong text-text-primary text-xs font-bold px-2 py-0.5 rounded ml-1">{saved.length}</span>
               </div>
               <button className="flex items-center gap-2 border border-border-strong hover:bg-bg-surface-hover text-text-secondary px-3 py-1.5 rounded-lg text-sm transition-colors">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
@@ -131,8 +161,19 @@ export default function ArtikelPage() {
               </button>
             </div>
 
-            <div className="flex-1 flex items-center justify-center text-center">
-              <p className="text-text-secondary text-sm">Belum ada referensi tersimpan. Hasil pencarian di kiri bisa ditambahkan ke sini.</p>
+            <div className="flex-1 overflow-y-auto">
+              {saved.length === 0 && (
+                <div className="flex-1 flex items-center justify-center text-center h-full">
+                  <p className="text-text-secondary text-sm">Belum ada referensi tersimpan. Hasil pencarian di kiri bisa ditambahkan ke sini.</p>
+                </div>
+              )}
+              {saved.map((r: any, i: number) => (
+                <div key={i} className="text-xs border-b border-border-subtle py-3">
+                  <div className="font-bold text-text-primary">{r.title} ({r.year})</div>
+                  <div className="text-text-secondary mt-0.5">{r.authors}</div>
+                  {r.doi && <a href={`https://doi.org/${r.doi}`} target="_blank" rel="noreferrer" className="text-brand-primary">https://doi.org/{r.doi}</a>}
+                </div>
+              ))}
             </div>
           </div>
 

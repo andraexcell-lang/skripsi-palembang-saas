@@ -114,12 +114,15 @@ router.post('/spss', requireAuth, upload.single('file'), async (req: AuthRequest
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// Pencarian referensi nyata ber-DOI via Crossref (gratis, tanpa kredit, tanpa login)
+// Pencarian referensi nyata ber-DOI via OpenAlex (gratis, tanpa kredit, tanpa login)
 router.get('/referensi', async (req, res) => {
   try {
     const q = String(req.query.q || '');
     if (q.trim().length < 3) return res.status(400).json({ error: 'q minimal 3 karakter' });
-    res.json({ items: await crossrefTop(q, 10) });
+    const since = req.query.since ? parseInt(String(req.query.since), 10) : null;
+    const lang = req.query.lang === 'id' ? 'id' : req.query.lang === 'en' ? 'en' : null;
+    const { openalexTop } = await import('./projects.routes');
+    res.json({ items: await openalexTop(q, 10, since, lang) });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
