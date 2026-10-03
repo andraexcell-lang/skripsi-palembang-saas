@@ -1,4 +1,5 @@
 import Link from "next/link";
+import DashboardSearch from "./search";
 
 export default function DashboardIndex() {
   return (
@@ -26,21 +27,7 @@ export default function DashboardIndex() {
       <div className="p-8 max-w-7xl mx-auto w-full space-y-6 overflow-y-auto pb-24">
         
         {/* Search Bar */}
-        <div className="relative">
-          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-            <div className="w-5 h-5 bg-brand-primary rounded-full opacity-80 flex items-center justify-center">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
-            </div>
-          </div>
-          <input 
-            type="text" 
-            placeholder="Tanya AI Mantra Riset, atau ketik / untuk mulai membuat proyek..." 
-            className="w-full bg-bg-surface border border-border-subtle rounded-full py-4 pl-12 pr-12 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-all shadow-sm"
-          />
-          <button className="absolute inset-y-0 right-2 my-auto w-8 h-8 bg-text-primary text-bg-base rounded-full flex items-center justify-center hover:bg-text-secondary transition-colors">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
-          </button>
-        </div>
+        <DashboardSearch />
 
         {/* Highlight Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
