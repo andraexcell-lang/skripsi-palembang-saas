@@ -12,6 +12,9 @@ export default function ArtikelPage() {
   const [hasil, setHasil] = useState<any[]>([]);
   const [saved, setSaved] = useState<any[]>([]);
   const [err, setErr] = useState("");
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [moreLoading, setMoreLoading] = useState(false);
 
   useEffect(() => {
     try {
@@ -21,28 +24,46 @@ export default function ArtikelPage() {
 
   const isFormValid = query.trim().length > 0;
 
+  async function fetchPage(p: number, append: boolean) {
+    const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+    const params = new URLSearchParams({ q: query, page: String(p) });
+    if (tahun) params.set('since', tahun);
+    if (bahasa) params.set('lang', bahasa);
+    const res = await fetch(`${API}/api/files/referensi?${params.toString()}`);
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || "Gagal mencari referensi.");
+    setHasil(append ? [...hasil, ...(json.items || [])] : (json.items || []));
+    setTotal(json.total || 0);
+    setPage(p);
+  }
+
   const handleCari = async () => {
     if (!isFormValid) return;
 
     setLoading(true);
     setHasil([]);
     setErr("");
+    setTotal(0);
+    setPage(1);
 
     try {
-      const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-      const params = new URLSearchParams({ q: query });
-      if (tahun) params.set('since', tahun);
-      if (bahasa) params.set('lang', bahasa);
-      const res = await fetch(`${API}/api/files/referensi?${params.toString()}`);
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Gagal mencari referensi.");
-      setHasil(json.items || []);
+      await fetchPage(1, false);
     } catch (error: any) {
       setErr("Error: " + error.message);
     } finally {
       setLoading(false);
     }
   };
+
+  async function muatLagi() {
+    setMoreLoading(true);
+    try {
+      await fetchPage(page + 1, true);
+    } catch (error: any) {
+      setErr("Error: " + error.message);
+    }
+    setMoreLoading(false);
+  }
 
   function tambah(r: any) {
     if (saved.some((s) => s.doi && s.doi === r.doi)) return;
@@ -138,6 +159,14 @@ export default function ArtikelPage() {
                     </div>
                   </div>
                 ))}
+                {hasil.length < Math.min(total, 200) && (
+                  <div className="pt-2">
+                    <button onClick={muatLagi} disabled={moreLoading} className="w-full border border-border-strong rounded-lg py-2.5 text-sm font-bold text-text-primary hover:bg-bg-surface-hover disabled:opacity-50">
+                      {moreLoading ? 'Memuat...' : `Muat 10 lagi (${Math.min(total, 200) - hasil.length} tersisa)`}
+                    </button>
+                    <p className="text-center text-xs text-text-muted mt-2">{hasil.length} dari {Math.min(total, 200)} teratas · {total.toLocaleString('id-ID')} artikel relevan</p>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex-1 border-t border-border-subtle flex flex-col items-center justify-center text-center mt-4">

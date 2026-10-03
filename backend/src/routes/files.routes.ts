@@ -121,8 +121,10 @@ router.get('/referensi', async (req, res) => {
     if (q.trim().length < 3) return res.status(400).json({ error: 'q minimal 3 karakter' });
     const since = req.query.since ? parseInt(String(req.query.since), 10) : null;
     const lang = req.query.lang === 'id' ? 'id' : req.query.lang === 'en' ? 'en' : null;
+    const page = Math.min(Math.max(parseInt(String(req.query.page || '1'), 10) || 1, 1), 20);
     const { openalexTop } = await import('./projects.routes');
-    res.json({ items: await openalexTop(q, 10, since, lang) });
+    const r = await openalexTop(q, 10, since, lang, page);
+    res.json({ items: r.items, total: r.total, page });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 

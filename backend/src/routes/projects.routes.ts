@@ -10,16 +10,16 @@ const db = () => supabaseAdmin || supabaseAnon;
 const BAB_LIST = ['bab1', 'bab2', 'bab3', 'bab4', 'bab5'];
 
 // OpenAlex gratis (tanpa key): abstrak + bahasa + venue. Dipakai /referensi.
-export async function openalexTop(query: string, rows = 10, since?: number | null, lang?: string | null): Promise<{ doi: string; title: string; authors: string; year: string; url: string; venue: string; abstract: string }[]> {
+export async function openalexTop(query: string, rows = 10, since?: number | null, lang?: string | null, page = 1): Promise<{ items: { doi: string; title: string; authors: string; year: string; url: string; venue: string; abstract: string }[]; total: number }> {
   try {
     const q = encodeURIComponent(String(query).slice(0, 200));
     let filter = '';
     if (since) filter += `,from_publication_date:${since}-01-01`;
     if (lang === 'id' || lang === 'en') filter += `,language:${lang}`;
-    const res = await fetch(`https://api.openalex.org/works?search=${q}&per-page=${rows}${filter ? `&filter=${filter.slice(1)}` : ''}&select=id,doi,title,publication_year,authorships,primary_location,abstract_inverted_index,language&mailto=admin@skripsiplg.my.id`);
-    if (!res.ok) return [];
+    const res = await fetch(`https://api.openalex.org/works?search=${q}&per-page=${rows}${filter ? `&filter=${filter.slice(1)}` : ''}&page=${page}&select=id,doi,title,publication_year,authorships,primary_location,abstract_inverted_index,language&mailto=admin@skripsiplg.my.id`);
+    if (!res.ok) return { items: [], total: 0 };
     const j: any = await res.json();
-    return (j.results || []).map((it: any) => {
+    const items = (j.results || []).map((it: any) => {
       const inv = it.abstract_inverted_index || {};
       const words: [string, number][] = [];
       for (const [w, pos] of Object.entries(inv)) for (const p of (pos as number[])) words.push([w, p]);
@@ -34,7 +34,8 @@ export async function openalexTop(query: string, rows = 10, since?: number | nul
         abstract: words.map((w) => w[0]).join(' ').slice(0, 1200),
       };
     }).filter((r: any) => r.title);
-  } catch { return []; }
+    return { items, total: j.meta?.count || 0 };
+  } catch { return { items: [], total: 0 }; }
 }
 
 // Pencarian referensi nyata ber-DOI via Crossref (gratis, tanpa key): referensi nyata ber-DOI untuk sitasi.
