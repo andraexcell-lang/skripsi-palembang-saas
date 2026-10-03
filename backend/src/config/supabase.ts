@@ -1,7 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
+import WebSocket from 'ws';
 import dotenv from 'dotenv';
 
 dotenv.config();
+
+// Polyfill untuk @supabase/realtime-js bila runtime Node < 22
+if (!(globalThis as any).WebSocket) {
+  (globalThis as any).WebSocket = WebSocket;
+}
 
 const url = process.env.SUPABASE_URL || '';
 const anonKey = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY || '';
