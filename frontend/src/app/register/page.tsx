@@ -1,24 +1,36 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { apiPost } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 
 export default function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [ref, setRef] = useState('');
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search).get('ref');
+      if (q) setRef(q.toUpperCase());
+    } catch { /* abaikan */ }
+  }, []);
 
   async function onRegister(e: React.FormEvent) {
     e.preventDefault();
     setErr('');
     setLoading(true);
     const { error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name } } });
+    if (error) { setLoading(false); return setErr(error.message); }
+    if (ref.trim()) {
+      try { await apiPost('/api/affiliate/attribute', { code: ref.trim() }); } catch { /* kode salah, lanjut */ }
+    }
     setLoading(false);
-    if (error) return setErr(error.message);
     router.push('/dashboard');
   }
 
@@ -37,6 +49,10 @@ export default function RegisterPage() {
         <div>
           <label className="text-sm font-semibold text-text-primary">Password (min 8)</label>
           <input type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="mt-1 w-full bg-bg-base border border-border-strong rounded-lg p-3 text-sm text-text-primary" />
+        </div>
+        <div>
+          <label className="text-sm font-semibold text-text-primary">Kode referral <span className="font-normal text-text-muted">(opsional)</span></label>
+          <input value={ref} onChange={(e) => setRef(e.target.value.toUpperCase())} placeholder="SP-XXXXXXXX" className="mt-1 w-full bg-bg-base border border-border-strong rounded-lg p-3 text-sm text-text-primary" />
         </div>
         {err && <p className="text-sm text-accent-red">{err}</p>}
         <button disabled={loading} className="w-full bg-brand-primary text-white py-3 rounded-lg text-sm font-bold disabled:opacity-50">

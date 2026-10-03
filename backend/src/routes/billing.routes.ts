@@ -4,6 +4,7 @@ import { AuthRequest, requireAuth } from '../middleware/auth';
 import { addCredits } from '../services/credits.service';
 import { supabaseAdmin, supabaseAnon } from '../config/supabase';
 import { midtransReady, snapCharge, verifySignature } from '../services/midtrans.service';
+import { grantCommission } from './affiliate.routes';
 
 const router = Router();
 
@@ -49,6 +50,7 @@ router.post('/confirm', requireAuth, async (req: AuthRequest, res) => {
     if (trx.status === 'paid') return res.json({ ok: true, already: true });
     await db.from('transactions').update({ status: 'paid' }).eq('id', transactionId);
     const remaining = await addCredits(req.userId!, trx.credits, `billing:${trx.package_id}`, { transactionId });
+    await grantCommission(req.userId!, transactionId, trx.amount);
     res.json({ ok: true, remaining });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -107,6 +109,7 @@ router.post('/midtrans/webhook', async (req, res) => {
       if (trx && trx.status !== 'paid') {
         await db.from('transactions').update({ status: 'paid' }).eq('id', trx.id);
         await addCredits(trx.user_id, trx.credits, `billing:${trx.package_id}`, { orderId: order_id });
+        await grantCommission(trx.user_id, trx.id, trx.amount);
       }
     } else if (['deny', 'expire', 'cancel'].includes(transaction_status)) {
       const db = supabaseAdmin || supabaseAnon;
