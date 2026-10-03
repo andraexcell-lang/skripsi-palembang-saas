@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ReactNode } from "react";
+import UserChip from "@/components/UserChip";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
@@ -149,13 +150,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </button>
           </div>
           
-          <div className="flex flex-col gap-2">
-            <div className="text-sm font-medium text-text-primary truncate">Indah Permata Sari</div>
-            <button className="text-left flex items-center gap-2 text-text-secondary hover:text-text-primary text-sm transition-colors">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-              Keluar
-            </button>
-          </div>
+          <UserChip />
         </div>
       </aside>
 
