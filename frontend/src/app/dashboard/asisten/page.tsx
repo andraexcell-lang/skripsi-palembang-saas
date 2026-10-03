@@ -21,7 +21,7 @@ export default function AsistenPage() {
       <header className="h-16 flex items-center justify-between px-8 border-b border-border-subtle bg-bg-base">
         <div className="flex items-center gap-3 text-brand-primary font-bold">
            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-           AI Mantra Riset
+           AI Skripsi Palembang
         </div>
         <div className="flex items-center gap-4">
           <button className="text-text-secondary hover:text-text-primary text-sm font-medium flex items-center gap-2">

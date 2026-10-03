@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ReactNode } from "react";
 import UserChip from "@/components/UserChip";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
@@ -15,7 +16,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <div className="text-brand-primary">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
             </div>
-            <span className="font-bold text-lg tracking-wide">MantraRiset</span>
+            <span className="font-bold text-lg tracking-wide">Skripsi<span className="text-brand-primary">Palembang</span></span>
           </Link>
           <button className="text-text-secondary hover:text-text-primary">
              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><polyline points="15 3 15 21"></polyline><polyline points="9 9 12 12 9 15"></polyline></svg>
@@ -30,7 +31,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </Link>
           <Link href="/dashboard/asisten" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:text-text-primary hover:bg-bg-surface-hover transition-colors text-sm">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-            AI Mantra Riset
+            AI Skripsi Palembang
           </Link>
 
           <div className="pt-5 pb-2 px-3">
@@ -141,14 +142,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
         {/* Bottom Section */}
         <div className="p-4 border-t border-border-subtle space-y-4 shrink-0 bg-bg-surface">
-          <div className="flex items-center bg-bg-base rounded-lg p-1 border border-border-subtle">
-            <button className="flex-1 flex justify-center py-1.5 rounded-md text-text-secondary hover:text-text-primary text-xs font-medium">
-              ☀ Terang
-            </button>
-            <button className="flex-1 flex justify-center py-1.5 rounded-md bg-bg-surface-hover text-text-primary shadow-sm text-xs font-medium border border-border-subtle">
-              🌙 Gelap
-            </button>
-          </div>
+          <ThemeToggle />
           
           <UserChip />
         </div>

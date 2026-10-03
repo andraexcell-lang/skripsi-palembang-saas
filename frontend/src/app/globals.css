@@ -1,30 +1,54 @@
 @import "tailwindcss";
 
-@theme {
-  /* Dark Navy Theme based on the screenshots */
-  --color-bg-base: #0B1121; /* Darkest background */
-  --color-bg-surface: #131B2F; /* Sidebar and cards */
-  --color-bg-surface-hover: #1E293B;
-  
-  --color-border-subtle: #1E2B4D;
-  --color-border-strong: #334155;
-  
-  --color-brand-primary: #0066FF; /* Bright blue accent */
+/* Default: terang. Gelap via class .dark di <html> */
+:root {
+  --bg-base: #edf1f7;
+  --bg-surface: #ffffff;
+  --bg-surface-hover: #f1f5f9;
+  --border-subtle: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  color-scheme: light;
+}
+
+.dark {
+  --bg-base: #0B1121;
+  --bg-surface: #131B2F;
+  --bg-surface-hover: #1E293B;
+  --border-subtle: #1E2B4D;
+  --border-strong: #334155;
+  --text-primary: #F8FAFC;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg-base: var(--bg-base);
+  --color-bg-surface: var(--bg-surface);
+  --color-bg-surface-hover: var(--bg-surface-hover);
+
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+
+  --color-brand-primary: #0066FF;
   --color-brand-primary-hover: #0052CC;
-  
-  --color-text-primary: #F8FAFC;
-  --color-text-secondary: #94A3B8;
-  --color-text-muted: #64748B;
-  
-  --color-accent-purple: #8B5CF6; /* Disertasi icon */
-  --color-accent-teal: #14B8A6;   /* Tesis icon */
-  --color-accent-red: #EF4444;    /* Scopus icon */
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+
+  --color-accent-purple: #8B5CF6;
+  --color-accent-teal: #14B8A6;
+  --color-accent-red: #EF4444;
 }
 
 @layer base {
   body {
-    background-color: var(--color-bg-base);
-    color: var(--color-text-primary);
+    background-color: var(--bg-base);
+    color: var(--text-primary);
     font-family: 'Inter', system-ui, sans-serif;
   }
 }
@@ -35,12 +59,12 @@
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--color-bg-base);
+  background: var(--bg-base);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border-strong);
+  background: var(--border-strong);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-muted);
+  background: var(--text-muted);
 }

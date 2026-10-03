@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
@@ -18,8 +19,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id">
+    <html lang="id" suppressHydrationWarning>
       <body className={`${plusJakarta.variable} antialiased`}>
+        <Script id="sp-tema" strategy="beforeInteractive">
+          {`(function(){try{var t=localStorage.getItem("sp-tema");if(t==="gelap"||(t!=="terang"&&window.matchMedia("(prefers-color-scheme: dark)").matches))document.documentElement.classList.add("dark")}catch(e){}})()`}
+        </Script>
         {children}
       </body>
     </html>

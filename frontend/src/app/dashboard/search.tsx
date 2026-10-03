@@ -33,7 +33,7 @@ export default function DashboardSearch() {
         type="text"
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder="Tanya AI Mantra Riset, atau ketik / untuk mulai membuat proyek..."
+        placeholder="Tanya AI Skripsi Palembang, atau ketik / untuk mulai membuat proyek..."
         className="w-full bg-bg-surface border border-border-subtle rounded-full py-4 pl-12 pr-12 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-all shadow-sm"
       />
       {open && (

@@ -55,7 +55,7 @@ export default function CekPlagiasiPage() {
             <div className="w-8 h-8 rounded bg-brand-primary flex items-center justify-center text-white">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
             </div>
-            <h1 className="text-xl font-bold text-text-primary flex items-center gap-2">MantraRiset <span className="text-text-muted font-normal text-sm">×</span> <span className="bg-purple-900/40 text-purple-400 px-2.5 py-0.5 rounded-md text-sm">Mulfu</span></h1>
+            <h1 className="text-xl font-bold text-text-primary flex items-center gap-2">Skripsi Palembang <span className="text-text-muted font-normal text-sm">×</span> <span className="bg-purple-900/40 text-purple-400 px-2.5 py-0.5 rounded-md text-sm">Mulfu</span></h1>
           </div>
           <h2 className="text-2xl font-bold text-text-primary mb-2">Cek Risiko Kemiripan (Estimasi AI)</h2>
           <p className="text-text-secondary text-sm">Temukan frasa rawan + alternatif parafrase. Ini BUKAN skor Turnitin — verifikasi resmi tetap via Turnitin kampus.</p>
