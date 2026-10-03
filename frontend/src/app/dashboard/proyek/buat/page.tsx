@@ -1,12 +1,18 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiPost } from '@/lib/api';
 
 export default function BuatSkripsiPage() {
   const [judul, setJudul] = useState('');
   const [jenis, setJenis] = useState('skripsi');
-  const [metode, setMetode] = useState('Kualitatif');
+
+  useEffect(() => {
+    try {
+      const j = new URLSearchParams(window.location.search).get('jenis');
+      if (j === 'tesis' || j === 'disertasi' || j === 'skripsi') setJenis(j);
+    } catch { /* abaikan */ }
+  }, []);  const [metode, setMetode] = useState('Kualitatif');
   const [nama, setNama] = useState('');
   const [nim, setNim] = useState('');
   const [kampus, setKampus] = useState('');

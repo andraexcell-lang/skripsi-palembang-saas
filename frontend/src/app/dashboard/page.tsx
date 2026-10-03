@@ -48,16 +48,17 @@ export default function DashboardIndex() {
         {/* Highlight Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          {/* Terakhir Dibuat */}
+          {/* Terakhir Dibuat / Empty state */}
+          {latest ? (
           <div className="lg:col-span-2 bg-bg-surface border border-border-subtle rounded-xl p-6 flex flex-col justify-between relative overflow-hidden group">
             <div>
               <div className="text-text-secondary text-xs mb-3 font-medium">Terakhir dibuat</div>
-              <h2 className="text-xl font-bold text-text-primary mb-8 relative z-10 w-3/4">{latest?.judul || 'Belum ada proyek — buat yang pertama'}</h2>
+              <h2 className="text-xl font-bold text-text-primary mb-8 relative z-10 w-3/4">{latest.judul}</h2>
             </div>
 
             <div className="flex items-end justify-between relative z-10">
               <div className="text-xs text-text-muted">
-                {latest ? `Diperbarui ${new Date(latest.updated_at).toLocaleDateString('id-ID')}` : '—'}
+                Diperbarui {new Date(latest.updated_at).toLocaleDateString('id-ID')}
               </div>
               <div className="flex items-center gap-4">
                 <div className="text-right">
@@ -66,14 +67,25 @@ export default function DashboardIndex() {
                     <div className="h-full bg-brand-primary" style={{ width: `${pct}%` }}></div>
                   </div>
                 </div>
-                {latest && (
-                  <Link href={`/dashboard/studio/${latest.id}`} className="bg-brand-primary hover:bg-brand-primary-hover text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1 shadow-md shadow-brand-primary/20">
-                    Buka Proyek <span>→</span>
-                  </Link>
-                )}
+                <Link href={`/dashboard/studio/${latest.id}`} className="bg-brand-primary hover:bg-brand-primary-hover text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1 shadow-md shadow-brand-primary/20">
+                  Buka Proyek <span>→</span>
+                </Link>
               </div>
             </div>
           </div>
+          ) : (
+          <div className="lg:col-span-2 bg-bg-surface border border-border-subtle rounded-xl p-6 flex flex-col justify-between relative overflow-hidden">
+            <div>
+              <div className="text-text-secondary text-xs mb-3 font-medium">Mulai penelitian pertamamu</div>
+              <h2 className="text-xl font-bold text-text-primary mb-2 relative z-10 w-3/4">Pilih jenis karya di bawah, isi topiknya, dan AI menyusun kerangkanya.</h2>
+            </div>
+            <div className="relative z-10">
+              <Link href="/dashboard/proyek/buat" className="inline-flex bg-brand-primary hover:bg-brand-primary-hover text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors shadow-md shadow-brand-primary/20">
+                Buat Proyek
+              </Link>
+            </div>
+          </div>
+          )}
 
           {/* Paket */}
           <div className="bg-bg-surface border border-border-subtle rounded-xl p-6 flex flex-col">
@@ -91,6 +103,15 @@ export default function DashboardIndex() {
           </div>
         </div>
 
+        {/* Banner tutorial untuk pengguna baru */}
+        {!latest && (
+          <div className="bg-bg-surface border border-border-subtle rounded-xl p-6">
+            <h3 className="font-bold text-text-primary">Baru di Skripsi Palembang?</h3>
+            <p className="text-text-secondary text-sm mt-1 mb-4">Tonton video tutorialnya dulu — beberapa menit untuk memahami alurnya sebelum mulai menulis.</p>
+            <Link href="/dashboard/tutorial" className="inline-flex border border-border-strong px-4 py-2 rounded-lg text-sm font-semibold text-text-primary hover:bg-bg-surface-hover">Tonton Tutorial</Link>
+          </div>
+        )}
+
         {/* Mulai Buat Karya */}
         <div>
           <div className="flex items-center justify-between mb-4">
@@ -99,10 +120,24 @@ export default function DashboardIndex() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            <Link href="/dashboard/proyek/buat" className="bg-bg-surface border border-border-subtle hover:border-brand-primary rounded-xl p-4 flex items-center gap-3 transition-colors group">
+            <Link href="/dashboard/proyek/buat?jenis=skripsi" className="bg-bg-surface border border-border-subtle hover:border-brand-primary rounded-xl p-4 flex items-center gap-3 transition-colors group">
               <div>
                 <div className="font-bold text-sm text-text-primary group-hover:text-brand-primary transition-colors">Skripsi</div>
                 <div className="text-xs text-text-muted">S1 · Bab 1-5 lengkap</div>
+              </div>
+            </Link>
+
+            <Link href="/dashboard/proyek/buat?jenis=tesis" className="bg-bg-surface border border-border-subtle hover:border-brand-primary rounded-xl p-4 flex items-center gap-3 transition-colors group">
+              <div>
+                <div className="font-bold text-sm text-text-primary group-hover:text-brand-primary transition-colors">Tesis</div>
+                <div className="text-xs text-text-muted">S2 · Analisis mendalam</div>
+              </div>
+            </Link>
+
+            <Link href="/dashboard/proyek/buat?jenis=disertasi" className="bg-bg-surface border border-border-subtle hover:border-brand-primary rounded-xl p-4 flex items-center gap-3 transition-colors group">
+              <div>
+                <div className="font-bold text-sm text-text-primary group-hover:text-brand-primary transition-colors">Disertasi</div>
+                <div className="text-xs text-text-muted">S3 · Kebaruan penelitian</div>
               </div>
             </Link>
 
