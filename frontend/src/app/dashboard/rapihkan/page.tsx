@@ -1,5 +1,7 @@
 "use client";
 
+import { aiGenerate } from "@/lib/api";
+
 import { useState } from "react";
 
 export default function RapihkanSkripsiPage() {
@@ -18,20 +20,10 @@ export default function RapihkanSkripsiPage() {
     const prompt = `Rapihkan teks atau draf skripsi berikut secara formatting (struktur heading, paragraf, penomoran, dsb). Jangan merubah substansi isinya sama sekali, hanya buat strukturnya menjadi sangat rapi dan standar akademik. Format output dengan Markdown:\n\n${materi}`;
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/ai/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-      });
-      
-      const data = await response.json();
-      if (response.ok) {
-        setHasil(data.result);
-      } else {
-        setHasil("Error: " + (data.error || "Gagal menghubungi server AI."));
-      }
+      const data = await aiGenerate(prompt, "bab");
+      setHasil(data.result);
     } catch (error: any) {
-      setHasil("Error: " + error.message);
+      setHasil("Error: " + error.message + (/kredit kurang/i.test(error.message || "") ? " Buka Billing untuk top-up." : ""));
     } finally {
       setLoading(false);
     }

@@ -1,5 +1,7 @@
 "use client";
 
+import { aiGenerate } from "@/lib/api";
+
 import { useState } from "react";
 
 export default function CekPlagiasiPage() {
@@ -15,23 +17,13 @@ export default function CekPlagiasiPage() {
     setLoading(true);
     setHasil("");
     
-    const prompt = `Lakukan simulasi pengecekan plagiasi (Turnitin/Mulfu style) pada teks berikut. Berikan output persentase plagiasi fiktif (misalnya 15%), rincian sumber yang mungkin mirip, dan kalimat mana saja yang terdeteksi mirip. Teks:\n\n${materi}\n\nFormat jawaban dalam Markdown yang terstruktur.`;
+    const prompt = `Analisis TEKS berikut untuk risiko kemiripan akademik (BUKAN skor Turnitin — jangan klaim persentase pasti). Tugas: 1) tandai maksimal 10 frasa generik/klise yang rawan terdeteksi (kutip verbatim), 2) untuk tiap frasa beri 1 alternatif parafrase, 3) tutup dengan catatan: hasil ini estimasi AI, verifikasi resmi tetap via Turnitin kampus. Jangan membuat persentase fiktif. Teks:\n\n${materi}\n\nMarkdown terstruktur.`;
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/ai/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-      });
-      
-      const data = await response.json();
-      if (response.ok) {
-        setHasil(data.result);
-      } else {
-        setHasil("Error: " + (data.error || "Gagal menghubungi server AI."));
-      }
+      const data = await aiGenerate(prompt, "plagiasi");
+      setHasil(data.result);
     } catch (error: any) {
-      setHasil("Error: " + error.message);
+      setHasil("Error: " + error.message + (/kredit kurang/i.test(error.message || "") ? " Buka Billing untuk top-up." : ""));
     } finally {
       setLoading(false);
     }
@@ -65,15 +57,15 @@ export default function CekPlagiasiPage() {
             </div>
             <h1 className="text-xl font-bold text-text-primary flex items-center gap-2">MantraRiset <span className="text-text-muted font-normal text-sm">×</span> <span className="bg-purple-900/40 text-purple-400 px-2.5 py-0.5 rounded-md text-sm">Mulfu</span></h1>
           </div>
-          <h2 className="text-2xl font-bold text-text-primary mb-2">Cek Plagiasi (Demo AI)</h2>
-          <p className="text-text-secondary text-sm">Paste teks dokumen untuk memeriksa tingkat kemiripan (plagiarisme). (Simulasi dari mesin <strong className="text-purple-400">Mulfu</strong> menggunakan Gemini).</p>
+          <h2 className="text-2xl font-bold text-text-primary mb-2">Cek Risiko Kemiripan (Estimasi AI)</h2>
+          <p className="text-text-secondary text-sm">Temukan frasa rawan + alternatif parafrase. Ini BUKAN skor Turnitin — verifikasi resmi tetap via Turnitin kampus.</p>
         </div>
 
         {/* Warning Box */}
         <div className="bg-bg-surface border border-brand-primary rounded-xl p-4 flex items-start gap-3">
            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-brand-primary shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
            <p className="text-sm text-text-secondary">
-             Dalam mode demo, fitur ini akan disimulasikan secara instan oleh AI tanpa memotong kredit Anda.
+             Estimasi AI: menandai frasa generik + saran parafrase (15 kredit/cek). Bukan pengganti Turnitin resmi.
            </p>
         </div>
 
@@ -133,7 +125,7 @@ export default function CekPlagiasiPage() {
         {/* Hasil Area */}
         {hasil && (
           <div className="bg-bg-surface-hover border border-brand-primary/20 rounded-xl p-6 text-sm text-text-primary shadow-sm whitespace-pre-wrap leading-relaxed">
-             <h3 className="font-bold text-lg mb-4 text-brand-primary border-b border-border-subtle pb-2">Laporan Hasil Plagiasi (Simulasi):</h3>
+             <h3 className="font-bold text-lg mb-4 text-brand-primary border-b border-border-subtle pb-2">Laporan Risiko Kemiripan (Estimasi AI):</h3>
              {hasil}
           </div>
         )}

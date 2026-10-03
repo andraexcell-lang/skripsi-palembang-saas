@@ -1,21 +1,58 @@
 "use client";
 
+import { aiGenerate, isInsufficientCredits } from "@/lib/api";
+
 import { useState } from "react";
+import Link from "next/link";
 
 export default function OlahDataPage() {
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [dataInput, setDataInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [hasil, setHasil] = useState<string>("");
+  const [needsTopup, setNeedsTopup] = useState(false);
+  const [spssFile, setSpssFile] = useState<File | null>(null);
 
-  const isFormValid = dataInput.trim().length > 0;
+  const isFormValid = dataInput.trim().length > 0 || (selectedTool === "spss" && !!spssFile);
 
   const handleOlah = async () => {
     if (!isFormValid) return;
     
     setLoading(true);
     setHasil("");
-    
+    setNeedsTopup(false);
+
+    if (selectedTool === "spss" && spssFile) {
+      try {
+        const { supabase } = await import('@/lib/supabase');
+        const { data: sess } = await supabase.auth.getSession();
+        let token = sess.session?.access_token || '';
+        if (!token) {
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i) || '';
+            if (k.endsWith('-auth-token')) {
+              try { token = JSON.parse(localStorage.getItem(k) || '').access_token || ''; if (token) break; } catch { /* abaikan */ }
+            }
+          }
+        }
+        const fd = new FormData();
+        fd.append('file', spssFile);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/files/spss`, { method: 'POST', headers: token ? { Authorization: `Bearer ${token}` } : {}, body: fd });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          if (res.status === 402) setNeedsTopup(true);
+          throw new Error(json.error || 'Gagal olah SPSS');
+        }
+        const d = (json.deskriptif || []).map((x: any) => `| ${x.variabel} | ${x.n} | ${x.mean} | ${x.sd} | ${x.min} | ${x.max} |`).join('\n');
+        setHasil(`N=${json.n}\n\n| Variabel | n | Mean | SD | Min | Max |\n|---|---|---|---|---|---|\n${d}\n\n${json.interpretasi || ''}`);
+      } catch (error: any) {
+        setHasil("Error: " + error.message + (/kredit kurang/i.test(error.message || "") ? " Buka Billing untuk top-up." : ""));
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     let prompt = "";
     if (selectedTool === "spss") {
       prompt = `Berperanlah sebagai dosen statistik ahli. Analisis data mentah kuantitatif berikut ini seolah-olah diproses menggunakan SPSS. Lakukan uji asumsi dasar, uji regresi, dan berikan tabel output (dalam format Markdown) beserta interpretasinya. Data: \n\n${dataInput}`;
@@ -26,20 +63,11 @@ export default function OlahDataPage() {
     }
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/ai/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-      });
-      
-      const data = await response.json();
-      if (response.ok) {
-        setHasil(data.result);
-      } else {
-        setHasil("Error: " + (data.error || "Gagal menghubungi server AI."));
-      }
+      const feature = selectedTool === "spss" ? "spss" : "kualitatif";
+      const data = await aiGenerate(prompt, feature);
+      setHasil(data.result);
     } catch (error: any) {
-      setHasil("Error: " + error.message);
+      setHasil("Error: " + error.message + (/kredit kurang/i.test(error.message || "") ? " Buka Billing untuk top-up." : ""));
     } finally {
       setLoading(false);
     }
@@ -128,7 +156,18 @@ export default function OlahDataPage() {
                 placeholder={selectedTool === 'spss' ? "Contoh data CSV: \nResponden, X1, X2, Y\n1, 4, 5, 4\n2, 3, 4, 3" : "Contoh wawancara: \nPewawancara: Bagaimana strategi pemasaran Anda?\nNarasumber: Kami fokus ke media sosial..."}
                 className="w-full bg-bg-base border border-border-strong rounded-lg p-4 text-text-primary placeholder:text-text-muted focus:border-brand-primary focus:outline-none text-sm mb-4 font-mono whitespace-pre"
               ></textarea>
-              
+              {selectedTool === 'spss' && (
+                <div className="mb-4">
+                  <label className="block text-xs font-bold text-text-primary mb-2">Atau upload file (xlsx/csv, maks 10 MB, 3 kredit)</label>
+                  <input type="file" accept=".xlsx,.xls,.csv" onChange={(e) => setSpssFile(e.target.files?.[0] || null)} className="text-xs text-text-secondary" />
+                </div>
+              )}
+              {needsTopup && (
+                <div className="bg-accent-red/10 border border-accent-red/30 rounded-lg p-4 text-sm text-text-primary flex items-center justify-between gap-3 mb-4">
+                  <span>Kredit habis. Top-up untuk lanjut.</span>
+                  <Link href="/dashboard/billing" className="bg-brand-primary text-white px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap">Pilih Paket →</Link>
+                </div>
+              )}
               <div className="flex justify-end">
                 <button 
                   onClick={handleOlah}

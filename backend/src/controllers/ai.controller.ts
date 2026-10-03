@@ -1,20 +1,33 @@
 import { Request, Response } from 'express';
 import { aiQueue, jobResults } from '../services/queue.service';
 import { generateContent } from '../services/ai.service';
+import { AuthRequest } from '../middleware/auth';
+import { consumeCredits, FEATURE_COSTS } from '../services/credits.service';
 
-export const requestGeneration = async (req: Request, res: Response) => {
+export const requestGeneration = async (req: AuthRequest, res: Response) => {
   try {
-    const { prompt } = req.body;
-    
+    const { prompt, feature = 'bab', ref = '' } = req.body;
+
     if (!prompt) {
       return res.status(400).json({ error: "Prompt is required" });
     }
+    if (!req.userId) return res.status(401).json({ error: 'Unauthorized' });
 
-    console.log(`Received prompt: ${prompt.substring(0, 50)}...`);
-    
-    // Bypass BullMQ/Redis for local testing so we can get immediate responses
+    // Potong kredit dulu (gratis untuk fitur 0-kredit). Gagal -> 402.
+    try {
+      await consumeCredits(req.userId, feature, ref || `ai:${feature}`);
+    } catch (e: any) {
+      if (e.code === 'INSUFFICIENT_CREDITS') {
+        return res.status(402).json({ error: e.message, cost: e.cost, remaining: e.remaining, featureCosts: FEATURE_COSTS });
+      }
+      throw e;
+    }
+
+    console.log(`User ${req.userId} feature=${feature} prompt: ${prompt.substring(0, 50)}...`);
+
+    // Bypass BullMQ/Redis untuk respons langsung (jalur TS port 5000)
     const result = await generateContent(prompt);
-    
+
     // Return final result directly
     res.status(200).json({
       message: "Success",
@@ -28,8 +41,8 @@ export const requestGeneration = async (req: Request, res: Response) => {
 
 export const checkJobStatus = async (req: Request, res: Response) => {
   try {
-    const { jobId } = req.params;
-    
+    const jobId = String(req.params.jobId || '');
+
     const jobStatus = jobResults.get(jobId);
     
     if (!jobStatus) {

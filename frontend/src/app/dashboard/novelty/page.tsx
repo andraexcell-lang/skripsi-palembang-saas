@@ -1,5 +1,7 @@
 "use client";
 
+import { aiGenerate } from "@/lib/api";
+
 import { useState } from "react";
 
 export default function NoveltyPage() {
@@ -18,20 +20,10 @@ export default function NoveltyPage() {
     const prompt = `Analisis novelty (kebaruan) untuk topik penelitian: "${topik}". Jelaskan apa yang sudah banyak diteliti (teori, populasi, metode) dan tunjukkan celah penelitian (research gap) yang bisa dieksplorasi. Format output menggunakan Markdown.`;
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/ai/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-      });
-      
-      const data = await response.json();
-      if (response.ok) {
-        setHasil(data.result);
-      } else {
-        setHasil("Error: " + (data.error || "Gagal menghubungi server AI."));
-      }
+      const data = await aiGenerate(prompt, "novelty");
+      setHasil(data.result);
     } catch (error: any) {
-      setHasil("Error: " + error.message);
+      setHasil("Error: " + error.message + (/kredit kurang/i.test(error.message || "") ? " Buka Billing untuk top-up." : ""));
     } finally {
       setLoading(false);
     }

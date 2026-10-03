@@ -1,5 +1,7 @@
 "use client";
 
+import { aiGenerate } from "@/lib/api";
+
 import { useState } from "react";
 
 export default function KelayakanPage() {
@@ -18,20 +20,10 @@ export default function KelayakanPage() {
     const prompt = `Berikan analisis kelayakan, kekuatan, celah penelitian, dan saran penajaman untuk judul penelitian berikut: "${judul}". Format output menggunakan Markdown agar rapi dan terstruktur.`;
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/ai/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-      });
-      
-      const data = await response.json();
-      if (response.ok) {
-        setHasil(data.result);
-      } else {
-        setHasil("Error: " + (data.error || "Gagal menghubungi server AI."));
-      }
+      const data = await aiGenerate(prompt, "kelayakan");
+      setHasil(data.result);
     } catch (error: any) {
-      setHasil("Error: " + error.message);
+      setHasil("Error: " + error.message + (/kredit kurang/i.test(error.message || "") ? " Buka Billing untuk top-up." : ""));
     } finally {
       setLoading(false);
     }

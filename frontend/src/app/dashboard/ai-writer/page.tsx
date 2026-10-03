@@ -1,5 +1,7 @@
 "use client";
 
+import { aiGenerate } from "@/lib/api";
+
 import { useState } from "react";
 
 export default function AIWriterPage() {
@@ -19,20 +21,10 @@ export default function AIWriterPage() {
     const prompt = `Berperanlah sebagai penulis akademik (AI Writer). Lanjutkan paragraf atau tulisan berikut ini secara logis, berbobot, dan menggunakan bahasa akademik formal. Tambahkan penjelasan, argumen, atau sitasi fiktif (bila relevan). Berikut adalah teks awalan dari pengguna:\n\n${materi}`;
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/ai/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-      });
-      
-      const data = await response.json();
-      if (response.ok) {
-        setHasil(data.result);
-      } else {
-        setHasil("Error: " + (data.error || "Gagal menghubungi server AI."));
-      }
+      const data = await aiGenerate(prompt, "bab");
+      setHasil(data.result);
     } catch (error: any) {
-      setHasil("Error: " + error.message);
+      setHasil("Error: " + error.message + (/kredit kurang/i.test(error.message || "") ? " Buka Billing untuk top-up." : ""));
     } finally {
       setLoading(false);
     }

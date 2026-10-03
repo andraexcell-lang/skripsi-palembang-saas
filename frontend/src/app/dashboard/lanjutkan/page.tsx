@@ -1,5 +1,7 @@
 "use client";
 
+import { aiGenerate } from "@/lib/api";
+
 import { useState } from "react";
 
 export default function LanjutkanSkripsiPage() {
@@ -18,20 +20,10 @@ export default function LanjutkanSkripsiPage() {
     const prompt = `Berperanlah sebagai asisten pembimbing skripsi. Berdasarkan judul penelitian: "${judul}", buatkan rancangan (outline) komprehensif dari Bab 1 hingga Bab 5 yang bisa dijadikan acuan untuk melanjutkan penulisan skripsi. Susun dalam format Markdown yang rapi dan terstruktur.`;
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/ai/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-      });
-      
-      const data = await response.json();
-      if (response.ok) {
-        setHasil(data.result);
-      } else {
-        setHasil("Error: " + (data.error || "Gagal menghubungi server AI."));
-      }
+      const data = await aiGenerate(prompt, "bab");
+      setHasil(data.result);
     } catch (error: any) {
-      setHasil("Error: " + error.message);
+      setHasil("Error: " + error.message + (/kredit kurang/i.test(error.message || "") ? " Buka Billing untuk top-up." : ""));
     } finally {
       setLoading(false);
     }

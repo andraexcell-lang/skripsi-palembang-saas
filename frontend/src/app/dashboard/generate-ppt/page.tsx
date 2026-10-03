@@ -1,12 +1,41 @@
 "use client";
 
+import { aiGenerate, apiDownloadPptx, apiUpload, isInsufficientCredits } from "@/lib/api";
+
 import { useState } from "react";
+import Link from "next/link";
 
 export default function GeneratePPTPage() {
   const [jenisPresentasi, setJenisPresentasi] = useState("sempro");
   const [materi, setMateri] = useState("");
   const [loading, setLoading] = useState(false);
   const [hasil, setHasil] = useState<string>("");
+  const [needsTopup, setNeedsTopup] = useState(false);
+  const [busy, setBusy] = useState('');
+
+  async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setBusy('upload'); setHasil('');
+    try {
+      const r = await apiUpload('/api/files/extract', f);
+      setMateri((r.text || '').slice(0, 8000));
+    } catch (error: any) {
+      setHasil('Error: ' + error.message);
+    }
+    setBusy('');
+  }
+
+  async function downloadPptx() {
+    setBusy('pptx'); setNeedsTopup(false);
+    try {
+      await apiDownloadPptx(jenisPresentasi, materi, 'Presentasi Penelitian');
+    } catch (error: any) {
+      if (isInsufficientCredits(error)) setNeedsTopup(true);
+      setHasil('Error: ' + error.message);
+    }
+    setBusy('');
+  }
 
   const isFormValid = materi.trim().length > 0;
 
@@ -19,20 +48,11 @@ export default function GeneratePPTPage() {
     const prompt = `Buatkan outline presentasi PowerPoint (${jenisPresentasi === 'sempro' ? 'Seminar Proposal' : 'Seminar Hasil'}) berdasarkan teks materi berikut. Buat dalam format Markdown. Berikan judul setiap slide dan poin-poin isinya (bullet points) secara ringkas, jelas, dan profesional. Teks Materi:\n\n${materi}`;
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/ai/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-      });
-      
-      const data = await response.json();
-      if (response.ok) {
-        setHasil(data.result);
-      } else {
-        setHasil("Error: " + (data.error || "Gagal menghubungi server AI."));
-      }
+      const data = await aiGenerate(prompt, "ppt");
+      setHasil(data.result);
     } catch (error: any) {
-      setHasil("Error: " + error.message);
+      if (isInsufficientCredits(error)) setNeedsTopup(true);
+      setHasil("Error: " + error.message + (/kredit kurang/i.test(error.message || "") ? " Buka Billing untuk top-up." : ""));
     } finally {
       setLoading(false);
     }
@@ -122,7 +142,9 @@ export default function GeneratePPTPage() {
         {/* Sumber materi */}
         <div className="bg-bg-surface border border-border-subtle rounded-xl p-6">
           <label className="block font-bold text-text-primary text-sm mb-1">Sumber materi</label>
-          <p className="text-xs text-text-muted mb-4">Paste ringkasan/bab skripsi Anda di sini (Simulasi Upload).</p>
+          <p className="text-xs text-text-muted mb-4">Upload PDF/DOCX (maks 10 MB) atau paste teks.</p>
+          <input type="file" accept=".pdf,.docx,.txt" onChange={onUpload} className="mb-3 text-xs text-text-secondary" />
+          {busy === 'upload' && <p className="text-xs text-text-secondary mb-2">Mengekstrak teks...</p>}
           
           <textarea 
              rows={6}
@@ -139,6 +161,12 @@ export default function GeneratePPTPage() {
         </div>
 
         {/* Riwayat / Hasil */}
+        {needsTopup && (
+          <div className="bg-accent-red/10 border border-accent-red/30 rounded-lg p-4 text-sm text-text-primary flex items-center justify-between gap-3 mt-6">
+            <span>Kredit habis (PPT 8 kredit). Top-up untuk lanjut.</span>
+            <Link href="/dashboard/billing" className="bg-brand-primary text-white px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap">Pilih Paket →</Link>
+          </div>
+        )}
         {hasil && (
           <div className="border border-brand-primary/20 bg-bg-surface-hover rounded-xl p-6 text-sm text-text-primary shadow-sm whitespace-pre-wrap leading-relaxed mt-6">
              <h3 className="font-bold text-lg mb-4 text-brand-primary border-b border-border-subtle pb-2">Draft Slide Presentasi:</h3>
@@ -167,7 +195,15 @@ export default function GeneratePPTPage() {
               <div className="text-sm font-bold text-brand-primary">Mode Testing Lokal</div>
             </div>
             <div className="flex flex-col items-end">
-               <button 
+                <div className="flex gap-2">
+                  <button
+                    onClick={downloadPptx}
+                    disabled={!isFormValid || loading || busy !== ''}
+                    className="px-6 py-2.5 rounded-lg text-sm font-bold border border-brand-primary text-brand-primary hover:bg-brand-primary/10 disabled:opacity-50"
+                  >
+                    {busy === 'pptx' ? 'Membuat .pptx...' : 'Unduh .pptx (8 kredit)'}
+                  </button>
+                <button 
                  onClick={handleGenerate}
                  disabled={!isFormValid || loading}
                  className={`px-8 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors mb-1 shadow-lg ${isFormValid && !loading ? 'bg-brand-primary text-white hover:bg-brand-primary-hover shadow-brand-primary/20' : 'bg-brand-primary/20 text-brand-primary opacity-80 cursor-not-allowed'}`}
@@ -184,6 +220,7 @@ export default function GeneratePPTPage() {
                    </>
                  )}
                </button>
+                </div>
                <span className="text-[9px] text-text-muted">{!isFormValid ? 'Paste materi untuk melanjutkan' : 'Siap digenerate!'}</span>
             </div>
           </div>
