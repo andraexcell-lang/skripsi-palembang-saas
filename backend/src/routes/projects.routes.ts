@@ -10,10 +10,11 @@ const db = () => supabaseAdmin || supabaseAnon;
 const BAB_LIST = ['bab1', 'bab2', 'bab3', 'bab4', 'bab5'];
 
 // Crossref gratis (tanpa key): referensi nyata ber-DOI untuk sitasi.
-export async function crossrefTop(query: string, rows = 6): Promise<{ doi: string; title: string; authors: string; year: string; url: string }[]> {
+export async function crossrefTop(query: string, rows = 6, minYear?: number | null): Promise<{ doi: string; title: string; authors: string; year: string; url: string }[]> {
   try {
     const q = encodeURIComponent(String(query).slice(0, 200));
-    const res = await fetch(`https://api.crossref.org/works?query.bibliographic=${q}&rows=${rows}&select=DOI,title,author,published,URL&mailto=admin@skripsiplg.my.id`);
+    const filt = minYear ? `&filter=from-pub-date:${minYear}-01-01` : '';
+    const res = await fetch(`https://api.crossref.org/works?query.bibliographic=${q}&rows=${rows}${filt}&select=DOI,title,author,published,URL&mailto=admin@skripsiplg.my.id`);
     if (!res.ok) return [];
     const j: any = await res.json();
     return (j.message?.items || []).map((it: any) => ({
@@ -32,10 +33,12 @@ function refBlock(refs: { doi: string; title: string; authors: string; year: str
     refs.map((r, i) => `${i + 1}. ${r.authors} (${r.year}). ${r.title}. https://doi.org/${r.doi}`).join('\n');
 }
 
-const SITASI = `Wajib: (1) bodynote APA (Nama, Tahun) di setiap sub-bab yang memakai teori/temuan, (2) akhiri dengan sub-bagian "Daftar Pustaka Bab Ini" berisi referensi di atas dalam format APA 7th lengkap dengan link DOI yang bisa diklik. Jangan mengarang DOI/judul di luar daftar.`;
+const SITASI = `Wajib: (1) tulis dalam bahasa yang diminta, (2) bodynote sesuai gaya sitasi yang diminta di setiap sub-bab yang memakai teori/temuan, (3) akhiri dengan sub-bagian "Daftar Pustaka Bab Ini" berisi referensi di atas dalam format gaya sitasi yang diminta lengkap dengan link DOI yang bisa diklik. Jangan mengarang DOI/judul di luar daftar.`;
 
 function babPrompt(bab: string, p: any, refs: { doi: string; title: string; authors: string; year: string; url: string }[]) {
-  const base = `Judul: ${p.judul}\nJenis: ${p.jenis}\nMetode: ${p.metode}\n`;
+  const style = p.citation_style || 'APA 7th';
+  const lang = p.language || 'Indonesia';
+  const base = `Judul: ${p.judul}\nJenis: ${p.jenis}\nMetode: ${p.metode}\nBahasa penulisan: ${lang}\nGaya sitasi: ${style}\n${p.initial_data ? `Data awal penelitian: ${String(p.initial_data).slice(0, 1000)}\n` : ''}`;
   const ref = refBlock(refs);
   const map: Record<string, string> = {
     bab1: `Susun BAB I PENDAHULUAN (latar belakang, rumusan masalah, tujuan, manfaat, batasan) untuk skripsi berikut.\n${base}${ref}\nTulis akademik formal Indonesia, siap tempel ke Word.\n${SITASI}`,
@@ -57,9 +60,12 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
 
 router.post('/', requireAuth, async (req: AuthRequest, res) => {
   try {
-    const { judul, jenis = 'skripsi', metode = 'Kualitatif', tahap = 'full', identitas = {} } = req.body || {};
+    const { judul, jenis = 'skripsi', metode = 'Kualitatif', tahap = 'full', identitas = {},
+      citation_style = 'APA 7th', language = 'Indonesia', min_year = null,
+      ref_origin = 'semua', ref_scope = 'umum', initial_data = '' } = req.body || {};
     if (!judul || String(judul).trim().length < 10) return res.status(400).json({ error: 'Judul minimal 10 karakter' });
-    const { data, error } = await db().from('projects').insert({ user_id: req.userId!, judul, jenis, metode, tahap, identitas }).select().single();
+    const { data, error } = await db().from('projects').insert({ user_id: req.userId!, judul, jenis, metode, tahap, identitas,
+      citation_style, language, min_year, ref_origin, ref_scope, initial_data }).select().single();
     if (error) throw new Error(error.message);
     res.json({ item: data });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
@@ -85,7 +91,7 @@ router.post('/:id/generate-bab', requireAuth, async (req: AuthRequest, res) => {
       if (e.code === 'INSUFFICIENT_CREDITS') return res.status(402).json({ error: e.message, remaining: e.remaining });
       throw e;
     }
-    const refs = await crossrefTop(p.judul);
+    const refs = await crossrefTop(p.judul, 6, p.min_year);
     let text: string;
     try {
       text = await generateContent(babPrompt(bab, p, refs));
