@@ -6,6 +6,9 @@
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Skripsi Palembang AI" />
   <Description DefaultValue="Generate Bab, parafrase, dan sitasi langsung di Word memakai kredit Skripsi Palembang." />
+  <IconUrl DefaultValue="https://skripsi-palembang-saas.vercel.app/word/icon-32.png" />
+  <HighResolutionIconUrl DefaultValue="https://skripsi-palembang-saas.vercel.app/word/icon-80.png" />
+  <SupportUrl DefaultValue="https://skripsi-palembang-saas.vercel.app/dashboard/pengaturan" />
   <AppDomains>
     <AppDomain>https://skripsi-palembang-saas.vercel.app</AppDomain>
     <AppDomain>https://appsforoffice.microsoft.com</AppDomain>
