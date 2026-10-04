@@ -177,6 +177,24 @@ router.post('/:id/generate-artikel', requireAuthOrKey, async (req: AuthRequest, 
 
 router.get('/meta/outline', async (_req, res) => res.json({ outline: OUTLINE }));
 
+// Halaman depan: kata pengantar AI + data identitas (gratis, tanpa potong kredit)
+router.post('/:id/front-matter', requireAuthOrKey, async (req: AuthRequest, res) => {
+  try {
+    const id = String(req.params.id);
+    const { data: p, error } = await db().from('projects').select('*').eq('id', id).eq('user_id', req.userId!).single();
+    if (error || !p) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
+    const ident = p.identitas || {};
+    const kata = await generateContent(
+      `Susun KATA PENGANTAR skripsi 250-350 kata, formal Indonesia. Judul: ${p.judul}. Penulis: ${ident.nama || '-'}, NIM ${ident.nim || '-'}, ${ident.jurusan || ''} ${ident.kampus || ''}. Ucapkan syukur, terima kasih pembimbing, sadari kekurangan, harap manfaat. Tanpa markdown tebal berlebihan.`
+    );
+    res.json({
+      judul: p.judul, nama: ident.nama || '', nim: ident.nim || '',
+      kampus: ident.kampus || '', jurusan: ident.jurusan || '', fakultas: ident.fakultas || '',
+      kata,
+    });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 // Generate per SUB-BAB. Bayar sekali per bab: sub-bab berikutnya di bab yang sama gratis.
 router.post('/:id/generate-subbab', requireAuthOrKey, async (req: AuthRequest, res) => {
   try {

@@ -27,10 +27,20 @@
 </head>
 <body>
 <div id="view-login">
-  <h3>Skripsi Palembang</h3>
+  <h3>Skripsi Palembang untuk Word</h3>
+  <p class="muted">Hubungkan panel ini dengan akun Skripsi Palembang-mu untuk menggenerate sub-bab langsung di dokumen.</p>
   <input id="api" value="https://skripsi-palembang-saas-production.up.railway.app">
+  <button id="pair">Hubungkan akun</button>
+  <div id="pair-box" style="display:none">
+    <p class="muted">Masukkan kode ini di browser yang terbuka:</p>
+    <div id="pair-code" style="font-size:22px;font-weight:bold;letter-spacing:2px;text-align:center;background:#f1f5f9;border-radius:8px;padding:10px"></div>
+    <p class="muted"><a id="pair-link" href="#" target="_blank">Buka tautan ini</a> bila browser tak terbuka. Menunggu persetujuan...</p>
+  </div>
+  <p class="muted">Punya kunci manual? <a href="#" id="manual-link">Tempel API key</a></p>
+  <div id="manual-box" style="display:none">
   <input id="key" type="password" placeholder="API key (skp_...) — buat di Pengaturan > Kunci API">
   <button id="save">Sambungkan</button>
+  </div>
   <div id="msg"></div>
 </div>
 <div id="view-main" style="display:none">
@@ -101,14 +111,54 @@
     $('proj').innerHTML = projects.map((x) => '<option value="' + x.id + '">' + (x.judul || '').slice(0, 55) + '</option>').join('');
     renderOutline();
   }
+  let pollTimer = null;
+  async function enterMain() {
+    await refresh();
+    $('view-login').style.display = 'none';
+    $('view-main').style.display = 'block';
+    msg('');
+  }
+  $('manual-link').onclick = (e) => {
+    e.preventDefault();
+    const b = $('manual-box');
+    b.style.display = b.style.display === 'none' ? 'block' : 'none';
+  };
+  $('pair').onclick = async () => {
+    msg('');
+    if (pollTimer) clearInterval(pollTimer);
+    try {
+      const r = await fetch(api() + '/api/word/pair/request', { method: 'POST' });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || 'Gagal meminta kode');
+      $('pair-box').style.display = 'block';
+      $('pair-code').textContent = j.code;
+      $('pair-link').href = j.url;
+      try { window.open(j.url, '_blank'); } catch (e) {}
+      pollTimer = setInterval(async () => {
+        try {
+          const s = await fetch(api() + '/api/word/pair/status?code=' + encodeURIComponent(j.code));
+          const sj = await s.json();
+          if (sj.status === 'approved' && sj.key) {
+            clearInterval(pollTimer);
+            try {
+              localStorage.setItem('spw-api', $('api').value);
+              localStorage.setItem('spw-key', sj.key);
+            } catch (e) {}
+            $('key').value = sj.key;
+            await enterMain();
+          } else if (sj.status === 'expired') {
+            clearInterval(pollTimer);
+            msg('Kode kedaluwarsa. Minta kode baru.');
+          }
+        } catch (e) {}
+      }, 3000);
+    } catch (e) { msg('Error: ' + e.message); }
+  };
   $('save').onclick = async () => {
     try {
       localStorage.setItem('spw-api', $('api').value);
       localStorage.setItem('spw-key', key());
-      await refresh();
-      $('view-login').style.display = 'none';
-      $('view-main').style.display = 'block';
-      msg('');
+      await enterMain();
     } catch (e) { msg('Error: ' + e.message); }
   };
   $('out').onclick = () => {
@@ -166,7 +216,7 @@
   async function genSub(bab, sub, btn) {
     const pid = $('proj').value;
     if (!pid) return msg2('Pilih proyek dulu.');
-    if (btn) btn.disabled = true;
+    if (btn) { btn.disabled = true; btn.dataset.label = btn.innerText; btn.innerText = 'Menulis...'; }
     msg2('Menggenerate ' + sub + '...');
     try {
       const j = await call('/api/projects/' + pid + '/generate-subbab', { bab, sub });
@@ -174,7 +224,7 @@
       msg2(sub + ' selesai' + (j.cost ? '' : ' (gratis — bab sudah dibayar).'));
       refresh();
     } catch (e) { msg2('Error: ' + e.message); }
-    if (btn) btn.disabled = false;
+    if (btn) { btn.disabled = false; btn.innerText = btn.dataset.label || 'Generate'; }
   }
   $('gen-custom').onclick = async () => {
     const s = $('custom-sub').value.trim();
@@ -182,28 +232,81 @@
     genSub('bab1', s, $('gen-custom'));
   };
   $('cover').onclick = async () => {
-    const p = projects.find((x) => x.id === $('proj').value);
-    if (!p) return msg2('Pilih proyek dulu.');
-    const idt = p.identitas || {};
-    const cov = [p.judul, '', idt.nama || '', 'NIM: ' + (idt.nim || ''), [idt.kampus, idt.jurusan, idt.fakultas].filter(Boolean).join(' — ')].join('\n');
+    const pr = projects.find((x) => x.id === $('proj').value);
+    if (!pr) return msg2('Pilih proyek dulu.');
+    msg2('Membangun halaman depan...');
     try {
+      const fm = await call('/api/projects/' + pr.id + '/front-matter', {});
+      const J = fm.judul || '', N = fm.nama || '', NIM = fm.nim || '';
+      const KJ = [fm.kampus, fm.jurusan, fm.fakultas].filter(Boolean).join(' — ');
       await Word.run(async (ctx) => {
-        ctx.document.body.insertParagraph(cov, Word.InsertLocation.start);
+        const body = ctx.document.body;
+        function para(text, opt) {
+          const pa = body.insertParagraph(text, Word.InsertLocation.end);
+          opt = opt || {};
+          pa.alignment = opt.center ? Word.Alignment.centered : Word.Alignment.justified;
+          pa.font.name = 'Times New Roman';
+          pa.font.size = opt.size || 12;
+          pa.font.bold = !!opt.bold;
+          return pa;
+        }
+        function brk() {
+          const pa = body.insertParagraph('', Word.InsertLocation.end);
+          pa.insertBreak(Word.BreakType.page, Word.InsertLocation.after);
+        }
+        para(J.toUpperCase(), { center: true, bold: true, size: 14 });
+        para('', {});
+        if (N) para(N, { center: true, bold: true });
+        if (NIM) para('NIM: ' + NIM, { center: true });
+        if (KJ) para(KJ, { center: true, bold: true });
+        para('2026', { center: true });
+        brk();
+        para('LEMBAR PERSETUJUAN', { center: true, bold: true, size: 14 });
+        para('Skripsi dengan judul:', {});
+        para('"' + J + '"', { bold: true });
+        para('yang disusun oleh ' + (N || '........') + ', NIM ' + (NIM || '........') + (KJ ? ', ' + KJ : '') + ', telah diperiksa dan disetujui oleh dosen pembimbing untuk diajukan dalam sidang skripsi.', {});
+        para('Menyetujui,', {});
+        para('Dosen Pembimbing', {});
+        para('( ........................................ )', {});
+        brk();
+        para('LEMBAR PENGESAHAN', { center: true, bold: true, size: 14 });
+        para('Skripsi dengan judul "' + J + '" yang disusun oleh ' + (N || '........') + ' telah dipertahankan di depan dewan penguji dan dinyatakan lulus sebagai salah satu syarat memperoleh gelar.', {});
+        para('Mengesahkan,', {});
+        para('Dosen Pembimbing / Ketua Program Studi', {});
+        para('( ........................................ )', {});
+        brk();
+        para('LEMBAR PERNYATAAN KEASLIAN', { center: true, bold: true, size: 14 });
+        para('Yang bertanda tangan di bawah ini. Nama: ' + (N || '........') + '. NIM: ' + (NIM || '........') + '. Program Studi: ' + (fm.jurusan || '........') + '.', {});
+        para('Dengan ini menyatakan bahwa skripsi yang berjudul "' + J + '" adalah benar-benar hasil karya sendiri dan bukan menjiplak karya orang lain. Apabila di kemudian hari terbukti sebaliknya, penulis bersedia menerima sanksi sesuai ketentuan yang berlaku.', {});
+        para('Yang menyatakan,', {});
+        para((N || '........') + ' — NIM ' + (NIM || '........'), {});
+        brk();
+        para('KATA PENGANTAR', { center: true, bold: true, size: 14 });
+        (fm.kata || '').split('\n').forEach((x) => { if (x.trim()) para(x.trim(), {}); });
         await ctx.sync();
       });
-      const toc = '<w:sdt><w:sdtPr><w:docPartObj><w:docPartGallery w:val="Table of Contents"/><w:docPartUnique/></w:docPartObj></w:sdtPr><w:sdtContent><w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r></w:p><w:p><w:r><w:instrText xml:space="preserve"> TOC \\o "1-3" \\h \\z \\u </w:instrText></w:r></w:p><w:p><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p></w:sdtContent></w:sdt>';
+      const TOC = '<w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r></w:p><w:p><w:r><w:instrText xml:space="preserve"> TOC \\o "1-3" \\h \\z \\u </w:instrText></w:r></w:p><w:p><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>';
+      const TOCT = TOC.replace('TOC \\o', 'TOC \\c "Table" \\o');
       await Word.run(async (ctx) => {
-        ctx.document.body.insertParagraph('Daftar Isi', Word.InsertLocation.end);
+        const body = ctx.document.body;
+        const h1 = body.insertParagraph('DAFTAR ISI', Word.InsertLocation.end);
+        h1.alignment = Word.Alignment.centered; h1.font.bold = true; h1.font.size = 14; h1.font.name = 'Times New Roman';
         await ctx.sync();
-      });
-      try {
-        await Word.run(async (ctx) => {
+        try {
           const r = ctx.document.body.paragraphs.getLast();
-          r.insertOoxml(toc, Word.InsertLocation.after);
+          r.insertOoxml('<w:sdt><w:sdtPr><w:docPartObj><w:docPartGallery w:val="Table of Contents"/><w:docPartUnique/></w:docPartObj></w:sdtPr><w:sdtContent>' + TOC + '</w:sdtContent></w:sdt>', Word.InsertLocation.after);
           await ctx.sync();
-        });
-      } catch (e) { /* TOC field tidak didukung di platform ini */ }
-      msg2('Cover + Daftar Isi disisipkan. Klik kanan Daftar Isi > Update Field di Word desktop.');
+        } catch (e) {}
+        const h2 = body.insertParagraph('DAFTAR TABEL', Word.InsertLocation.end);
+        h2.alignment = Word.Alignment.centered; h2.font.bold = true; h2.font.size = 14; h2.font.name = 'Times New Roman';
+        await ctx.sync();
+        try {
+          const r2 = ctx.document.body.paragraphs.getLast();
+          r2.insertOoxml('<w:sdt><w:sdtPr><w:docPartObj><w:docPartGallery w:val="Table of Contents"/><w:docPartUnique/></w:docPartObj></w:sdtPr><w:sdtContent>' + TOCT + '</w:sdtContent></w:sdt>', Word.InsertLocation.after);
+          await ctx.sync();
+        } catch (e) {}
+      });
+      msg2('Cover, halaman depan, Daftar Isi & Daftar Tabel dibuat. Klik kanan field > Update Field bila isi berubah.');
     } catch (e) { msg2('Error: ' + e.message); }
   };
   async function pageNum(fmt) {

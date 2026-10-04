@@ -8,6 +8,7 @@ import projectsRoutes from './routes/projects.routes';
 import filesRoutes from './routes/files.routes';
 import apikeysRoutes from './routes/apikeys.routes';
 import affiliateRoutes from './routes/affiliate.routes';
+import wordRoutes from './routes/word.routes';
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.use('/api/projects', projectsRoutes);
 app.use('/api/files', filesRoutes);
 app.use('/api/keys', apikeysRoutes);
 app.use('/api/affiliate', affiliateRoutes);
+app.use('/api/word', wordRoutes);
 
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', message: 'MantraRiset Backend is running' });
