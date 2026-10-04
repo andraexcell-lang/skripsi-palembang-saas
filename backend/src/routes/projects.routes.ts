@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { AuthRequest, requireAuth } from '../middleware/auth';
+import { requireAuthOrKey } from '../middleware/apiKey';
 import { supabaseAdmin, supabaseAnon } from '../config/supabase';
 import { consumeCredits } from '../services/credits.service';
 import { generateContent } from '../services/ai.service';
@@ -85,7 +86,7 @@ function babPrompt(bab: string, p: any, refs: { doi: string; title: string; auth
   return map[bab] || map.bab1;
 }
 
-router.get('/', requireAuth, async (req: AuthRequest, res) => {
+router.get('/', requireAuthOrKey, async (req: AuthRequest, res) => {
   try {
     const { data, error } = await db().from('projects').select('*').eq('user_id', req.userId!).order('updated_at', { ascending: false });
     if (error) throw new Error(error.message);
@@ -93,7 +94,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/', requireAuth, async (req: AuthRequest, res) => {
+router.post('/', requireAuthOrKey, async (req: AuthRequest, res) => {
   try {
     const { judul, jenis = 'skripsi', metode = 'Kualitatif', tahap = 'full', identitas = {},
       citation_style = 'APA 7th', language = 'Indonesia', min_year = null,
@@ -108,7 +109,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/:id', requireAuth, async (req: AuthRequest, res) => {
+router.get('/:id', requireAuthOrKey, async (req: AuthRequest, res) => {
   try {
     const { data, error } = await db().from('projects').select('*').eq('id', String(req.params.id)).eq('user_id', req.userId!).single();
     if (error) throw new Error('Proyek tidak ditemukan');
@@ -116,7 +117,7 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res) => {
   } catch (e: any) { res.status(404).json({ error: e.message }); }
 });
 
-router.post('/:id/generate-bab', requireAuth, async (req: AuthRequest, res) => {  try {
+router.post('/:id/generate-bab', requireAuthOrKey, async (req: AuthRequest, res) => {  try {
     const id = String(req.params.id);
     const { bab } = req.body || {};
     if (!BAB_LIST.includes(bab)) return res.status(400).json({ error: `bab harus salah satu: ${BAB_LIST.join(', ')}` });
@@ -143,7 +144,7 @@ router.post('/:id/generate-bab', requireAuth, async (req: AuthRequest, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/:id/generate-artikel', requireAuth, async (req: AuthRequest, res) => {
+router.post('/:id/generate-artikel', requireAuthOrKey, async (req: AuthRequest, res) => {
   try {
     const id = String(req.params.id);
     const { data: p, error } = await db().from('projects').select('*').eq('id', id).eq('user_id', req.userId!).single();

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skripsi Palembang untuk Word</title>
+<script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+<style>
+  body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 12px; color: #0f172a; font-size: 13px; }
+  h3 { margin: 12px 0 6px; font-size: 13px; }
+  input, select, textarea, button { width: 100%; box-sizing: border-box; margin: 4px 0; padding: 8px; font-size: 13px; border-radius: 6px; border: 1px solid #cbd5e1; }
+  button { background: #0066FF; color: #fff; border: none; font-weight: bold; cursor: pointer; }
+  button:disabled { opacity: .5; }
+  button.secondary { background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; }
+  #msg { white-space: pre-wrap; font-size: 12px; color: #b91c1c; margin: 6px 0; }
+  #bal { font-weight: bold; color: #0066FF; }
+</style>
+</head>
+<body>
+  <h3>Koneksi</h3>
+  <input id="api" placeholder="Backend URL" value="https://skripsi-palembang-saas-production.up.railway.app">
+  <input id="key" placeholder="API key (skp_...) — buat di Pengaturan > Kunci API" type="password">
+  <button id="save">Sambungkan</button>
+  <div>Saldo: <span id="bal">—</span></div>
+  <h3>Generate Bab</h3>
+  <select id="proj"><option value="">— pilih proyek —</option></select>
+  <select id="bab">
+    <option value="bab1">Bab I: Pendahuluan</option>
+    <option value="bab2">Bab II: Tinjauan Pustaka</option>
+    <option value="bab3">Bab III: Metodologi</option>
+    <option value="bab4">Bab IV: Hasil &amp; Pembahasan</option>
+    <option value="bab5">Bab V: Penutup</option>
+  </select>
+  <button id="gen">Generate &amp; Sisipkan ke Dokumen</button>
+  <h3>Parafrase teks terpilih</h3>
+  <button id="par" class="secondary">Parafrase Seleksi &amp; Ganti</button>
+  <div id="msg"></div>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const api = () => ($('api').value || '').replace(/\/$/, '');
+  const key = () => $('key').value.trim();
+  const msg = (t) => { $('msg').textContent = t; };
+  try {
+    $('api').value = localStorage.getItem('spw-api') || $('api').value;
+    $('key').value = localStorage.getItem('spw-key') || '';
+  } catch (e) {}
+  async function headers(extra) {
+    return Object.assign({ 'Content-Type': 'application/json', 'X-API-Key': key() }, extra || {});
+  }
+  $('save').onclick = async () => {
+    try {
+      localStorage.setItem('spw-api', $('api').value);
+      localStorage.setItem('spw-key', key());
+      const r = await fetch(api() + '/api/credits/balance', { headers: await headers() });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || 'Gagal tersambung');
+      $('bal').textContent = j.credits + ' kredit (' + j.plan + ')';
+      const p = await fetch(api() + '/api/projects', { headers: await headers() });
+      const pj = await p.json();
+      $('proj').innerHTML = '<option value="">— pilih proyek —</option>' +
+        (pj.items || []).map((x) => '<option value="' + x.id + '">' + x.judul.slice(0, 60) + '</option>').join('');
+      msg('');
+    } catch (e) { msg('Error: ' + e.message); }
+  };
+  $('gen').onclick = async () => {
+    if (!$('proj').value) return msg('Pilih proyek dulu.');
+    msg('Menggenerate... (10 kredit)');
+    try {
+      const r = await fetch(api() + '/api/projects/' + $('proj').value + '/generate-bab', {
+        method: 'POST', headers: await headers(), body: JSON.stringify({ bab: $('bab').value })
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || 'Gagal generate');
+      await Word.run(async (ctx) => {
+        ctx.document.body.insertParagraph(j.text.slice(0, 15000), Word.InsertLocation.end);
+        await ctx.sync();
+      });
+      msg('Berhasil disisipkan.');
+      $('save').click();
+    } catch (e) { msg('Error: ' + e.message); }
+  };
+  $('par').onclick = async () => {
+    msg('Memarafrase seleksi... (1 kredit)');
+    try {
+      const sel = await Word.run(async (ctx) => {
+        const range = ctx.document.getSelection();
+        range.load('text');
+        await ctx.sync();
+        return range.text;
+      });
+      if (!sel || !sel.trim()) return msg('Blok dulu teks di dokumen.');
+      const r = await fetch(api() + '/api/ai/generate', {
+        method: 'POST', headers: await headers(),
+        body: JSON.stringify({ prompt: 'Parafrase akademik formal (Indonesia), pertahankan makna:\n\n' + sel.slice(0, 4000), feature: 'parafrase' })
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || 'Gagal parafrase');
+      await Word.run(async (ctx) => {
+        ctx.document.getSelection().insertText(j.result.slice(0, 15000), Word.InsertLocation.replace);
+        await ctx.sync();
+      });
+      msg('Parafrase selesai.');
+      $('save').click();
+    } catch (e) { msg('Error: ' + e.message); }
+  };
+  Office.onReady(() => {});
+})();
+</script>
+</body>
+</html>

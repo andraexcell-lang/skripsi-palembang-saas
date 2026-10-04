@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import { AuthRequest, requireAuth } from '../middleware/auth';
+import { requireAuthOrKey } from '../middleware/apiKey';
 import { getBalance, consumeCredits } from '../services/credits.service';
 import { supabaseAdmin, supabaseAnon } from '../config/supabase';
 
 const router = Router();
 
-router.get('/balance', requireAuth, async (req: AuthRequest, res) => {
+router.get('/balance', requireAuthOrKey, async (req: AuthRequest, res) => {
   try {
     res.json(await getBalance(req.userId!));
   } catch (e: any) {
@@ -13,7 +14,7 @@ router.get('/balance', requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
-router.get('/ledger', requireAuth, async (req: AuthRequest, res) => {
+router.get('/ledger', requireAuthOrKey, async (req: AuthRequest, res) => {
   try {
     const db = supabaseAdmin || supabaseAnon;
     const { data, error } = await db
@@ -29,7 +30,7 @@ router.get('/ledger', requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
-router.post('/consume', requireAuth, async (req: AuthRequest, res) => {
+router.post('/consume', requireAuthOrKey, async (req: AuthRequest, res) => {
   try {
     const { feature, ref } = req.body || {};
     if (!feature) return res.status(400).json({ error: 'feature wajib diisi' });
