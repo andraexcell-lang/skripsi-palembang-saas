@@ -10,6 +10,15 @@ const db = () => supabaseAdmin || supabaseAnon;
 
 const BAB_LIST = ['bab1', 'bab2', 'bab3', 'bab4', 'bab5'];
 
+export const OUTLINE: Record<string, { bab: string; subs: string[] }> = {
+  bab1: { bab: 'Bab I Pendahuluan', subs: ['1.1 Latar Belakang', '1.2 Identifikasi Masalah', '1.3 Rumusan Masalah', '1.4 Tujuan Penelitian', '1.5 Manfaat Penelitian', '1.6 Batasan Masalah', '1.7 Sistematika Penulisan'] },
+  bab2: { bab: 'Bab II Tinjauan Pustaka', subs: ['2.1 Landasan Teori', '2.2 Kerangka Teori', '2.3 Hubungan Antar Variabel', '2.4 Penelitian Terdahulu', '2.5 Kerangka Berpikir', '2.6 Hipotesis'] },
+  bab3: { bab: 'Bab III Metodologi', subs: ['3.1 Jenis & Desain Penelitian', '3.2 Populasi & Sampel', '3.3 Definisi Operasional', '3.4 Teknik Pengumpulan Data', '3.5 Teknik Analisis Data', '3.6 Jadwal Penelitian'] },
+  bab4: { bab: 'Bab IV Hasil Penelitian dan Pembahasan', subs: ['4.1 Gambaran Umum Objek Penelitian', '4.2 Hasil Penelitian', '4.3 Pembahasan', '4.4 Implikasi'] },
+  bab5: { bab: 'Bab V Penutup', subs: ['5.1 Simpulan', '5.2 Saran'] },
+  lampiran: { bab: 'Lampiran', subs: ['6.1 Kisi-Kisi Penelitian', '6.2 Pernyataan Kuesioner'] },
+};
+
 // OpenAlex gratis (tanpa key): abstrak + bahasa + venue. Dipakai /referensi.
 export async function openalexTop(query: string, rows = 10, since?: number | null, lang?: string | null, page = 1): Promise<{ items: { doi: string; title: string; authors: string; year: string; url: string; venue: string; abstract: string }[]; total: number }> {
   try {
@@ -163,6 +172,41 @@ router.post('/:id/generate-artikel', requireAuthOrKey, async (req: AuthRequest, 
     );
     await db().from('projects').update({ content: { ...(p.content || {}), artikel: text }, updated_at: new Date().toISOString() }).eq('id', id);
     res.json({ text, refs });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.get('/meta/outline', async (_req, res) => res.json({ outline: OUTLINE }));
+
+// Generate per SUB-BAB. Bayar sekali per bab: sub-bab berikutnya di bab yang sama gratis.
+router.post('/:id/generate-subbab', requireAuthOrKey, async (req: AuthRequest, res) => {
+  try {
+    const id = String(req.params.id);
+    const { bab, sub } = req.body || {};
+    if (!OUTLINE[bab]) return res.status(400).json({ error: 'bab tidak dikenal' });
+    if (!sub || String(sub).trim().length < 2) return res.status(400).json({ error: 'sub wajib diisi' });
+    const { data: p, error } = await db().from('projects').select('*').eq('id', id).eq('user_id', req.userId!).single();
+    if (error || !p) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
+    const d = db();
+    const key = `${bab}:${sub}`;
+    if ((p.content || {})[key]) return res.json({ text: p.content[key], cached: true, cost: 0 });
+    const { data: paid } = await d.from('credit_ledger').select('id').eq('user_id', req.userId!).eq('ref', `proyek:${id}:${bab}`).limit(1);
+    let cost = 0;
+    if ((!paid || !paid.length) && !(p.content || {})[bab]) {
+      try {
+        const r = await consumeCredits(req.userId!, 'bab', `proyek:${id}:${bab}`);
+        cost = r.cost;
+      } catch (e: any) {
+        if (e.code === 'INSUFFICIENT_CREDITS') return res.status(402).json({ error: e.message, remaining: e.remaining });
+        throw e;
+      }
+    }
+    const refs = await crossrefTop(`${p.judul} ${sub}`, 5, p.min_year);
+    const text = await generateContent(
+      `Susun sub-bab "${sub}" dari ${(OUTLINE[bab] || {}).bab || bab} untuk karya berikut. Judul: ${p.judul}. Metode: ${p.metode}. Bahasa: ${p.language || 'Indonesia'}. Gaya sitasi: ${p.citation_style || 'APA 7th'}.\n${refBlock(refs)}\nTulis 300-600 kata akademik dengan bodynote bila memakai teori. Jangan mengarang DOI.`
+    );
+    const content = { ...(p.content || {}), [key]: text };
+    await d.from('projects').update({ content, updated_at: new Date().toISOString() }).eq('id', id);
+    res.json({ text, cost });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 

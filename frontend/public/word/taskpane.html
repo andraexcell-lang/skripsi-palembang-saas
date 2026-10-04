@@ -7,81 +7,223 @@
 <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
 <style>
   body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 12px; color: #0f172a; font-size: 13px; }
-  h3 { margin: 12px 0 6px; font-size: 13px; }
+  h3 { margin: 12px 0 6px; font-size: 14px; }
+  .bab { font-weight: bold; margin: 10px 0 4px; font-size: 13px; }
+  .sub { display: flex; align-items: center; gap: 6px; margin: 3px 0; font-size: 12px; }
+  .sub span { flex: 1; }
   input, select, textarea, button { width: 100%; box-sizing: border-box; margin: 4px 0; padding: 8px; font-size: 13px; border-radius: 6px; border: 1px solid #cbd5e1; }
   button { background: #0066FF; color: #fff; border: none; font-weight: bold; cursor: pointer; }
   button:disabled { opacity: .5; }
   button.secondary { background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; }
+  button.mini { width: auto; padding: 3px 10px; font-size: 11px; margin: 0; }
+  button.link { background: none; border: none; color: #0066FF; width: auto; padding: 2px 0; font-size: 12px; text-align: left; }
   #msg { white-space: pre-wrap; font-size: 12px; color: #b91c1c; margin: 6px 0; }
   #bal { font-weight: bold; color: #0066FF; }
+  .row2 { display: flex; gap: 6px; }
+  .row2 > * { flex: 1; }
+  .muted { color: #64748b; font-size: 11px; }
+  hr { border: none; border-top: 1px solid #e2e8f0; margin: 10px 0; }
 </style>
 </head>
 <body>
-  <h3>Koneksi</h3>
-  <input id="api" placeholder="Backend URL" value="https://skripsi-palembang-saas-production.up.railway.app">
-  <input id="key" placeholder="API key (skp_...) — buat di Pengaturan > Kunci API" type="password">
+<div id="view-login">
+  <h3>Skripsi Palembang</h3>
+  <input id="api" value="https://skripsi-palembang-saas-production.up.railway.app">
+  <input id="key" type="password" placeholder="API key (skp_...) — buat di Pengaturan > Kunci API">
   <button id="save">Sambungkan</button>
-  <div>Saldo: <span id="bal">—</span></div>
-  <h3>Generate Bab</h3>
-  <select id="proj"><option value="">— pilih proyek —</option></select>
-  <select id="bab">
-    <option value="bab1">Bab I: Pendahuluan</option>
-    <option value="bab2">Bab II: Tinjauan Pustaka</option>
-    <option value="bab3">Bab III: Metodologi</option>
-    <option value="bab4">Bab IV: Hasil &amp; Pembahasan</option>
-    <option value="bab5">Bab V: Penutup</option>
-  </select>
-  <button id="gen">Generate &amp; Sisipkan ke Dokumen</button>
+  <div id="msg"></div>
+</div>
+<div id="view-main" style="display:none">
+  <h3>Skripsi Palembang</h3>
+  <div>Saldo: <span id="bal">—</span> · <button id="out" class="link">Putuskan perangkat ini</button></div>
+  <label class="muted">Proyek</label>
+  <select id="proj"></select>
+  <button id="newproj" class="link">+ Proyek baru</button>
+  <div id="form-new" style="display:none">
+    <input id="f-judul" placeholder="Judul lengkap skripsi/tesis...">
+    <div class="row2">
+      <select id="f-jenis"><option value="skripsi">Skripsi (S1)</option><option value="tesis">Tesis (S2)</option><option value="disertasi">Disertasi (S3)</option></select>
+      <select id="f-metode"><option>Kualitatif</option><option>Kuantitatif</option><option>Mixed Method</option><option>Studi Pustaka</option></select>
+    </div>
+    <input id="f-nama" placeholder="Nama penulis">
+    <div class="row2"><input id="f-nim" placeholder="NIM"><input id="f-kampus" placeholder="Kampus"></div>
+    <div class="row2"><input id="f-jurusan" placeholder="Jurusan/Prodi"><input id="f-fakultas" placeholder="Fakultas"></div>
+    <div class="row2">
+      <select id="f-gaya"><option>APA 7th</option><option>Harvard</option><option>IEEE</option><option>Vancouver</option><option>MLA 9th</option></select>
+      <select id="f-bahasa"><option>Indonesia</option><option>Inggris (English)</option></select>
+    </div>
+    <button id="create">Buat proyek</button>
+  </div>
+  <hr>
+  <div id="outline"></div>
+  <hr>
+  <h3>Sub-bab lain</h3>
+  <p class="muted">Ketik judul bagian yang ingin dibuat, taruh kursor di dokumen, lalu Generate.</p>
+  <input id="custom-sub" placeholder="mis. Analisis SWOT">
+  <button id="gen-custom" class="secondary">Generate</button>
+  <hr>
+  <button id="cover">Bangun Cover + Daftar Isi + Daftar Tabel</button>
+  <p class="muted">Disisipkan di awal dokumen. Nomor halaman &amp; daftar dihitung otomatis oleh Word.</p>
+  <div class="row2">
+    <button id="pg-arab" class="secondary">Angka 1, 2, 3</button>
+    <button id="pg-rom" class="secondary">Romawi i, ii, iii</button>
+  </div>
+  <p class="muted">Dipasang di bagian tempat kursor berada.</p>
+  <hr>
   <h3>Parafrase teks terpilih</h3>
   <button id="par" class="secondary">Parafrase Seleksi &amp; Ganti</button>
-  <div id="msg"></div>
+  <div id="msg2"></div>
+</div>
 <script>
 (function () {
   const $ = (id) => document.getElementById(id);
   const api = () => ($('api').value || '').replace(/\/$/, '');
   const key = () => $('key').value.trim();
   const msg = (t) => { $('msg').textContent = t; };
+  const msg2 = (t) => { $('msg2').textContent = t; };
+  let projects = [];
   try {
     $('api').value = localStorage.getItem('spw-api') || $('api').value;
     $('key').value = localStorage.getItem('spw-key') || '';
   } catch (e) {}
-  async function headers(extra) {
-    return Object.assign({ 'Content-Type': 'application/json', 'X-API-Key': key() }, extra || {});
+  const H = () => ({ 'Content-Type': 'application/json', 'X-API-Key': key() });
+  async function call(path, body) {
+    const r = await fetch(api() + path, { method: body ? 'POST' : 'GET', headers: H(), body: body ? JSON.stringify(body) : undefined });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+    return j;
+  }
+  async function refresh() {
+    const b = await call('/api/credits/balance');
+    $('bal').textContent = b.credits + ' kredit (' + b.plan + ')';
+    const p = await call('/api/projects');
+    projects = p.items || [];
+    $('proj').innerHTML = projects.map((x) => '<option value="' + x.id + '">' + (x.judul || '').slice(0, 55) + '</option>').join('');
+    renderOutline();
   }
   $('save').onclick = async () => {
     try {
       localStorage.setItem('spw-api', $('api').value);
       localStorage.setItem('spw-key', key());
-      const r = await fetch(api() + '/api/credits/balance', { headers: await headers() });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error || 'Gagal tersambung');
-      $('bal').textContent = j.credits + ' kredit (' + j.plan + ')';
-      const p = await fetch(api() + '/api/projects', { headers: await headers() });
-      const pj = await p.json();
-      $('proj').innerHTML = '<option value="">— pilih proyek —</option>' +
-        (pj.items || []).map((x) => '<option value="' + x.id + '">' + x.judul.slice(0, 60) + '</option>').join('');
+      await refresh();
+      $('view-login').style.display = 'none';
+      $('view-main').style.display = 'block';
       msg('');
     } catch (e) { msg('Error: ' + e.message); }
   };
-  $('gen').onclick = async () => {
-    if (!$('proj').value) return msg('Pilih proyek dulu.');
-    msg('Menggenerate... (10 kredit)');
+  $('out').onclick = () => {
+    try { localStorage.removeItem('spw-key'); } catch (e) {}
+    $('key').value = '';
+    $('view-main').style.display = 'none';
+    $('view-login').style.display = 'block';
+  };
+  $('newproj').onclick = () => {
+    const f = $('form-new');
+    f.style.display = f.style.display === 'none' ? 'block' : 'none';
+  };
+  $('create').onclick = async () => {
     try {
-      const r = await fetch(api() + '/api/projects/' + $('proj').value + '/generate-bab', {
-        method: 'POST', headers: await headers(), body: JSON.stringify({ bab: $('bab').value })
+      const j = await call('/api/projects', {
+        judul: $('f-judul').value, jenis: $('f-jenis').value, metode: $('f-metode').value,
+        identitas: { nama: $('f-nama').value, nim: $('f-nim').value, kampus: $('f-kampus').value, jurusan: $('f-jurusan').value, fakultas: $('f-fakultas').value },
+        citation_style: $('f-gaya').value, language: $('f-bahasa').value
       });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error || 'Gagal generate');
+      $('form-new').style.display = 'none';
+      await refresh();
+      $('proj').value = j.item.id;
+      renderOutline();
+    } catch (e) { msg2('Error: ' + e.message); }
+  };
+  const BABS = ['bab1', 'bab2', 'bab3', 'bab4', 'bab5', 'lampiran'];
+  let OUTLINE = null;
+  async function renderOutline() {
+    const box = $('outline');
+    const p = projects.find((x) => x.id === $('proj').value);
+    if (!p) { box.innerHTML = '<p class="muted">Pilih proyek untuk melihat outline.</p>'; return; }
+    if (!OUTLINE) {
+      try {
+        const o = await call('/api/projects/meta/outline');
+        OUTLINE = o.outline;
+      } catch (e) { box.innerHTML = '<p class="muted">Gagal memuat outline.</p>'; return; }
+    }
+    box.innerHTML = BABS.map((b) =>
+      '<div class="bab">' + (OUTLINE[b] ? OUTLINE[b].bab : b) + '</div>' +
+      (OUTLINE[b] ? OUTLINE[b].subs.map((s) =>
+        '<div class="sub"><span>' + s + '</span><button class="mini" data-bab="' + b + '" data-sub="' + s.replace(/"/g, '') + '">Generate</button></div>'
+      ).join('') : '')
+    ).join('');
+    box.querySelectorAll('button[data-sub]').forEach((btn) => {
+      btn.onclick = () => genSub(btn.getAttribute('data-bab'), btn.getAttribute('data-sub'), btn);
+    });
+  }
+  $('proj').onchange = renderOutline;
+  async function insertEnd(text) {
+    await Word.run(async (ctx) => {
+      ctx.document.body.insertParagraph(text.slice(0, 15000), Word.InsertLocation.end);
+      await ctx.sync();
+    });
+  }
+  async function genSub(bab, sub, btn) {
+    const pid = $('proj').value;
+    if (!pid) return msg2('Pilih proyek dulu.');
+    if (btn) btn.disabled = true;
+    msg2('Menggenerate ' + sub + '...');
+    try {
+      const j = await call('/api/projects/' + pid + '/generate-subbab', { bab, sub });
+      await insertEnd(sub + '\n\n' + j.text);
+      msg2(sub + ' selesai' + (j.cost ? '' : ' (gratis — bab sudah dibayar).'));
+      refresh();
+    } catch (e) { msg2('Error: ' + e.message); }
+    if (btn) btn.disabled = false;
+  }
+  $('gen-custom').onclick = async () => {
+    const s = $('custom-sub').value.trim();
+    if (!s) return msg2('Ketik judul sub-bab dulu.');
+    genSub('bab1', s, $('gen-custom'));
+  };
+  $('cover').onclick = async () => {
+    const p = projects.find((x) => x.id === $('proj').value);
+    if (!p) return msg2('Pilih proyek dulu.');
+    const idt = p.identitas || {};
+    const cov = [p.judul, '', idt.nama || '', 'NIM: ' + (idt.nim || ''), [idt.kampus, idt.jurusan, idt.fakultas].filter(Boolean).join(' — ')].join('\n');
+    try {
       await Word.run(async (ctx) => {
-        ctx.document.body.insertParagraph(j.text.slice(0, 15000), Word.InsertLocation.end);
+        ctx.document.body.insertParagraph(cov, Word.InsertLocation.start);
         await ctx.sync();
       });
-      msg('Berhasil disisipkan.');
-      $('save').click();
-    } catch (e) { msg('Error: ' + e.message); }
+      const toc = '<w:sdt><w:sdtPr><w:docPartObj><w:docPartGallery w:val="Table of Contents"/><w:docPartUnique/></w:docPartObj></w:sdtPr><w:sdtContent><w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r></w:p><w:p><w:r><w:instrText xml:space="preserve"> TOC \\o "1-3" \\h \\z \\u </w:instrText></w:r></w:p><w:p><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p></w:sdtContent></w:sdt>';
+      await Word.run(async (ctx) => {
+        ctx.document.body.insertParagraph('Daftar Isi', Word.InsertLocation.end);
+        await ctx.sync();
+      });
+      try {
+        await Word.run(async (ctx) => {
+          const r = ctx.document.body.paragraphs.getLast();
+          r.insertOoxml(toc, Word.InsertLocation.after);
+          await ctx.sync();
+        });
+      } catch (e) { /* TOC field tidak didukung di platform ini */ }
+      msg2('Cover + Daftar Isi disisipkan. Klik kanan Daftar Isi > Update Field di Word desktop.');
+    } catch (e) { msg2('Error: ' + e.message); }
   };
+  async function pageNum(fmt) {
+    const f = fmt === 'rom' ? 'PAGE \\* ROMAN \\* MERGEFORMAT' : 'PAGE \\* MERGEFORMAT';
+    const ooxml = '<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> ' + f + ' </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>1</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>';
+    try {
+      await Word.run(async (ctx) => {
+        const sec = ctx.document.sections.getFirst();
+        const foot = sec.getFooter('primary');
+        foot.clear();
+        foot.insertOoxml(ooxml, Word.InsertLocation.start);
+        await ctx.sync();
+      });
+      msg2('Nomor halaman dipasang.');
+    } catch (e) { msg2('Error: ' + e.message); }
+  }
+  $('pg-arab').onclick = () => pageNum('arab');
+  $('pg-rom').onclick = () => pageNum('rom');
   $('par').onclick = async () => {
-    msg('Memarafrase seleksi... (1 kredit)');
+    msg2('Memarafrase seleksi... (1 kredit)');
     try {
       const sel = await Word.run(async (ctx) => {
         const range = ctx.document.getSelection();
@@ -89,20 +231,15 @@
         await ctx.sync();
         return range.text;
       });
-      if (!sel || !sel.trim()) return msg('Blok dulu teks di dokumen.');
-      const r = await fetch(api() + '/api/ai/generate', {
-        method: 'POST', headers: await headers(),
-        body: JSON.stringify({ prompt: 'Parafrase akademik formal (Indonesia), pertahankan makna:\n\n' + sel.slice(0, 4000), feature: 'parafrase' })
-      });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error || 'Gagal parafrase');
+      if (!sel || !sel.trim()) return msg2('Blok dulu teks di dokumen.');
+      const j = await call('/api/ai/generate', { prompt: 'Parafrase akademik formal (Indonesia), pertahankan makna:\n\n' + sel.slice(0, 4000), feature: 'parafrase' });
       await Word.run(async (ctx) => {
         ctx.document.getSelection().insertText(j.result.slice(0, 15000), Word.InsertLocation.replace);
         await ctx.sync();
       });
-      msg('Parafrase selesai.');
-      $('save').click();
-    } catch (e) { msg('Error: ' + e.message); }
+      msg2('Parafrase selesai.');
+      refresh();
+    } catch (e) { msg2('Error: ' + e.message); }
   };
   Office.onReady(() => {});
 })();
