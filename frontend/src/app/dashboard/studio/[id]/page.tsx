@@ -51,7 +51,6 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
       return <p key={i} className="text-justify indent-8 mb-3 leading-relaxed">{renderSitasi(t, `l${i}-`)}</p>;
     });
   }
-  const [abstrakLoading, setAbstrakLoading] = useState(false);
   const [showDisc, setShowDisc] = useState(false);
 
   useEffect(() => {
@@ -102,18 +101,18 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
     );
   }
 
-  function renderSitasi(body: string) {
+  function renderSitasi(body: string, prefix = '') {
     const parts = body.split(/(\([A-ZÀ-Ž][^()]{1,80}?,\s?\d{4}[a-z]?\))/g);
     return parts.map((seg, i) => {
       if (i % 2 === 1) {
         const ri = findRef(seg);
         return (
-          <a key={i} href={ri >= 0 ? `#${refId(refs[ri], ri)}` : '#dapus'} title={ri >= 0 ? `${refs[ri].title} — klik untuk verifikasi` : 'Verifikasi di Daftar Pustaka'} className="text-brand-primary underline decoration-dotted font-semibold">
+          <a key={`${prefix}${i}`} href={ri >= 0 ? `#${refId(refs[ri], ri)}` : '#dapus'} title={ri >= 0 ? `${refs[ri].title} — klik untuk verifikasi` : 'Verifikasi di Daftar Pustaka'} className="text-brand-primary underline decoration-dotted font-semibold">
             {seg}
           </a>
         );
       }
-      return <span key={i}>{seg}</span>;
+      return <span key={`${prefix}${i}`}>{seg}</span>;
     });
   }
 
@@ -221,9 +220,15 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
             </select>
           </div>
         )}
+        <div className="flex gap-3 items-center flex-wrap">
+          <select value={nomor} onChange={(e) => setNomor(e.target.value)} className="bg-bg-surface border border-border-strong rounded-lg p-2.5 text-sm text-text-primary" title="Format penomoran tampilan">
+            <option value="1.1">Nomor 1.1 / 1.1.1</option>
+            <option value="A">Nomor A. / 1. / a.</option>
+          </select>
+        </div>
         <div className="flex gap-3 flex-wrap">
-          <button onClick={generate} disabled={loading} className="bg-brand-primary text-white px-5 py-2.5 rounded-lg text-sm font-bold disabled:opacity-50">
-            {loading ? 'Menggenerate...' : `Generate ${BABS.find((b) => b.id === active)?.label}`}
+          <button onClick={() => generate(!!text)} disabled={loading} className="bg-brand-primary text-white px-5 py-2.5 rounded-lg text-sm font-bold disabled:opacity-50">
+            {loading ? 'Menggenerate...' : text ? `Generate Ulang ${BABS.find((b) => b.id === active)?.label}` : `Generate ${BABS.find((b) => b.id === active)?.label}`}
           </button>
           {text && (
             <button onClick={downloadWord} className="border border-border-strong bg-bg-surface px-5 py-2.5 rounded-lg text-sm font-bold text-text-primary hover:bg-bg-surface-hover">
@@ -268,8 +273,22 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
             ))}
           </div>
         )}
-        {text ? <div id="dapus" className="bg-bg-surface border border-border-subtle rounded-xl p-6 text-sm text-text-primary whitespace-pre-wrap scroll-mt-24">{renderSitasi(text)}</div>
+        {proyek?.metode === 'Kuantitatif' && active === 'bab2' && text && !/hipotesis/i.test(text) && (
+          <div className="bg-amber-50 dark:bg-amber-400/10 border border-amber-300 dark:border-amber-400/40 rounded-lg p-4 text-xs text-amber-900 dark:text-amber-200">
+            <strong>Penelitianmu belum punya Hipotesis.</strong> Sub-bab Hipotesis sudah ada di kerangka tetapi belum ditulis. Generate bab ini supaya lengkap — penguji hampir selalu menanyakannya pada penelitian kuantitatif.
+          </div>
+        )}
+        {text ? <div id="dapus" className="bg-white dark:bg-bg-surface text-slate-900 dark:text-text-primary border border-border-subtle rounded-xl p-8 text-sm scroll-mt-24 shadow-sm" style={{ fontFamily: "'Times New Roman', Georgia, serif" }}>{renderDoc(text)}</div>
           : <p className="text-sm text-text-muted">Belum ada isi untuk bab ini. Klik generate (10 kredit).</p>}
+        {showDisc && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-bg-surface border border-border-subtle rounded-2xl max-w-md w-full p-6 text-center space-y-3">
+              <h2 className="font-bold text-text-primary">⚠️ Perhatian</h2>
+              <p className="text-sm text-text-secondary">Hasil ini adalah <strong>DRAF AWAL</strong> AI. Wajib didalami, dikritisi, diverifikasi fakta/data/referensinya, dan direvisi menyeluruh — tanggung jawab karya akhir ada pada Anda (Permendiknas No. 17/2010). <Link href="/dashboard/tutorial" className="text-brand-primary underline">Selengkapnya</Link></p>
+              <button onClick={closeDisc} className="bg-brand-primary text-white px-6 py-2.5 rounded-lg text-sm font-bold">Saya mengerti</button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
