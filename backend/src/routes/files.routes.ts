@@ -3,7 +3,7 @@ import multer from 'multer';
 import * as XLSX from 'xlsx';
 import { AuthRequest, requireAuth } from '../middleware/auth';
 import { requireAuthOrKey } from '../middleware/apiKey';
-import { consumeCredits, addCredits } from '../services/credits.service';
+import { consumeCredits, addCredits, FEATURE_COSTS } from '../services/credits.service';
 import { generateContent } from '../services/ai.service';
 import { crossrefTop } from './projects.routes';
 
@@ -100,10 +100,10 @@ router.post('/rapihkan/terapkan', requireAuthOrKey, upload.single('file'), async
     const db = (await import('../config/supabase')).supabaseAdmin || (await import('../config/supabase')).supabaseAnon;
     const dayAgo = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
     const { data: prev } = await db.from('credit_ledger').select('id').eq('user_id', (req as any).userId!).eq('ref', `rapihkan:${fhash}`).gte('created_at', dayAgo).limit(1);
-    let tarif = 1;
+    let tarif = FEATURE_COSTS.rapihkan ?? 1;
     if (!prev || !prev.length) {
       try {
-        await consumeCredits((req as any).userId!, 'rapihkan', `rapihkan:${fhash}`);
+        tarif = (await consumeCredits((req as any).userId!, 'rapihkan', `rapihkan:${fhash}`)).cost;
       } catch (e: any) {
         if (e.code === 'INSUFFICIENT_CREDITS') return res.status(402).json({ error: e.message, remaining: e.remaining });
         throw e;
@@ -120,7 +120,7 @@ router.post('/rapihkan/terapkan', requireAuthOrKey, upload.single('file'), async
     };
     const mammoth = await import('mammoth');
     const cheerio = await import('cheerio');
-    const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, PageNumberElement, Footer, TableOfContents } = await import('docx');
+    const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, PageNumber, NumberFormat, Footer, TableOfContents } = await import('docx');
     const { value: html } = await (mammoth as any).convertToHtml({ buffer: req.file.buffer });
     const $ = (cheerio as any).load(html);
     const TW = 567;
@@ -128,6 +128,8 @@ router.post('/rapihkan/terapkan', requireAuthOrKey, upload.single('file'), async
     const ROM = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
     let babNo = 0;
     let inDapus = false;
+    let firstBabIdx = -1;
+    const splitRomawi = S.nomorHalaman === 'romawi-arab';
     const body: any[] = [];
     let diubah = 0, ditandai = 0;
     const norm = (el: any) => $(el).text().replace(/\s+/g, ' ').trim();
@@ -155,10 +157,12 @@ router.post('/rapihkan/terapkan', requireAuthOrKey, upload.single('file'), async
       if (/^DAFTAR PUSTAKA$/i.test(text)) inDapus = true;
       else if (lvl !== null && lvl !== undefined) inDapus = false;
       if (lvl === 1) {
+        if (babNo === 0) firstBabIdx = body.length;
         babNo++;
         let title = text.replace(/^(BAB\s+[IVX0-9]+)\b\s*[:.-]?\s*/i, '').trim() || text;
         const label = S.nomorBab === 'arab' ? `BAB ${babNo}` : `BAB ${ROM[babNo - 1] || babNo}`;
-        body.push(new Paragraph({ heading: HeadingLevel.HEADING_1, ...(S.babHalamanBaru ? { pageBreakBefore: true } : {}), children: [new TextRun({ text: `${label} ${title}`.trim(), ...F(S.ukuranPt + 2), bold: true })] }));
+        const mulaiBagian = splitRomawi && firstBabIdx === body.length;
+        body.push(new Paragraph({ heading: HeadingLevel.HEADING_1, ...(S.babHalamanBaru && !mulaiBagian ? { pageBreakBefore: true } : {}), children: [new TextRun({ text: `${label} ${title}`.trim(), ...F(S.ukuranPt + 2), bold: true })] }));
         ditandai++;
       } else if (lvl === 2 || lvl === 3) {
         body.push(new Paragraph({ heading: lvl === 2 ? HeadingLevel.HEADING_2 : HeadingLevel.HEADING_3, children: [new TextRun({ text, ...F(S.ukuranPt), bold: true })] }));
@@ -174,25 +178,30 @@ router.post('/rapihkan/terapkan', requireAuthOrKey, upload.single('file'), async
         }));
       }
     });
-    const children: any[] = [];
+    const pembuka: any[] = [];
     if (S.daftarIsi !== 'mati') {
-      children.push(new Paragraph({ heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'DAFTAR ISI', ...F(S.ukuranPt + 2), bold: true })] }));
-      children.push(new TableOfContents('Daftar Isi', { hyperlink: true, headingStyleRange: S.daftarIsi === '2' ? '1-2' : '1-3' }));
+      pembuka.push(new Paragraph({ heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'DAFTAR ISI', ...F(S.ukuranPt + 2), bold: true })] }));
+      pembuka.push(new TableOfContents('Daftar Isi', { hyperlink: true, headingStyleRange: S.daftarIsi === '2' ? '1-2' : '1-3' }));
     }
-    children.push(...body);
-    let footer: any = undefined;
-    if (S.nomorHalaman !== 'mati') {
-      footer = new Footer({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new PageNumberElement()] })] });
+    // Nomor halaman: PAGE field asli (PageNumberElement lama menghasilkan <w:pgNum/> yang bikin Word gagal buka)
+    const mkFooter = () => (S.nomorHalaman === 'mati'
+      ? undefined
+      : { default: new Footer({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ children: [PageNumber.CURRENT] })] })] }) });
+    const page = { size: { width: 11906, height: 16838 }, margin: { top: Math.round(S.marginAtasCm * TW), left: Math.round(S.marginKiriCm * TW), bottom: Math.round(S.marginBawahCm * TW), right: Math.round(S.marginKananCm * TW) } };
+    const sections: any[] = [];
+    if (splitRomawi && firstBabIdx >= 0) {
+      // Halaman awal romawi (i, ii) lalu mulai Bab I kembali dari 1
+      const sebelumBab = [...pembuka, ...body.slice(0, firstBabIdx)];
+      if (sebelumBab.length) sections.push({ properties: { page: { ...page, pageNumbers: { start: 1, formatType: NumberFormat.UPPER_ROMAN } } }, footers: mkFooter(), children: sebelumBab });
+      sections.push({ properties: { page: { ...page, pageNumbers: { start: 1, formatType: NumberFormat.DECIMAL } } }, footers: mkFooter(), children: body.slice(firstBabIdx) });
+    } else {
+      const fmt = splitRomawi ? { start: 1, formatType: NumberFormat.UPPER_ROMAN }
+        : S.nomorHalaman === 'arab' ? { start: 1, formatType: NumberFormat.DECIMAL } : undefined;
+      sections.push({ properties: { page: { ...page, ...(fmt ? { pageNumbers: fmt } : {}) } }, footers: mkFooter(), children: [...pembuka, ...body] });
     }
-    const doc = new Document({
-      sections: [{
-        properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: Math.round(S.marginAtasCm * TW), left: Math.round(S.marginKiriCm * TW), bottom: Math.round(S.marginBawahCm * TW), right: Math.round(S.marginKananCm * TW) } } },
-        footers: footer ? { default: footer } : undefined,
-        children,
-      }],
-    });
+    const doc = new Document({ sections });
     const buf = await Packer.toBuffer(doc);
-    const ringkasan = { tarif, paragrafDiubah: diubah, judulDitandai: ditandai, bagian: 1, paragrafTabelDilewati: 0, gratis: tarif === 0 };
+    const ringkasan = { tarif, paragrafDiubah: diubah, judulDitandai: ditandai, bagian: sections.length, paragrafTabelDilewati: 0, gratis: tarif === 0 };
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     res.setHeader('Content-Disposition', `attachment; filename="${req.file.originalname.replace(/\.docx$/i, '')} (rapih).docx"`);
     res.setHeader('X-Rapih-Ringkasan', encodeURIComponent(JSON.stringify(ringkasan)));
@@ -213,7 +222,7 @@ router.post('/rapihkan', requireAuthOrKey, upload.single('file'), async (req: Au
     }
     const mammoth = await import('mammoth');
     const cheerio = await import('cheerio');
-    const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, PageNumberElement, Footer, TableOfContents } = await import('docx');
+    const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, PageNumber, Footer, TableOfContents } = await import('docx');
     const { value: html } = await (mammoth as any).convertToHtml({ buffer: req.file.buffer });
     const $ = (cheerio as any).load(html);
     const CM = 567; // twips per cm
@@ -250,7 +259,7 @@ router.post('/rapihkan', requireAuthOrKey, upload.single('file'), async (req: Au
         },
         footers: {
           default: new Footer({
-            children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Halaman ', font: 'Times New Roman', size: 20 }), new PageNumberElement()] })],
+            children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Halaman ', font: 'Times New Roman', size: 20 }), new TextRun({ children: [PageNumber.CURRENT], font: 'Times New Roman', size: 20 })] })],
           }),
         },
         children: [

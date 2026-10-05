@@ -481,7 +481,7 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
     const id = String(req.params.id);
     const { data: pr, error } = await db().from('projects').select('*').eq('id', id).eq('user_id', req.userId!).single();
     if (error || !pr) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
-    const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, PageNumberElement, Footer, TableOfContents, ExternalHyperlink } = await import('docx');
+    const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, PageNumber, NumberFormat, Footer, TableOfContents, ExternalHyperlink } = await import('docx');
     const ident = pr.identitas || {};
     const C: any[] = [];
     const center = (text: string, bold = false, size = 24) =>
@@ -527,7 +527,7 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
       title: String(pr.judul || ''),
       sections: [{
         properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 2268, left: 2268, bottom: 1701, right: 1701 } } },
-        footers: { default: new Footer({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new PageNumberElement()] })] }) },
+        footers: { default: new Footer({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ children: [PageNumber.CURRENT] })] })] }) },
         children: [
           new Paragraph({ heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'DAFTAR ISI', font: 'Times New Roman', size: 28, bold: true })] }),
           new TableOfContents('Daftar Isi', { hyperlink: true, headingStyleRange: '1-2' }),
