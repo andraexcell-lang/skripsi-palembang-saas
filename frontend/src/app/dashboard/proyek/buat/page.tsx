@@ -110,7 +110,11 @@ export default function BuatSkripsiPage() {
         custom_outline: outlineOn ? outline : '', fetch_fenomena: fenomena,
         custom_sources: sources,
       });
-      router.push(`/dashboard/studio/${r.item.id}`);
+      if (jenis === 'artikel') {
+        router.push('/dashboard/artikel-sinta');
+      } else {
+        router.push(`/dashboard/studio/${r.item.id}`);
+      }
     } catch (e: any) { setErr(e.message); }
     setLoading(false);
   }
