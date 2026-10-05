@@ -271,7 +271,6 @@ router.post('/rapihkan/terapkan', requireAuthOrKey, upload.single('file'), async
     $('body').children('h1, h2, h3, p, li, table').each((_: any, el: any) => {
       const tag = String((el as any).tagName || '').toLowerCase();
       if (tag === 'table') {
-        if (!S.sertakanTabel) return;
         paragrafTabel += $(el).find('p').length;
         const tb = buildTable(el);
         if (tb) {
