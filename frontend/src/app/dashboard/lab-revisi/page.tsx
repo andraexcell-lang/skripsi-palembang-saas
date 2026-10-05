@@ -1,8 +1,9 @@
 "use client";
 
-import { aiGenerate } from "@/lib/api";
+import { aiGenerate, apiGet, apiUpload } from "@/lib/api";
+import Link from "next/link";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function LabRevisiPage() {
   const [tab, setTab] = useState("luar");
@@ -10,19 +11,51 @@ export default function LabRevisiPage() {
   const [instruksi, setInstruksi] = useState("");
   const [loading, setLoading] = useState(false);
   const [hasil, setHasil] = useState<string>("");
+  const [proyek, setProyek] = useState<any[]>([]);
+  const [pid, setPid] = useState("");
+  const [babKey, setBabKey] = useState("");
+  const [busy, setBusy] = useState("");
+
+  useEffect(() => {
+    apiGet('/api/projects').then((r) => {
+      setProyek(r.items || []);
+      if (r.items?.[0]) setPid(r.items[0].id);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const p = proyek.find((x) => x.id === pid);
+    const keys = Object.keys(p?.content || {});
+    if (keys.length && !keys.includes(babKey)) setBabKey(keys[0]);
+    if (!keys.length) setBabKey("");
+  }, [pid, proyek]);
 
   const isFormValid = materi.trim().length > 0 && instruksi.trim().length > 0;
 
+  async function uploadFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setBusy('upload');
+    try {
+      const r = await apiUpload('/api/files/extract', f);
+      setMateri(((materi ? materi + "\n\n" : "") + (r.text || "")).slice(0, 10000));
+    } catch (error: any) {
+      setHasil("Error: " + error.message);
+    }
+    setBusy('');
+    e.target.value = '';
+  }
+
   const handleRevisi = async () => {
     if (!isFormValid) return;
-    
+
     setLoading(true);
     setHasil("");
-    
+
     const prompt = `Berperanlah sebagai editor akademik profesional. Saya memiliki draf tulisan berikut:\n\n${materi}\n\nTolong revisi tulisan tersebut berdasarkan instruksi berikut: "${instruksi}".\n\nBerikan hasil revisinya dalam format Markdown yang rapi.`;
 
     try {
-      const data = await aiGenerate(prompt, "bab");
+      const data = await aiGenerate(prompt, "revisi");
       setHasil(data.result);
     } catch (error: any) {
       setHasil("Error: " + error.message + (/kredit kurang/i.test(error.message || "") ? " Buka Billing untuk top-up." : ""));
@@ -31,80 +64,137 @@ export default function LabRevisiPage() {
     }
   };
 
+  async function revisiWeb() {
+    const p = proyek.find((x) => x.id === pid);
+    if (!p || !babKey || !instruksi.trim() || loading) return;
+    setLoading(true); setHasil("");
+    try {
+      const prompt = `Revisi bagian "${babKey}" berikut sesuai instruksi: "${instruksi}". Pertahankan fakta, sitasi, dan struktur. Kembalikan teks revisi utuh.\n\n${String(p.content[babKey]).slice(0, 8000)}`;
+      const data = await aiGenerate(prompt, "revisi");
+      const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const { supabase } = await import('@/lib/supabase');
+      const { data: sess } = await supabase.auth.getSession();
+      let token = sess.session?.access_token || '';
+      if (!token) {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i) || '';
+          if (k.endsWith('-auth-token')) {
+            try { token = JSON.parse(localStorage.getItem(k) || '').access_token || ''; if (token) break; } catch {}
+          }
+        }
+      }
+      await fetch(`${API}/api/projects/${pid}/content`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ key: babKey, text: data.result }),
+      });
+      setProyek(proyek.map((x) => x.id === pid ? { ...x, content: { ...x.content, [babKey]: data.result } } : x));
+      setHasil(data.result + "\n\n(Tersimpan otomatis ke proyek.)");
+    } catch (error: any) {
+      setHasil("Error: " + error.message + (/kredit kurang/i.test(error.message || "") ? " Buka Billing untuk top-up." : ""));
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="flex flex-col h-full bg-bg-base relative">
-      
+
       {/* Top Header */}
       <header className="h-16 flex items-center px-8 border-b border-border-subtle bg-bg-surface sticky top-0 z-20">
         <div className="flex items-center gap-4 w-full">
           <div className="flex items-center gap-2 cursor-pointer ml-auto">
-             <div className="text-xs font-semibold text-accent-red border border-accent-red/20 bg-accent-red/10 px-3 py-1 rounded-full flex items-center gap-1 mr-4">
+             <Link href="/dashboard/kredit" className="text-xs font-semibold text-accent-red border border-accent-red/20 bg-accent-red/10 px-3 py-1 rounded-full flex items-center gap-1 mr-4">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
-                0 kredit
-             </div>
-             <button className="text-text-secondary hover:text-text-primary">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-             </button>
+                Lihat kredit
+             </Link>
           </div>
         </div>
       </header>
 
       {/* Main Content Area */}
       <div className="flex-1 p-8 max-w-4xl mx-auto w-full space-y-6 overflow-y-auto">
-        
+
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-text-primary mb-2">Lab Revisi</h1>
           <p className="text-text-secondary text-sm">
-            Pilih proyek & sub-bab, lalu tulis instruksi revisi. AI akan merevisi otomatis dan file Word-mu langsung ter-update. Skripsi, tesis, disertasi, hingga artikel bisa direvisi di sini.
+            Pilih proyek & sub-bab, lalu tulis instruksi revisi. AI akan merevisi otomatis dan tersimpan ke proyek. Atau revisi file dari luar (1 kredit).
           </p>
         </div>
 
         {/* Tabs */}
         <div className="flex bg-bg-surface border border-border-subtle rounded-lg w-max mb-6">
-           <button 
+           <button
              onClick={() => setTab("web")}
-             className={`flex items-center gap-2 px-5 py-2.5 rounded-l-lg text-sm font-bold border border-transparent ${tab === 'web' ? 'bg-bg-surface-hover text-text-primary border-r-border-subtle' : 'bg-transparent text-text-secondary hover:bg-bg-surface-hover'}`}
+             className={`px-5 py-2.5 rounded-l-lg text-sm font-bold ${tab === 'web' ? 'bg-bg-surface-hover text-text-primary' : 'text-text-secondary'}`}
            >
-             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
              Proyek Web
            </button>
-           <button 
+           <button
              onClick={() => setTab("luar")}
-             className={`flex items-center gap-2 px-5 py-2.5 rounded-r-lg text-sm font-medium border border-transparent ${tab === 'luar' ? 'bg-bg-surface-hover text-text-primary font-bold border-l-border-subtle' : 'bg-transparent text-text-secondary hover:bg-bg-surface-hover'}`}
+             className={`px-5 py-2.5 rounded-r-lg text-sm font-bold ${tab === 'luar' ? 'bg-bg-surface-hover text-text-primary' : 'text-text-secondary'}`}
            >
-             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
              File dari Luar
            </button>
         </div>
 
-        {tab === "web" ? (
-          /* Empty State Box for Web */
-          <div className="bg-bg-surface border border-border-subtle rounded-xl p-16 flex flex-col items-center justify-center text-center">
-             <div className="text-text-muted mb-6">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M10 2v7.31"></path><path d="M14 9.3V1.99"></path><path d="M8.5 2h7"></path><path d="M14 9.3a6.5 6.5 0 1 1-4 0"></path><line x1="5.52" y1="16" x2="18.48" y2="16"></line></svg>
-             </div>
-             <p className="text-text-secondary text-sm max-w-lg mb-8">
-               Belum ada proyek yang bisa direvisi. Buat & generate proyekmu dulu di Studio, atau pakai tab "File dari Luar".
-             </p>
-             <button className="bg-brand-primary hover:bg-brand-primary-hover text-white px-6 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-lg shadow-brand-primary/20">
-               Ke Studio
-             </button>
-          </div>
-        ) : (
-          /* Active State for File Luar */
+        {tab === "web" && (
+          proyek.length === 0 ? (
+            <div className="bg-bg-surface border border-border-subtle rounded-xl p-16 flex flex-col items-center justify-center text-center">
+              <p className="text-text-secondary text-sm max-w-lg mb-8">
+                Belum ada proyek yang bisa direvisi. Buat & generate proyekmu dulu di Studio, atau pakai tab "File dari Luar".
+              </p>
+              <Link href="/dashboard/proyek/buat" className="bg-brand-primary text-white px-6 py-2.5 rounded-lg text-sm font-bold">
+                Buat Proyek
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="bg-bg-surface border border-border-subtle rounded-xl p-6 grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold text-text-primary text-sm mb-2">Proyek</label>
+                  <select value={pid} onChange={(e) => setPid(e.target.value)} className="w-full bg-bg-base border border-border-strong rounded-lg p-3 text-sm text-text-primary">
+                    {proyek.map((x: any) => <option key={x.id} value={x.id}>{x.judul.slice(0, 60)}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-bold text-text-primary text-sm mb-2">Bagian</label>
+                  <select value={babKey} onChange={(e) => setBabKey(e.target.value)} className="w-full bg-bg-base border border-border-strong rounded-lg p-3 text-sm text-text-primary">
+                    {Object.keys((proyek.find((x) => x.id === pid)?.content) || {}).map((k) => <option key={k} value={k}>{k}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="bg-bg-surface border border-border-subtle rounded-xl p-6">
+                <label className="block font-bold text-text-primary text-sm mb-2">Instruksi Revisi</label>
+                <input type="text" value={instruksi} onChange={(e) => setInstruksi(e.target.value)} placeholder="Contoh: buat lebih akademis + tambah sitasi." className="w-full bg-bg-base border border-border-strong rounded-lg p-3 text-sm text-text-primary mb-4" />
+                <div className="flex justify-end">
+                  <button onClick={revisiWeb} disabled={!pid || !babKey || !instruksi.trim() || loading} className="px-6 py-2.5 rounded-lg text-sm font-bold bg-brand-primary text-white disabled:opacity-50">
+                    {loading ? 'Merevisi...' : 'Revisi & Simpan (1 kredit)'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        )}
+
+        {tab === "luar" && (
           <div className="space-y-6">
             <div className="bg-bg-surface border border-border-subtle rounded-xl p-6">
               <label className="block font-bold text-text-primary text-sm mb-2">Teks yang Ingin Direvisi</label>
-              <textarea 
+              <textarea
                 rows={5}
                 value={materi}
                 onChange={(e) => setMateri(e.target.value)}
                 placeholder="Paste paragraf atau bab yang ingin Anda perbaiki di sini..."
-                className="w-full bg-bg-base border border-border-strong rounded-lg p-4 text-text-primary placeholder:text-text-muted focus:border-brand-primary focus:outline-none text-sm mb-4"
+                className="w-full bg-bg-base border border-border-strong rounded-lg p-4 text-text-primary placeholder:text-text-muted focus:border-brand-primary focus:outline-none text-sm mb-3"
               ></textarea>
+              <label className="block text-xs font-bold text-text-primary mb-4">
+                Atau upload file (PDF/DOCX/TXT, maks 15 MB)
+                <input type="file" accept=".pdf,.docx,.txt" onChange={uploadFile} className="block mt-1 text-xs text-text-secondary" />
+                {busy === 'upload' && <span className="text-text-muted"> Membaca file...</span>}
+              </label>
 
               <label className="block font-bold text-text-primary text-sm mb-2">Instruksi Revisi (Dari Dosen/Anda)</label>
-              <input 
+              <input
                 type="text"
                 value={instruksi}
                 onChange={(e) => setInstruksi(e.target.value)}
@@ -113,33 +203,23 @@ export default function LabRevisiPage() {
               />
 
               <div className="flex justify-end pt-2">
-                <button 
+                <button
                   onClick={handleRevisi}
                   disabled={!isFormValid || loading}
-                  className={`px-6 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors shadow-lg ${isFormValid && !loading ? 'bg-brand-primary text-white hover:bg-brand-primary-hover shadow-brand-primary/20' : 'bg-brand-primary/20 text-brand-primary border border-brand-primary/50 opacity-80 cursor-not-allowed'}`}
+                  className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-lg ${isFormValid && !loading ? 'bg-brand-primary text-white hover:bg-brand-primary-hover shadow-brand-primary/20' : 'bg-brand-primary/20 text-brand-primary border border-brand-primary/50 opacity-80 cursor-not-allowed'}`}
                 >
-                  {loading ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                      Merevisi...
-                    </>
-                  ) : (
-                    <>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                      Revisi Sekarang
-                    </>
-                  )}
+                  {loading ? 'Merevisi...' : 'Revisi Sekarang (1 kredit)'}
                 </button>
               </div>
             </div>
+          </div>
+        )}
 
-            {/* Hasil Area */}
-            {hasil && (
-              <div className="bg-bg-surface-hover border border-brand-primary/20 rounded-xl p-6 text-sm text-text-primary shadow-sm whitespace-pre-wrap leading-relaxed mt-6">
-                <h3 className="font-bold text-lg mb-4 text-brand-primary border-b border-border-subtle pb-2">Hasil Revisi AI:</h3>
-                {hasil}
-              </div>
-            )}
+        {/* Hasil Area */}
+        {hasil && (
+          <div className="bg-bg-surface-hover border border-brand-primary/20 rounded-xl p-6 text-sm text-text-primary shadow-sm whitespace-pre-wrap leading-relaxed">
+            <h3 className="font-bold text-lg mb-4 text-brand-primary border-b border-border-subtle pb-2">Hasil Revisi AI:</h3>
+            {hasil}
           </div>
         )}
 

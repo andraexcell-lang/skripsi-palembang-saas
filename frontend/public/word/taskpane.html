@@ -56,6 +56,7 @@
       <select id="f-jenis"><option value="skripsi">Skripsi (S1)</option><option value="tesis">Tesis (S2)</option><option value="disertasi">Disertasi (S3)</option></select>
       <select id="f-metode"><option>Kualitatif</option><option>Kuantitatif</option><option>Mixed Method</option><option>Studi Pustaka</option></select>
     </div>
+    <input id="f-logo" type="file" accept="image/*">
     <input id="f-nama" placeholder="Nama penulis">
     <div class="row2"><input id="f-nim" placeholder="NIM"><input id="f-kampus" placeholder="Kampus"></div>
     <div class="row2"><input id="f-jurusan" placeholder="Jurusan/Prodi"><input id="f-fakultas" placeholder="Fakultas"></div>
@@ -174,8 +175,21 @@
   };
   $('create').onclick = async () => {
     try {
+      let logoData = '';
+      try {
+        const lf = $('f-logo').files && $('f-logo').files[0];
+        if (lf && lf.size <= 2097152) {
+          logoData = await new Promise((res, rej) => {
+            const rd = new FileReader();
+            rd.onload = () => res(String(rd.result || '').slice(0, 500000));
+            rd.onerror = rej;
+            rd.readAsDataURL(lf);
+          });
+        }
+      } catch (e) {}
       const j = await call('/api/projects', {
         judul: $('f-judul').value, jenis: $('f-jenis').value, metode: $('f-metode').value,
+        logo: logoData,
         identitas: { nama: $('f-nama').value, nim: $('f-nim').value, kampus: $('f-kampus').value, jurusan: $('f-jurusan').value, fakultas: $('f-fakultas').value },
         citation_style: $('f-gaya').value, language: $('f-bahasa').value
       });
@@ -212,7 +226,8 @@
         .map((s) => ({ key: b + '|' + s, label: ganti[b + '|' + s] || s }));
       const extra = (tambah[b] || []).map((s, i) => ({ key: b + '|+|' + i + '|' + s, label: s, custom: true }));
       const rows = base.concat(extra);
-      return '<div class="bab">' + (OUTLINE[b] ? OUTLINE[b].bab : b) + '</div>' +
+      const babTitle = OUTLINE[b] ? OUTLINE[b].bab : b;
+      return '<div class="bab">' + babTitle + ' <button class="mini linkbtn" data-act="heading" data-bab="' + b + '">\u25B6 Judul bab</button></div>' +
         rows.map((r) =>
           '<div class="sub"><span>' + r.label.replace(/</g, '&lt;') + '</span>' +
           '<button class="mini linkbtn" data-act="ren" data-bab="' + b + '" data-key="' + r.key.replace(/"/g, '') + '">\u270E</button>' +
@@ -224,6 +239,15 @@
     box.querySelectorAll('button[data-act]').forEach((btn) => {
       const act = btn.getAttribute('data-act'), b = btn.getAttribute('data-bab'), kk = btn.getAttribute('data-key');
       if (act === 'gen') btn.onclick = () => genSub(b, btn.getAttribute('data-sub'), btn);
+      else if (act === 'heading') btn.onclick = async () => {
+        try {
+          await Word.run(async (ctx) => {
+            const h = ctx.document.body.insertParagraph(babTitle, Word.InsertLocation.end);
+            h.font.bold = true; h.font.size = 14;
+            await ctx.sync();
+          });
+        } catch (e) { msg2('Error: ' + e.message); }
+      };
       else if (act === 'del') btn.onclick = () => {
         const o2 = getOverrides();
         o2.hapus = (o2.hapus || []).concat([kk]);

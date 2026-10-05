@@ -108,9 +108,11 @@ router.post('/', requireAuthOrKey, async (req: AuthRequest, res) => {
     const { judul, jenis = 'skripsi', metode = 'Kualitatif', tahap = 'full', identitas = {},
       citation_style = 'APA 7th', language = 'Indonesia', min_year = null,
       ref_origin = 'semua', ref_scope = 'umum', initial_data = '',
-      custom_outline = '', fetch_fenomena = true, custom_sources = [] } = req.body || {};
+      custom_outline = '', fetch_fenomena = true, custom_sources = [], logo = '' } = req.body || {};
     if (!judul || String(judul).trim().length < 10) return res.status(400).json({ error: 'Judul minimal 10 karakter' });
-    const { data, error } = await db().from('projects').insert({ user_id: req.userId!, judul, jenis, metode, tahap, identitas,
+    const ident = { ...(identitas || {}) };
+    if (logo) ident.logo = String(logo).slice(0, 500000);
+    const { data, error } = await db().from('projects').insert({ user_id: req.userId!, judul, jenis, metode, tahap, identitas: ident,
       citation_style, language, min_year, ref_origin, ref_scope, initial_data, custom_outline, fetch_fenomena,
       custom_sources: Array.isArray(custom_sources) ? custom_sources.slice(0, 10) : [] }).select().single();
     if (error) throw new Error(error.message);
@@ -223,6 +225,21 @@ router.post('/:id/generate-artikel', requireAuthOrKey, async (req: AuthRequest, 
 
 router.get('/meta/outline', async (_req, res) => res.json({ outline: OUTLINE }));
 
+// Simpan/ubah isi konten (dipakai Lab Revisi tab Proyek Web)
+router.patch('/:id/content', requireAuthOrKey, async (req: AuthRequest, res) => {
+  try {
+    const id = String(req.params.id);
+    const { key, text } = req.body || {};
+    if (!key || typeof text !== 'string') return res.status(400).json({ error: 'key dan text wajib' });
+    const { data: p, error } = await db().from('projects').select('content').eq('id', id).eq('user_id', req.userId!).single();
+    if (error || !p) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
+    const content = { ...(p.content || {}), [key]: text.slice(0, 60000) };
+    const { error: e2 } = await db().from('projects').update({ content, updated_at: new Date().toISOString() }).eq('id', id);
+    if (e2) throw new Error(e2.message);
+    res.json({ ok: true });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 // Halaman depan: kata pengantar AI + data identitas (gratis, tanpa potong kredit)
 router.post('/:id/front-matter', requireAuthOrKey, async (req: AuthRequest, res) => {
   try {
@@ -275,8 +292,7 @@ router.post('/:id/generate-subbab', requireAuthOrKey, async (req: AuthRequest, r
 });
 
 // Streaming SSE per sub-bab (kata-per-kata). Kredit sama seperti generate-subbab.
-router.post('/:id/generate-subbab-stream', requireAuthOrKey, async (req: AuthRequest, res) => {
-  try {
+router.post('/:id/generate-subbab-stream', requireAuthOrKey, async (req: AuthRequest, res) => {  try {
     const id = String(req.params.id);
     const { bab, sub } = req.body || {};
     if (!OUTLINE[bab]) return res.status(400).json({ error: 'bab tidak dikenal' });

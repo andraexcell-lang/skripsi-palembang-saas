@@ -19,6 +19,8 @@ export const FEATURE_COSTS: Record<string, number> = {
   transkripsi: 1,
   kualitatif: 1,
   dokumen: 1,
+  revisi: 1,
+  chat: 1,
 };
 
 export async function getBalance(userId: string) {

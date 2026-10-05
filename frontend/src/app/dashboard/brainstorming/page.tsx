@@ -8,18 +8,26 @@ export default function BrainstormingPage() {
   const [topik, setTopik] = useState("");
   const [bidangIlmu, setBidangIlmu] = useState("manajemen");
   const [lokasi, setLokasi] = useState("");
+  const [jenis, setJenis] = useState("Skripsi");
+  const [metode, setMetode] = useState("Belum tahu");
+  const [nx, setNx] = useState("1 variabel");
+  const [extra, setExtra] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasil, setHasil] = useState<string>("");
 
   const isFormValid = topik.trim().length > 0;
 
+  function toggleExtra(v: string) {
+    setExtra(extra.includes(v) ? extra.filter((x) => x !== v) : [...extra, v]);
+  }
+
   const handleGenerate = async () => {
     if (!isFormValid) return;
-    
+
     setLoading(true);
     setHasil("");
-    
-    const prompt = `Berikan saya 10 ide judul skripsi untuk bidang ilmu: ${bidangIlmu}. Topik utama: ${topik}. ${lokasi ? `Lokasi penelitian: ${lokasi}.` : ""} Fokuskan pada metode kualitatif dan kuantitatif. Format output berupa daftar Markdown.`;
+
+    const prompt = `Buatkan 10 judul penelitian ${jenis} bidang ${bidangIlmu}. Topik: ${topik}. ${lokasi ? `Lokasi: ${lokasi}.` : ""} Metode: ${metode}. Struktur variabel: ${nx} bebas (X) + 1 variabel terikat (Y)${extra.length ? ` + sertakan variabel ${extra.join(', ')}` : ''}. Setiap judul: beri skor kelayakan 1-10 + 1 kalimat alasan. Format Markdown bernomor.`;
 
     try {
       const data = await aiGenerate(prompt, "brainstorming");
@@ -86,15 +94,40 @@ export default function BrainstormingPage() {
         </div>
 
         {/* Step 2: Jenis dan Metode */}
-        <div className="bg-bg-surface border border-border-subtle rounded-xl overflow-hidden opacity-70">
+        <div className="bg-bg-surface border border-border-subtle rounded-xl overflow-hidden">
           <div className="bg-bg-surface-hover border-b border-border-subtle p-3 flex flex-col items-center justify-center">
              <div className="w-6 h-6 rounded bg-brand-primary/20 text-brand-primary text-xs font-bold flex items-center justify-center mb-1">2</div>
              <h2 className="font-bold text-text-primary text-sm">Jenis dan metode</h2>
-             <p className="text-[10px] text-text-muted">Untuk demo ini, pengaturan metode dijadikan default.</p>
+             <p className="text-[10px] text-text-muted">Judul terpilih akan diarahkan ke jenis karya ini.</p>
           </div>
-          {/* ... (disederhanakan untuk demo API) ... */}
-          <div className="p-5 text-center text-sm text-text-muted">
-            Opsi ini akan diaktifkan secara dinamis di versi final. Saat ini AI akan menggunakan prompt default kualitatif & kuantitatif.
+          <div className="p-5 grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-bold text-text-primary block mb-1">Jenis karya</label>
+              <select value={jenis} onChange={(e) => setJenis(e.target.value)} className="w-full bg-bg-base border border-border-strong rounded-lg p-2.5 text-sm text-text-primary">
+                {['Skripsi', 'Tesis', 'Disertasi', 'Artikel Sinta', 'Artikel Scopus', 'Review Literatur (SLR)'].map((j) => <option key={j} value={j}>{j}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-text-primary block mb-1">Metode penelitian</label>
+              <select value={metode} onChange={(e) => setMetode(e.target.value)} className="w-full bg-bg-base border border-border-strong rounded-lg p-2.5 text-sm text-text-primary">
+                {['Kualitatif', 'Kuantitatif', 'Kuantitatif (Data Sekunder)', 'Studi Pustaka', 'PTK', 'R&D', 'Mixed Method', 'Hukum Normatif', 'Hukum Empiris', 'Eksperimen/Rekayasa', 'Belum tahu'].map((m) => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-text-primary block mb-1">Jumlah variabel bebas (X)</label>
+              <select value={nx} onChange={(e) => setNx(e.target.value)} className="w-full bg-bg-base border border-border-strong rounded-lg p-2.5 text-sm text-text-primary">
+                {['1 variabel', '2 variabel', '3 variabel', '4 variabel'].map((n) => <option key={n} value={n}>{n}</option>)}
+              </select>
+              <p className="text-[10px] text-text-muted mt-1">+ 1 variabel terikat (Y) di tiap judul.</p>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-text-primary block mb-1">Variabel tambahan (opsional)</label>
+              <div className="flex gap-3 text-sm text-text-primary">
+                {['Mediasi', 'Moderasi', 'Kontrol'].map((v) => (
+                  <label key={v} className="flex items-center gap-1 cursor-pointer"><input type="checkbox" checked={extra.includes(v)} onChange={() => toggleExtra(v)} className="accent-brand-primary" />{v}</label>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -102,8 +135,7 @@ export default function BrainstormingPage() {
         <div className="flex items-center justify-between p-4 bg-bg-base border border-border-subtle rounded-xl">
            <div className="flex items-center gap-2 text-[11px]">
              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-text-muted"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-             <span className="text-text-secondary">Lengkapi topik untuk mulai membuat judul.</span>
-             <span className="text-green-500 font-bold bg-green-500/10 px-2 py-0.5 rounded ml-2">Mode Testing Lokal</span>
+             <span className="text-text-secondary">Gratis — tanpa potong kredit.</span>
            </div>
            <button 
               onClick={handleGenerate}
