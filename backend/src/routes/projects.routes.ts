@@ -330,7 +330,7 @@ router.post('/:id/references/upload', requireAuthOrKey, async (req: AuthRequest,
     const custom = Array.isArray(p.identitas?.refs) ? [...p.identitas.refs] : [];
     const kembar = custom.some((c: any) => String(c.doi || '') === String(ref.doi || '') && String(c.title || '').toLowerCase() === String(ref.title || '').toLowerCase());
     if (kembar) return res.status(409).json({ error: 'Artikel ini sudah ada di Daftar Pustaka proyek.' });
-    if (custom.length >= 30) return res.status(400).json({ error: 'Maksimal 30 artikel unggahan per proyek.' });
+    if (custom.length >= 10) return res.status(400).json({ error: 'Maksimal 10 artikel unggahan per proyek.' });
 
     const entri = {
       doi: String(ref.doi || ''),

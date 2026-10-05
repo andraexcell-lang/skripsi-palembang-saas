@@ -1,7 +1,7 @@
 'use client';
 import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { apiGet, apiPost, apiPostStream, apiUpload, isInsufficientCredits } from '@/lib/api';
+import { apiGet, apiPost, apiPostStream, apiUpload, apiDownloadPptx, isInsufficientCredits } from '@/lib/api';
 
 const BABS = [
   { id: 'bab1', label: 'Bab I: Pendahuluan', gen: 'Bab I: Pendahuluan' },
@@ -26,6 +26,7 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
   const [soalLoading, setSoalLoading] = useState(false);
   const [refs, setRefs] = useState<any[]>([]);
   const [abstrakLoading, setAbstrakLoading] = useState(false);
+  const [pptLoading, setPptLoading] = useState(false);
   const [nomor, setNomor] = useState('1.1');
   const [outline, setOutline] = useState<any>(null);
 
@@ -151,7 +152,7 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
       if (i % 2 === 1) {
         const ri = findRef(seg);
         return (
-          <a key={`${prefix}${i}`} href={ri >= 0 ? `#${refId(refs[ri], ri)}` : '#dapus'} title={ri >= 0 ? `${refs[ri].title} — klik untuk verifikasi` : 'Verifikasi di Daftar Pustaka'} className="text-brand-primary underline decoration-dotted font-semibold">
+          <a key={`${prefix}${i}`} href={ri >= 0 ? `#${refId(refs[ri], ri)}` : '#dapus'} title={ri >= 0 ? 'Lihat bukti kutipan' : 'Verifikasi di Daftar Pustaka'} className="text-brand-primary underline decoration-dotted font-semibold">
             {seg}
           </a>
         );
@@ -296,6 +297,24 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
     } catch (e: any) { setErr(e.message); }
   }
 
+  /* ---------------- PPT dari isi proyek (8 kredit) ---------------- */
+  async function downloadPpt() {
+    if (pptLoading) return;
+    setPptLoading(true); setErr(''); setNeedsTopup(false);
+    try {
+      const c = proyek?.content || {};
+      const materi = ['bab1', 'bab2', 'bab3', 'bab4', 'bab5', 'abstrak', 'lampiran']
+        .map((k) => (c[k] ? `=== ${k.toUpperCase()} ===\n${String(c[k]).slice(0, 1500)}` : ''))
+        .join('\n').slice(0, 8000);
+      if (!materi.trim()) { setErr('Belum ada isi proyek untuk dijadikan slide.'); return; }
+      await apiDownloadPptx(proyek?.tahap === 'proposal' ? 'sempro' : 'hasil', materi, String(proyek?.judul || 'Presentasi'));
+    } catch (e: any) {
+      setErr(e.message);
+      if (isInsufficientCredits(e)) setNeedsTopup(true);
+    }
+    setPptLoading(false);
+  }
+
   const text = active === 'pustaka' ? '' : (proyek?.content?.[active] || '');
   const metaBab = BABS.find((b) => b.id === active);
   const isPustaka = active === 'pustaka';
@@ -314,6 +333,9 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
         <button onClick={() => setActive('pustaka')} className={`text-left px-3 py-2 rounded-lg text-sm ${isPustaka ? 'bg-brand-primary/10 text-brand-primary font-semibold' : 'text-text-secondary hover:text-text-primary hover:bg-bg-surface-hover'}`}>
           Pustaka ({refs.length})
         </button>
+        <Link href="/dashboard/lab-revisi" className="px-3 py-2 rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-bg-surface-hover">
+          Revisi
+        </Link>
       </div>
 
       <div className="flex-1 p-4 lg:p-8 overflow-y-auto max-w-3xl mx-auto w-full space-y-4">
@@ -333,7 +355,7 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
         {active === 'bab2' && (
           <div className="flex items-center gap-2 text-sm">
             <label className="text-text-secondary text-xs font-bold">Studi terdahulu:</label>
-            <select value={studi} onChange={(e) => setStudi(e.target.value)} className="bg-bg-surface border border-border-strong rounded-lg p-2 text-sm text-text-primary" title="Berapa studi yang dibahas. Berlaku saat sub-bab ditulis ulang.">
+            <select value={studi} onChange={(e) => setStudi(e.target.value)} className="bg-bg-surface border border-border-strong rounded-lg p-2 text-sm text-text-primary" title='Berapa studi yang dibahas di "Penelitian Terdahulu". Berlaku saat sub-bab itu ditulis ulang.'>
               <option value="10">Studi terdahulu: 10 (bawaan)</option>
               {['15', '20', '25', '30', '35', '40', '45', '50'].map((n) => <option key={n} value={n}>Studi terdahulu: {n} (1 paragraf/studi)</option>)}
             </select>
@@ -341,7 +363,7 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
         )}
 
         <div className="flex gap-3 items-center flex-wrap">
-          <select value={nomor} onChange={(e) => setNomor(e.target.value)} className="bg-bg-surface border border-border-strong rounded-lg p-2.5 text-sm text-text-primary" title="Format penomoran tampilan">
+          <select value={nomor} onChange={(e) => setNomor(e.target.value)} className="bg-bg-surface border border-border-strong rounded-lg p-2.5 text-sm text-text-primary" title="Format penomoran sub-bab">
             <option value="1.1">Nomor 1.1 / 1.1.1</option>
             <option value="A">Nomor A. / 1. / a.</option>
           </select>
@@ -361,16 +383,16 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
           <button onClick={downloadRis} className={btnUtil} title="Unduh Daftar Pustaka (.ris) — siap impor ke Mendeley/Zotero">
             Unduh RIS
           </button>
-          <button onClick={() => { setShowUpload((v) => !v); }} className={btnUtil} title="Tambahkan artikel PDF milikmu sendiri sebagai referensi (maks 8 MB)">
+          <button onClick={() => { setShowUpload((v) => !v); }} className={btnUtil} title="Tambahkan artikel PDF milikmu sendiri sebagai referensi (maksimal 10)">
             Unggah Artikel
           </button>
           {!isPustaka && (
             <>
-              <button onClick={prediksiSoal} disabled={soalLoading || !text} className={btnUtil} title="Daftar pertanyaan & jawaban sidang">
+              <button onClick={prediksiSoal} disabled={soalLoading || !text} className={btnUtil} title="Daftar pertanyaan & jawaban dalam bentuk teks. Ingin berlatih bicara dengan penguji AI? Buka menu Simulasi Sidang.">
                 {soalLoading ? 'Menyusun...' : 'Prediksi Soal'}
               </button>
               <button onClick={tambahSitasi} disabled={loading || !text} className={btnUtil} title="GRATIS">
-                Tambah Sitasi
+                Tambah Sitasi <span className="rounded-full bg-brand-primary/10 px-2 py-0.5 text-[10px] font-bold text-brand-primary">GRATIS</span>
               </button>
             </>
           )}
@@ -380,9 +402,15 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
           <button onClick={cekSitasi} disabled={sitasiLoading} className={btnUtil} title="Deteksi sitasi palsu/yatim — GRATIS, tanpa kredit">
             {sitasiLoading ? 'Memeriksa...' : 'Cek Sitasi'}
           </button>
-          <button onClick={tinjauHasil} disabled={tinjauLoading} className={btnUtil} title="Catatan revisi: kelebihan, kekurangan & pertanyaan penguji (5 kredit)">
+          <button onClick={tinjauHasil} disabled={tinjauLoading} className={btnUtil} title="Catatan revisi per bab: kelebihan, kekurangan & pertanyaan penguji (5 kredit)">
             {tinjauLoading ? 'Meninjau...' : 'Tinjau Hasil'}
           </button>
+          <button onClick={downloadPpt} disabled={pptLoading} className={btnUtil} title="Buat slide presentasi (.pptx) dari isi proyek ini">
+            {pptLoading ? 'Membuat...' : 'PPT'}
+          </button>
+          <Link href="/dashboard/plagiasi" className={`${btnUtil} inline-block`} title="Cek Plagiasi">
+            Cek Plagiasi
+          </Link>
           <button onClick={sesuaikan} disabled={sesLoading || !proyek?.content?.bab1} className={btnUtil} title="Rapikan tujuan, hipotesis, kerangka konsep & Bab III agar sesuai rumusan masalah terbaru">
             {sesLoading ? 'Menyesuaikan...' : 'Sesuaikan Skripsi'}
           </button>
@@ -503,7 +531,7 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
                 <h3 className="font-bold text-base text-brand-primary">Unggah Artikel Sendiri</h3>
                 <button onClick={() => { setShowUpload(false); setUpMsg(null); }} className="ml-auto text-xs font-semibold text-text-secondary hover:underline">Tutup</button>
               </div>
-              <p className="text-xs text-text-secondary">PDF dari pembimbing atau jurnal berlangganan — maks 8 MB. Metadatanya (penulis, tahun, judul, DOI) dicocokkan ke Crossref lalu masuk Daftar Pustaka proyekmu.</p>
+              <p className="text-xs text-text-secondary">PDF dari pembimbing atau jurnal berlangganan — maks 10. Metadatanya (penulis, tahun, judul, DOI) dicocokkan ke Crossref lalu masuk Daftar Pustaka proyekmu.</p>
               <input
                 type="file"
                 accept=".pdf,.docx"
