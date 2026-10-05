@@ -225,6 +225,15 @@ router.post('/:id/generate-artikel', requireAuthOrKey, async (req: AuthRequest, 
 
 router.get('/meta/outline', async (_req, res) => res.json({ outline: OUTLINE }));
 
+// Referensi proyek (untuk Unduh RIS): Crossref by judul, tanpa AI, tanpa kredit
+router.get('/:id/references', requireAuthOrKey, async (req: AuthRequest, res) => {
+  try {
+    const { data: p, error } = await db().from('projects').select('judul,min_year').eq('id', String(req.params.id)).eq('user_id', req.userId!).single();
+    if (error || !p) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
+    res.json({ items: await crossrefTop(p.judul, 20, p.min_year) });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 // Simpan/ubah isi konten (dipakai Lab Revisi tab Proyek Web)
 router.patch('/:id/content', requireAuthOrKey, async (req: AuthRequest, res) => {
   try {

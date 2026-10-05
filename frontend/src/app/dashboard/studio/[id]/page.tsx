@@ -42,6 +42,21 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
     setLoading(false);
   }
 
+  function downloadRis() {
+    apiGet(`/api/projects/${id}/references`).then((r: any) => {
+      const ris = (r.items || []).map((x: any) => {
+        const aus = String(x.authors || '').split(';').map((a: string) => `AU  - ${a.trim()}`).join('\n');
+        return `TY  - JOUR\n${aus}\nPY  - ${x.year || ''}\nTI  - ${x.title || ''}\nDO  - ${x.doi || ''}\nUR  - ${x.url || ''}\nER  - `;
+      }).join('\n\n');
+      const blob = new Blob([ris], { type: 'application/x-research-info-systems' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'referensi.ris';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }).catch((e: any) => setErr(e.message));
+  }
+
   function downloadWord() {
     const label = BABS.find((b) => b.id === active)?.label || active;
     const ident = proyek?.identitas || {};
@@ -87,6 +102,9 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
               Unduh Word
             </button>
           )}
+          <button onClick={downloadRis} className="border border-border-strong bg-bg-surface px-5 py-2.5 rounded-lg text-sm font-bold text-text-primary hover:bg-bg-surface-hover" title="Format Mendeley/Zotero">
+            Unduh RIS
+          </button>
         </div>
         {text ? <div className="bg-bg-surface border border-border-subtle rounded-xl p-6 text-sm text-text-primary whitespace-pre-wrap">{text}</div>
           : <p className="text-sm text-text-muted">Belum ada isi untuk bab ini. Klik generate (10 kredit).</p>}
