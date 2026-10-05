@@ -21,13 +21,29 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
   const [studi, setStudi] = useState('10');
   const [soal, setSoal] = useState('');
   const [soalLoading, setSoalLoading] = useState(false);
+  const [refs, setRefs] = useState<any[]>([]);
+
+  function refId(r: any, i: number) {
+    return `ref-${i}`;
+  }
+
+  function findRef(cite: string): number {
+    const m = cite.match(/([A-Za-zÀ-Ž\-']+)[^,]*,\s?(\d{4})/);
+    if (!m) return -1;
+    const surname = m[1].toLowerCase();
+    const year = m[2];
+    return refs.findIndex((r: any) =>
+      String(r.authors || '').toLowerCase().includes(surname) && String(r.year || '') === year
+    );
+  }
 
   function renderSitasi(body: string) {
     const parts = body.split(/(\([A-ZÀ-Ž][^()]{1,80}?,\s?\d{4}[a-z]?\))/g);
     return parts.map((seg, i) => {
       if (i % 2 === 1) {
+        const ri = findRef(seg);
         return (
-          <a key={i} href="#dapus" title="Klik untuk verifikasi di Daftar Pustaka" className="text-brand-primary underline decoration-dotted font-semibold">
+          <a key={i} href={ri >= 0 ? `#${refId(refs[ri], ri)}` : '#dapus'} title={ri >= 0 ? `${refs[ri].title} — klik untuk verifikasi` : 'Verifikasi di Daftar Pustaka'} className="text-brand-primary underline decoration-dotted font-semibold">
             {seg}
           </a>
         );
@@ -55,6 +71,10 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
       const r = await apiGet(`/api/projects/${id}`);
       setProyek(r.item);
     } catch (e: any) { setErr(e.message); }
+    try {
+      const r = await apiGet(`/api/projects/${id}/references`);
+      setRefs(r.items || []);
+    } catch { /* abaikan */ }
   }
   useEffect(() => { load(); }, [id]);
 
@@ -155,6 +175,19 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
           <div className="bg-bg-surface border border-border-subtle rounded-xl p-6 text-sm text-text-primary whitespace-pre-wrap">
             <h3 className="font-bold text-base mb-3 text-brand-primary">Prediksi Soal Sidang</h3>
             {soal}
+          </div>
+        )}
+        {refs.length > 0 && (
+          <div className="bg-bg-surface border border-border-subtle rounded-xl p-6 text-sm">
+            <h3 className="font-bold text-base mb-3 text-text-primary">Referensi Terverifikasi</h3>
+            <p className="text-xs text-text-muted mb-3">Klik sitasi biru di naskah untuk melompat ke entri ini.</p>
+            {refs.map((r: any, i: number) => (
+              <div key={i} id={refId(r, i)} className="text-xs border-t border-border-subtle py-2 scroll-mt-24">
+                <span className="font-bold text-text-primary">{r.authors} ({r.year}). </span>
+                <span className="text-text-secondary">{r.title}. </span>
+                {r.doi && <a href={`https://doi.org/${r.doi}`} target="_blank" rel="noreferrer" className="text-brand-primary">DOI</a>}
+              </div>
+            ))}
           </div>
         )}
         {text ? <div id="dapus" className="bg-bg-surface border border-border-subtle rounded-xl p-6 text-sm text-text-primary whitespace-pre-wrap scroll-mt-24">{renderSitasi(text)}</div>
