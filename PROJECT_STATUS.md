@@ -22,6 +22,8 @@ Terakhir diperbarui: 3 Okt 2026. Acuan fitur: https://mantrariset.com (akun uji:
 3. `migration_keys.sql` — api_keys
 4. `migration_affiliate.sql` — referral_code, referred_by, referral_commissions
 5. `migration_projprefs.sql` + `migration_projprefs2.sql` + `migration_projprefs3.sql` — tahap, sitasi, bahasa, min_year, ref_origin/scope, initial_data, custom_outline, fetch_fenomena, custom_sources
+6. `migration_wordpair.sql` — word_pairings (pairing Word)
+7. `migration_docs.sql` — documents (AI Writer)
 
 ## Selesai (terverifikasi e2e)
 
@@ -33,6 +35,8 @@ Terakhir diperbarui: 3 Okt 2026. Acuan fitur: https://mantrariset.com (akun uji:
 - Affiliate kode + komisi 10% (mock confirm + webhook), admin plan bypass
 - Tema terang default + toggle, rebrand, slash palette `/`, tutorial, pengaturan + API key
 - Dashboard live (user/kredit/proyek), paritas form Skripsi
+- Plugin Word: pairing device-code, outline edit tersimpan, streaming, cover builder, Ulangi
+- Asisten chat (1 kredit), brainstorming penuh, Lab Revisi proyek tersimpan + upload, AI Writer dokumen + sitasi
 
 ## Biaya kredit
 
