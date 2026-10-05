@@ -51,14 +51,16 @@ router.post('/rapihkan/analisis', requireAuthOrKey, upload.single('file'), async
     const footCount = (rawXml.match(/w:footnoteReference/g) || []).length;
     const judul: any[] = [];
     const paragraf: any[] = [];
-    let idx = 0, tables = 0, images = 0;
+    let idx = 0;
+    const tables = $('table').length;
+    const images = $('img').length;
     const norm = (el: any) => $(el).text().replace(/\s+/g, ' ').trim();
-    $('h1, h2, h3, p, li, table, img').each((_: any, el: any) => {
+    $('body').children('h1, h2, h3, p, li').each((_: any, el: any) => {
       const tag = ((el as any).tagName || '').toLowerCase();
-      if (tag === 'table') { tables++; return; }
-      if (tag === 'img') { images++; return; }
       const text = norm(el);
       if (!text) return;
+      // Wajib sama persis dengan terapkan supaya idx koreksi level tidak meleset
+      if (/^\s*(daftar isi|daftar tabel|daftar gambar)\b/i.test(text) && text.length < 40) return;
       const myIdx = idx++;
       if (tag === 'h1') judul.push({ idx: myIdx, tingkat: 1, asal: 'gaya', teks: text.slice(0, 160), nomorLama: '', ragu: false });
       else if (tag === 'h2') judul.push({ idx: myIdx, tingkat: 2, asal: 'gaya', teks: text.slice(0, 160), nomorLama: '', ragu: false });
@@ -85,7 +87,7 @@ router.post('/rapihkan/analisis', requireAuthOrKey, upload.single('file'), async
     res.json({
       setelan,
       judul, paragraf,
-      statistik: { paragraf: paragraf.length, tabel: tables, gambar: images, catatanKaki: footCount, punyaTocLama: /daftar isi/i.test(html.slice(0, 2000)) },
+      statistik: { paragraf: $('body').children('p, h1, h2, h3, li').length, tabel: tables, gambar: images, catatanKaki: footCount, punyaTocLama: /daftar isi/i.test(html.slice(0, 2000)) },
       gagalWaras: judul.length === 0,
     });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
@@ -120,7 +122,7 @@ router.post('/rapihkan/terapkan', requireAuthOrKey, upload.single('file'), async
     };
     const mammoth = await import('mammoth');
     const cheerio = await import('cheerio');
-    const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, PageNumber, NumberFormat, Footer, TableOfContents } = await import('docx');
+    const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, PageNumber, NumberFormat, Footer, TableOfContents, ExternalHyperlink, ImageRun, Table, TableRow, TableCell, WidthType, VerticalAlign } = await import('docx');
     const { value: html } = await (mammoth as any).convertToHtml({ buffer: req.file.buffer });
     const $ = (cheerio as any).load(html);
     const TW = 567;
@@ -131,26 +133,172 @@ router.post('/rapihkan/terapkan', requireAuthOrKey, upload.single('file'), async
     let firstBabIdx = -1;
     const splitRomawi = S.nomorHalaman === 'romawi-arab';
     const body: any[] = [];
-    let diubah = 0, ditandai = 0;
+    let diubah = 0, ditandai = 0, tabelDipertahankan = 0, paragrafTabel = 0;
     const norm = (el: any) => $(el).text().replace(/\s+/g, ' ').trim();
     const F = (n: number) => ({ font: S.font, size: Math.round(n * 2) });
     let idx = 0;
-    const isTocPara = (text: string) => S.buangDaftarIsiLama && /^\s*(daftar isi|daftar tabel|daftar gambar)\b/i.test(text) && text.length < 40;
-    $('h1, h2, h3, p, li').each((_: any, el: any) => {
-      const tag = ((el as any).tagName || '').toLowerCase();
+    const isTocPara = (text: string) => /^\s*(daftar isi|daftar tabel|daftar gambar)\b/i.test(text) && text.length < 40; // harus sama dengan analisis
+    const maxPx = Math.max(200, Math.round((11906 - Math.round(S.marginKiriCm * TW) - Math.round(S.marginKananCm * TW)) / 15));
+
+    // Ukuran gambar asli dari header PNG/JPEG/GIF/BMP/SVG
+    const sniff = (buf: Buffer, kind: string): { w: number; h: number } | null => {
+      try {
+        if (kind === 'png' && buf.length > 24) return { w: buf.readUInt32BE(16), h: buf.readUInt32BE(20) };
+        if (kind === 'gif' && buf.length > 10) return { w: buf.readUInt16LE(6), h: buf.readUInt16LE(8) };
+        if (kind === 'bmp' && buf.length > 26) return { w: buf.readInt32LE(18), h: Math.abs(buf.readInt32LE(22)) };
+        if (kind === 'jpg' || kind === 'jpeg') {
+          let i = 2;
+          while (i + 9 < buf.length) {
+            if (buf[i] !== 0xff) { i++; continue; }
+            const marker = buf[i + 1];
+            if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+              return { h: buf.readUInt16BE(i + 5), w: buf.readUInt16BE(i + 7) };
+            }
+            const len = buf.readUInt16BE(i + 2);
+            if (!len) break;
+            i += 2 + len;
+          }
+          return null;
+        }
+        if (kind === 'svg+xml') {
+          const s = buf.toString('utf8', 0, Math.min(buf.length, 4000));
+          const w = s.match(/width=["']?([\d.]+)/);
+          const h = s.match(/height=["']?([\d.]+)/);
+          if (w && h) return { w: Math.round(parseFloat(w[1])), h: Math.round(parseFloat(h[1])) };
+        }
+      } catch { /* ukuran tak terbaca -> default */ }
+      return null;
+    };
+
+    const imgRun = (node: any) => {
+      const src = String((node && node.attribs && node.attribs.src) || '');
+      const m = src.match(/^data:image\/(png|jpe?g|gif|bmp|svg\+xml);base64,([\s\S]+)$/);
+      if (!m) return null;
+      const kind = m[1];
+      const buf = Buffer.from(String(m[2]).replace(/\s/g, ''), 'base64');
+      if (!buf.length) return null;
+      const dim = sniff(buf, kind) || { w: 480, h: 360 };
+      const natW = Math.max(1, dim.w || 480);
+      const natH = Math.max(1, dim.h || 360);
+      const w = Math.max(40, Math.min(natW, maxPx));
+      const h = Math.max(30, Math.round(natH * (w / natW)));
+      const type = kind === 'png' ? 'png' : kind === 'gif' ? 'gif' : kind === 'bmp' ? 'bmp' : kind === 'svg+xml' ? 'svg' : 'jpg';
+      return new ImageRun({ data: buf, transformation: { width: w, height: h }, type } as any);
+    };
+
+    // Run teks dari node HTML: tebal/miring/garisbawah/sub-sup + tautan + gambar + checkbox
+    const ST = { b: false, i: false, u: false, sup: false, sub: false, link: false };
+    const mkRuns = (node: any, st: typeof ST): any[] => {
+      const out: any[] = [];
+      for (const child of node.children || []) {
+        if (child.type === 'text') {
+          const text = String(child.data || '').replace(/\u00a0/g, ' ');
+          if (text) out.push(new TextRun({
+            text, ...F(S.ukuranPt),
+            bold: st.b || undefined,
+            italics: st.i || undefined,
+            underline: (st.u || st.link) ? {} : undefined,
+            superScript: st.sup || undefined,
+            subScript: st.sub || undefined,
+            color: st.link ? '0563C1' : undefined,
+          }));
+          continue;
+        }
+        if (child.type !== 'tag') continue;
+        const tag = String(child.tagName || '').toLowerCase();
+        if (tag === 'br') { out.push(new TextRun({ text: '', break: 1 })); continue; }
+        if (tag === 'table' || tag === 'tbody' || tag === 'thead' || tag === 'tfoot' || tag === 'tr' || tag === 'td' || tag === 'th') continue; // ditangani buildTable
+        if (tag === 'img') { const r = imgRun(child); if (r) out.push(r); continue; }
+        if (tag === 'input') {
+          const t = String((child.attribs && child.attribs.type) || 'text');
+          if (t === 'checkbox') out.push(new TextRun({ text: child.attribs && child.attribs.checked !== undefined ? ' ☑' : ' ☐', ...F(S.ukuranPt) }));
+          else {
+            const v = String((child.attribs && child.attribs.value) || '');
+            if (v && t !== 'hidden') out.push(new TextRun({ text: v, ...F(S.ukuranPt) }));
+          }
+          continue;
+        }
+        const nst = {
+          b: st.b || tag === 'strong' || tag === 'b',
+          i: st.i || tag === 'em' || tag === 'i',
+          u: st.u || tag === 'u',
+          sup: st.sup || tag === 'sup',
+          sub: st.sub || tag === 'sub',
+          link: st.link || tag === 'a',
+        };
+        const inner = mkRuns(child, nst);
+        if (!inner.length) continue;
+        if (tag === 'a') {
+          const href = String((child.attribs && child.attribs.href) || '');
+          if (/^https?:\/\//.test(href)) out.push(new ExternalHyperlink({ children: inner, link: href }));
+          else out.push(...inner);
+        } else out.push(...inner);
+      }
+      return out;
+    };
+
+    // Tabel asli dipertahankan: baris/kolom/kSel + header abu-abu
+    const buildTable = (el: any): any => {
+      const rows: any[] = [];
+      $(el).find('tr').each((_: any, tr: any) => {
+        if ($(tr).parents('table').first().get(0) !== el) return; // lewati tabel bersarang
+        const cells: any[] = [];
+        $(tr).children('td, th').each((__: any, td: any) => {
+          const isTh = String((td as any).tagName || '').toLowerCase() === 'th';
+          const src: any[] = $(td).children('p').length ? ($(td).children('p').toArray() as any[]) : [td];
+          const paras: any[] = [];
+          for (const pe of src) {
+            const runs = mkRuns(pe, { ...ST, b: isTh });
+            if (!runs.length) continue;
+            paras.push(new Paragraph({ alignment: AlignmentType.LEFT, spacing: { line: 240, before: 20, after: 20 }, children: runs }));
+          }
+          if (!paras.length) paras.push(new Paragraph({ children: [new TextRun({ text: '', ...F(S.ukuranPt) })] }));
+          const nested: any[] = [];
+          $(td).children('table').each((___: any, nt: any) => { const ntb = buildTable(nt); if (ntb) nested.push(ntb); });
+          cells.push(new TableCell({
+            children: [...paras, ...nested],
+            verticalAlign: VerticalAlign.CENTER,
+            ...(isTh ? { shading: { fill: 'EDEDED' } } : {}),
+          }));
+        });
+        if (cells.length) rows.push(new TableRow({ children: cells }));
+      });
+      if (!rows.length) return null;
+      return new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows });
+    };
+
+    $('body').children('h1, h2, h3, p, li, table').each((_: any, el: any) => {
+      const tag = String((el as any).tagName || '').toLowerCase();
+      if (tag === 'table') {
+        if (!S.sertakanTabel) return;
+        paragrafTabel += $(el).find('p').length;
+        const tb = buildTable(el);
+        if (tb) {
+          body.push(tb);
+          // Word menggabungkan dua tabel berdempetan jadi satu; wajib ada paragraf pemisah
+          body.push(new Paragraph({ spacing: { line: 240, before: 0, after: 0 }, children: [new TextRun({ text: '', ...F(S.ukuranPt) })] }));
+          tabelDipertahankan++;
+        }
+        return;
+      }
       const text = norm(el);
-      if (!text || isTocPara(text)) return;
-      const myIdx = idx++;
+      const hasImg = $(el).find('img').length > 0;
+      if (!text && !hasImg) return;
+      if (text && isTocPara(text)) return;
+      const myIdx = text ? idx++ : -1;
       let lvl: number | null | undefined = lvlOf.has(myIdx) ? lvlOf.get(myIdx) : undefined;
       if (lvl === undefined) {
         if (tag === 'h1') lvl = 1;
         else if (tag === 'h2') lvl = 2;
         else if (tag === 'h3') lvl = 3;
+        else if (!text) lvl = null;
         else {
           const mB = text.match(/^BAB\s+[IVX]+\b/i);
           const mN = text.match(/^(\d+(?:\.\d+){0,2})\s+.{4,}/);
+          const isCaps = text.length < 90 && text === text.toUpperCase() && /[A-Z]{3,}/.test(text);
           if (mB) lvl = 1;
           else if (mN) lvl = Math.min(mN[1].split('.').length, 3);
+          else if (isCaps) lvl = 2;
           else lvl = null;
         }
       }
@@ -169,12 +317,14 @@ router.post('/rapihkan/terapkan', requireAuthOrKey, upload.single('file'), async
         ditandai++;
       } else {
         diubah++;
+        const runs = mkRuns(el, ST);
         const hanging = S.gantungDaftarPustaka && inDapus;
+        const gambarSaja = !text && hasImg;
         body.push(new Paragraph({
-          alignment: S.rataKiriKanan ? AlignmentType.JUSTIFIED : AlignmentType.LEFT,
+          alignment: S.rataKiriKanan && !gambarSaja ? AlignmentType.JUSTIFIED : AlignmentType.LEFT,
           spacing: { line: Math.round(S.spasi * 240) },
-          indent: hanging ? { hanging: Math.round(1.27 * TW) } : (S.indentCm ? { firstLine: Math.round(S.indentCm * TW) } : undefined),
-          children: [new TextRun({ text, ...F(S.ukuranPt) })],
+          indent: gambarSaja ? undefined : (hanging ? { hanging: Math.round(1.27 * TW) } : (S.indentCm ? { firstLine: Math.round(S.indentCm * TW) } : undefined)),
+          children: runs.length ? runs : [new TextRun({ text, ...F(S.ukuranPt) })],
         }));
       }
     });
@@ -201,7 +351,7 @@ router.post('/rapihkan/terapkan', requireAuthOrKey, upload.single('file'), async
     }
     const doc = new Document({ sections });
     const buf = await Packer.toBuffer(doc);
-    const ringkasan = { tarif, paragrafDiubah: diubah, judulDitandai: ditandai, bagian: sections.length, paragrafTabelDilewati: 0, gratis: tarif === 0 };
+    const ringkasan = { tarif, paragrafDiubah: diubah, judulDitandai: ditandai, bagian: sections.length, tabelDipertahankan, paragrafTabelDilewati: paragrafTabel, gratis: tarif === 0 };
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     res.setHeader('Content-Disposition', `attachment; filename="${req.file.originalname.replace(/\.docx$/i, '')} (rapih).docx"`);
     res.setHeader('X-Rapih-Ringkasan', encodeURIComponent(JSON.stringify(ringkasan)));

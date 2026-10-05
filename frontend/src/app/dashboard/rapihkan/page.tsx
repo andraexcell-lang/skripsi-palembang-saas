@@ -93,7 +93,7 @@ export default function RapihkanSkripsiPage() {
       const nama = `${file.name.replace(/\.docx$/i, '')} (rapih).docx`;
       setDoneUrl(URL.createObjectURL(blob));
       setDoneName(nama);
-      setMsg(`Selesai — ${ring.paragrafDiubah} paragraf dirapikan, ${ring.judulDitandai} judul ditandai (${ring.tarif === 0 ? 'gratis (berkas sama)' : ring.tarif + ' kredit'}). Saat dibuka di Word, jawab Yes bila ditanya update fields.`);
+      setMsg(`Selesai — ${ring.paragrafDiubah} paragraf dirapikan, ${ring.judulDitandai} judul ditandai${ring.tabelDipertahankan ? `, ${ring.tabelDipertahankan} tabel dan isinya dipertahankan` : ''} (${ring.tarif === 0 ? 'gratis (berkas sama)' : ring.tarif + ' kredit'}). Saat dibuka di Word, jawab Yes bila ditanya update fields.`);
     } catch (e: any) {
       if (isInsufficientCredits(e)) setNeedsTopup(true);
       setMsg("Error: " + e.message);

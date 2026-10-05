@@ -16,7 +16,8 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 5000;
 
-app.use(cors());
+// Header ringkasan wajib di-expose agar bisa dibaca frontend (CORS default menyembunyikan)
+app.use(cors({ exposedHeaders: ['X-Rapih-Ringkasan', 'X-Rapi-Stat', 'Content-Disposition'] }));
 app.use(express.json({ limit: '5mb' }));
 
 // Routes
