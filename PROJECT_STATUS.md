@@ -1,6 +1,6 @@
 # Status Proyek Skripsi Palembang SaaS
 
-Terakhir diperbarui: 3 Okt 2026. Acuan fitur: https://mantrariset.com (akun uji: dedibusro5@gmail.com).
+Terakhir diperbarui: 6 Okt 2026. Acuan fitur: https://mantrariset.com (akun uji: dedibusro5@gmail.com).
 
 ## Arsitektur
 
@@ -39,17 +39,33 @@ Terakhir diperbarui: 3 Okt 2026. Acuan fitur: https://mantrariset.com (akun uji:
 - Asisten chat (1 kredit), brainstorming penuh, Lab Revisi proyek tersimpan + upload, AI Writer dokumen + sitasi
 - Rapihkan .docx real (A4/TNR/TOC/halaman, 1 kredit), Lanjutkan dari file (deteksi Bab I-VII)
 - Daftar proyek terakhir + hapus, slash palette, tutorial, admin bypass
+- **Paritas Dashboard** (baris atas + notifikasi lonceng dari ledger + menu akun, kartu AI, kartu paket, "Mulai buat karya" 6 kartu, proyek terakhir 6 + segmented filter, chip kredit di sidebar, Grup WA)
+- **Paritas Studio**: tab `Bab VI: Lampiran` + panel sub-bab + tombol **Generate Lampiran**, tab `Pustaka (N)` (daftar + Unduh RIS), **Unggah Artikel Sendiri** (PDF/DOCX → DOI Crossref → `identitas.refs`, maks 10), **Sesuaikan Skripsi** (timpa Tujuan/Hipotesis/Kerangka + catatan Bab III), **Tinjau Hasil** (kelebihan/kekurangan/pertanyaan penguji), **Cek Sitasi** (GRATIS: total/nyata/yatim + verifikasi Crossref per sitasi yatim), rail PPT + Cek Plagiasi + tab Revisi, badge GRATIS & teks tooltip sesuai referensi
+- Parser `pdf-parse` v2 (kelas `PDFParse`) — sebelumnya cabang PDF di `/from-file` & analisis berkas error `fn is not a function`
+- Export `.docx` ikut menyertakan BAB VI Lampiran
+
+## Status verifikasi studio (6 Okt 2026)
+
+| Fitur | API | UI produksi |
+| --- | --- | --- |
+| Tab Bab VI + Generate Lampiran | ✅ 11.500 karakter, ikut export | ✅ panel sub-bab + tombol |
+| Tab Pustaka + RIS | ✅ 21 entri (1 unggahan) | ✅ |
+| Unggah Artikel Sendiri | ✅ DOI `10.24912/jmk.v5i2.23409` terbaca | ✅ panel biru + input file |
+| Cek Sitasi (gratis) | ✅ semua proyek (termasuk jalur yatim 17/17) | ✅ modal GRATIS |
+| Sesuaikan Skripsi (5) | ✅ 3 bagian ditimpa + catatan Bab III | ⏳ butuh ulang saat kuota AI pulih |
+| Tinjau Hasil (5) | ✅ 4/5/5 butir (parser tangguh + refund bila gagal) | ⏳ butuh ulang saat kuota AI pulih |
 
 ## Biaya kredit
 
-bab 10 · parafrase 1 · ppt 8 · plagiasi 15 · artikel 15 · sidang 15/25 · spss 3 · smartpls 5 · kualitatif/dokumen/transkripsi 1 · brainstorming/kelayakan/novelty/cari gratis
+bab 10 (termasuk Lampiran) · sesuaikan 5 · tinjau 5 · parafrase 1 · ppt 8 · plagiasi 15 · artikel 15 · sidang 15/25 · spss 3 · smartpls 5 · kualitatif/dokumen/transkripsi 1 · brainstorming/kelayakan/novelty/cari/cek-sitasi/unggah-artikel/referensi gratis
 
 ## Tunda (butuh owner)
 
 1. Project Supabase BARU (kunci bersih) + ulangi 5 migrasi + update env Railway/Vercel/lokal
 2. Midtrans Server Key sandbox → vars → uji QRIS → webhook URL Railway
-3. Konten: video tutorial, link Grup WA, payout affiliate manual, plugin Word
-4. Custom domain `api.skripsiplg.my.id` (opsional)
+3. **Kuota Gemini free tier habis** (`GenerateRequestsPerDayPerProjectPerModel-FreeTier` = 20 req/hari, sempat 429 → retry ±4 jam). Semua fitur AI (generate bab, tinjau, sesuaikan, PPT) mati sampai kuota reset **tiap hari** → pasang billing/bayar di Google AI Studio atau pakai key berbayar sebelum user riil
+4. Konten: video tutorial, link Grup WA (`https://chat.whatsapp.com/JFKzEThZQzDGwZKkMcxLq6`), payout affiliate manual, plugin Word
+5. Custom domain `api.skripsiplg.my.id` (opsional)
 
 ## Akun uji (password minta ke owner)
 

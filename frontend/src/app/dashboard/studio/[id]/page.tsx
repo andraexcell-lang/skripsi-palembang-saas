@@ -626,7 +626,7 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
                         <p className="text-xs text-text-secondary">
                           {t.saran
                             ? <>Ada di Crossref tapi belum ada di Daftar Pustakamu — mis. {t.saran.title} ({t.saran.year})</>
-                            : 'Tidak ditemukan di Crossref maupun daftar pustakamu — kemungkinan dikarang AI.'}
+                            : 'Tidak ditemukan di Crossref maupun daftar pustakamu — cek manual (bisa sumber institusi/teori klasik yang tak punya entri).'}
                         </p>
                       </li>
                     ))}
