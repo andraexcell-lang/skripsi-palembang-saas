@@ -50,7 +50,7 @@ export async function apiPost(path: string, body: any) {
     body: JSON.stringify(body),
   });
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new ApiError(json.error || `POST ${path} gagal`, res.status);
+  if (!res.ok) throw new ApiError(json.error || `POST ${path} gagal (${res.status})`, res.status);
   return json;
 }
 
