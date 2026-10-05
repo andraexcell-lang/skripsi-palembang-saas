@@ -2,6 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import * as XLSX from 'xlsx';
 import { AuthRequest, requireAuth } from '../middleware/auth';
+import { requireAuthOrKey } from '../middleware/apiKey';
 import { consumeCredits, addCredits } from '../services/credits.service';
 import { generateContent } from '../services/ai.service';
 import { crossrefTop } from './projects.routes';
@@ -36,8 +37,75 @@ router.post('/extract', requireAuth, upload.single('file'), async (req: AuthRequ
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/pptx', requireAuth, async (req: AuthRequest, res) => {
+// Rapihkan .docx: rebuild standar akademik (A4, margin 4-4-3-3, TNR 12, spasi 1.5, justify, heading, nomor halaman, TOC)
+router.post('/rapihkan', requireAuthOrKey, upload.single('file'), async (req: AuthRequest, res) => {
   try {
+    if (!req.file) return res.status(400).json({ error: 'Upload file .docx (maks 15 MB)' });
+    if (!/\.docx$/i.test(req.file.originalname)) return res.status(400).json({ error: 'Hanya .docx yang didukung' });
+    try {
+      await consumeCredits(req.userId!, 'dokumen', 'rapihkan:docx');
+    } catch (e: any) {
+      if (e.code === 'INSUFFICIENT_CREDITS') return res.status(402).json({ error: e.message, remaining: e.remaining });
+      throw e;
+    }
+    const mammoth = await import('mammoth');
+    const cheerio = await import('cheerio');
+    const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, PageNumberElement, Footer, TableOfContents } = await import('docx');
+    const { value: html } = await (mammoth as any).convertToHtml({ buffer: req.file.buffer });
+    const $ = (cheerio as any).load(html);
+    const CM = 567; // twips per cm
+    const body: any[] = [];
+    let h1 = 0, h2 = 0, paras = 0;
+    const norm = (el: any) => $(el).text().replace(/\s+/g, ' ').trim();
+    $('h1, h2, h3, p, li').each((_: any, el: any) => {
+      const tag = ((el as any).tagName || '').toLowerCase();
+      const text = norm(el);
+      if (!text) return;
+      const base = { font: 'Times New Roman', size: 24 };
+      if (tag === 'h1') {
+        h1++;
+        body.push(new Paragraph({ heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER, children: [new TextRun({ text, ...base, bold: true })] }));
+      } else if (tag === 'h2' || tag === 'h3') {
+        h2++;
+        body.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text, ...base, bold: true })] }));
+      } else {
+        paras++;
+        const isList = tag === 'li';
+        body.push(new Paragraph({
+          alignment: AlignmentType.JUSTIFIED,
+          spacing: { line: 360 },
+          indent: isList ? undefined : { firstLine: 567 },
+          children: [new TextRun({ text: (isList ? '• ' : '') + text, ...base })],
+        }));
+      }
+    });
+    if (!body.length) return res.status(400).json({ error: 'Dokumen kosong / tidak terbaca' });
+    const doc = new Document({
+      sections: [{
+        properties: {
+          page: { size: { width: 11906, height: 16838 }, margin: { top: 4 * CM, left: 4 * CM, bottom: 3 * CM, right: 3 * CM } },
+        },
+        footers: {
+          default: new Footer({
+            children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Halaman ', font: 'Times New Roman', size: 20 }), new PageNumberElement()] })],
+          }),
+        },
+        children: [
+          new Paragraph({ heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'DAFTAR ISI', font: 'Times New Roman', size: 28, bold: true })] }),
+          new TableOfContents('Daftar Isi — klik kanan > Update Field', { hyperlink: true, headingStyleRange: '1-2' }),
+          ...body,
+        ],
+      }],
+    });
+    const buf = await Packer.toBuffer(doc);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', 'attachment; filename="rapi-skripsi.docx"');
+    res.setHeader('X-Rapi-Stat', JSON.stringify({ heading1: h1, heading2: h2, paragraf: paras }));
+    res.send(Buffer.from(buf));
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/pptx', requireAuthOrKey, async (req: AuthRequest, res) => {  try {
     const { jenis = 'sempro', materi = '', judul = 'Presentasi' } = req.body || {};
     if (!materi || String(materi).length < 50) return res.status(400).json({ error: 'Materi minimal 50 karakter (paste atau upload dulu)' });
     try {
