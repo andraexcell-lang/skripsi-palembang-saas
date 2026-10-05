@@ -37,7 +37,164 @@ router.post('/extract', requireAuth, upload.single('file'), async (req: AuthRequ
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// Rapihkan .docx: rebuild standar akademik (A4, margin 4-4-3-3, TNR 12, spasi 1.5, justify, heading, nomor halaman, TOC)
+// Rapihkan dua-langkah ala referensi: analisis struktur dulu, lalu terapkan.
+// POST /rapihkan/analisis (multipart file) -> { setelan, judul[], paragraf[], statistik }
+router.post('/rapihkan/analisis', requireAuthOrKey, upload.single('file'), async (req: AuthRequest, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'Upload file .docx (maks 15 MB)' });
+    if (!/\.docx$/i.test(req.file.originalname)) return res.status(400).json({ error: 'Berkas harus .docx (Word). PDF belum bisa.' });
+    const mammoth = await import('mammoth');
+    const cheerio = await import('cheerio');
+    const { value: html } = await (mammoth as any).convertToHtml({ buffer: req.file.buffer });
+    const $ = (cheerio as any).load(html);
+    const judul: any[] = [];
+    const paragraf: any[] = [];
+    let idx = 0, tables = 0, images = 0;
+    const norm = (el: any) => $(el).text().replace(/\s+/g, ' ').trim();
+    $('h1, h2, h3, p, li, table, img').each((_: any, el: any) => {
+      const tag = ((el as any).tagName || '').toLowerCase();
+      if (tag === 'table') { tables++; return; }
+      if (tag === 'img') { images++; return; }
+      const text = norm(el);
+      if (!text) return;
+      const myIdx = idx++;
+      if (tag === 'h1') judul.push({ idx: myIdx, tingkat: 1, asal: 'gaya', teks: text.slice(0, 160), nomorLama: '', ragu: false });
+      else if (tag === 'h2') judul.push({ idx: myIdx, tingkat: 2, asal: 'gaya', teks: text.slice(0, 160), nomorLama: '', ragu: false });
+      else if (tag === 'h3') judul.push({ idx: myIdx, tingkat: 3, asal: 'gaya', teks: text.slice(0, 160), nomorLama: '', ragu: false });
+      else {
+        const mBab = text.match(/^(BAB\s+[IVX]+)\b\s*[:.-]?\s*(.*)$/i);
+        const mNum = text.match(/^(\d+(?:\.\d+){0,2})\s+(.{4,120})$/);
+        const isCaps = text.length < 90 && text === text.toUpperCase() && /[A-Z]{3,}/.test(text);
+        if (mBab) judul.push({ idx: myIdx, tingkat: 1, asal: 'pola', teks: text.slice(0, 160), nomorLama: '', ragu: false, bab: true });
+        else if (mNum) {
+          const depth = mNum[1].split('.').length;
+          judul.push({ idx: myIdx, tingkat: Math.min(depth, 3), asal: 'pola', teks: text.slice(0, 160), nomorLama: mNum[1], ragu: false });
+        } else if (isCaps) judul.push({ idx: myIdx, tingkat: 2, asal: 'pola', teks: text.slice(0, 160), nomorLama: '', ragu: true });
+        if (paragraf.length < 400) paragraf.push({ idx: myIdx, teks: text.slice(0, 220) });
+      }
+    });
+    const setelan = {
+      marginAtasCm: 4, marginBawahCm: 3, marginKiriCm: 4, marginKananCm: 3,
+      font: 'Times New Roman', ukuranPt: 12, spasi: 1.5, indentCm: 1.27,
+      nomorBab: 'romawi', nomorSubBab: 'angka', daftarIsi: '3', nomorHalaman: 'romawi-arab',
+      autoHeading: true, rataKiriKanan: true, babHalamanBaru: true,
+      gantungDaftarPustaka: true, buangDaftarIsiLama: true, sertakanTabel: true,
+    };
+    res.json({
+      setelan,
+      judul, paragraf,
+      statistik: { paragraf: paragraf.length, tabel: tables, gambar: images, catatanKaki: 0, punyaTocLama: /daftar isi/i.test(html.slice(0, 2000)) },
+      gagalWaras: judul.length === 0,
+    });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /rapihkan/terapkan (multipart file + setelan JSON + koreksi JSON) -> .docx + header X-Rapih-Ringkasan
+router.post('/rapihkan/terapkan', requireAuthOrKey, upload.single('file'), async (req: AuthRequest, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'Upload file .docx' });
+    const { createHash } = await import('crypto');
+    const fhash = createHash('sha256').update(req.file.buffer).digest('hex');
+    const db = (await import('../config/supabase')).supabaseAdmin || (await import('../config/supabase')).supabaseAnon;
+    const dayAgo = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    const { data: prev } = await db.from('credit_ledger').select('id').eq('user_id', (req as any).userId!).eq('ref', `rapihkan:${fhash}`).gte('created_at', dayAgo).limit(1);
+    let tarif = 1;
+    if (!prev || !prev.length) {
+      try {
+        await consumeCredits((req as any).userId!, 'dokumen', `rapihkan:${fhash}`);
+      } catch (e: any) {
+        if (e.code === 'INSUFFICIENT_CREDITS') return res.status(402).json({ error: e.message, remaining: e.remaining });
+        throw e;
+      }
+    } else tarif = 0;
+    const setelan = JSON.parse(String(req.body?.setelan || '{}'));
+    const koreksi: any[] = JSON.parse(String(req.body?.koreksi || '[]'));
+    const S = {
+      marginAtasCm: 4, marginBawahCm: 3, marginKiriCm: 4, marginKananCm: 3,
+      font: 'Times New Roman', ukuranPt: 12, spasi: 1.5, indentCm: 1.27,
+      nomorBab: 'romawi', nomorSubBab: 'angka', daftarIsi: '3', nomorHalaman: 'romawi-arab',
+      autoHeading: true, rataKiriKanan: true, babHalamanBaru: true,
+      gantungDaftarPustaka: false, buangDaftarIsiLama: true, sertakanTabel: true, ...setelan,
+    };
+    const mammoth = await import('mammoth');
+    const cheerio = await import('cheerio');
+    const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, PageNumberElement, Footer, TableOfContents } = await import('docx');
+    const { value: html } = await (mammoth as any).convertToHtml({ buffer: req.file.buffer });
+    const $ = (cheerio as any).load(html);
+    const TW = 567;
+    const lvlOf = new Map<number, number | null>(koreksi.map((k: any) => [k.idx, k.tingkat === 'bukan' ? null : Number(k.tingkat)]));
+    const ROM = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+    let babNo = 0;
+    const body: any[] = [];
+    let diubah = 0, ditandai = 0;
+    const norm = (el: any) => $(el).text().replace(/\s+/g, ' ').trim();
+    const F = (n: number) => ({ font: S.font, size: Math.round(n * 2) });
+    let idx = 0;
+    const isTocPara = (text: string) => S.buangDaftarIsiLama && /^\s*(daftar isi|daftar tabel|daftar gambar)\b/i.test(text) && text.length < 40;
+    $('h1, h2, h3, p, li').each((_: any, el: any) => {
+      const tag = ((el as any).tagName || '').toLowerCase();
+      const text = norm(el);
+      if (!text || isTocPara(text)) return;
+      const myIdx = idx++;
+      let lvl: number | null | undefined = lvlOf.has(myIdx) ? lvlOf.get(myIdx) : undefined;
+      if (lvl === undefined) {
+        if (tag === 'h1') lvl = 1;
+        else if (tag === 'h2') lvl = 2;
+        else if (tag === 'h3') lvl = 3;
+        else {
+          const mB = text.match(/^BAB\s+[IVX]+\b/i);
+          const mN = text.match(/^(\d+(?:\.\d+){0,2})\s+.{4,}/);
+          if (mB) lvl = 1;
+          else if (mN) lvl = Math.min(mN[1].split('.').length, 3);
+          else lvl = null;
+        }
+      }
+      if (lvl === 1) {
+        babNo++;
+        let title = text.replace(/^(BAB\s+[IVX0-9]+)\b\s*[:.-]?\s*/i, '').trim() || text;
+        const label = S.nomorBab === 'arab' ? `BAB ${babNo}` : `BAB ${ROM[babNo - 1] || babNo}`;
+        body.push(new Paragraph({ heading: HeadingLevel.HEADING_1, ...(S.babHalamanBaru ? { pageBreakBefore: true } : {}), children: [new TextRun({ text: `${label} ${title}`.trim(), ...F(S.ukuranPt + 2), bold: true })] }));
+        ditandai++;
+      } else if (lvl === 2 || lvl === 3) {
+        body.push(new Paragraph({ heading: lvl === 2 ? HeadingLevel.HEADING_2 : HeadingLevel.HEADING_3, children: [new TextRun({ text, ...F(S.ukuranPt), bold: true })] }));
+        ditandai++;
+      } else {
+        diubah++;
+        body.push(new Paragraph({
+          alignment: S.rataKiriKanan ? AlignmentType.JUSTIFIED : AlignmentType.LEFT,
+          spacing: { line: Math.round(S.spasi * 240) },
+          indent: S.indentCm ? { firstLine: Math.round(S.indentCm * TW) } : undefined,
+          children: [new TextRun({ text, ...F(S.ukuranPt) })],
+        }));
+      }
+    });
+    const children: any[] = [];
+    if (S.daftarIsi !== 'mati') {
+      children.push(new Paragraph({ heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'DAFTAR ISI', ...F(S.ukuranPt + 2), bold: true })] }));
+      children.push(new TableOfContents('Daftar Isi', { hyperlink: true, headingStyleRange: S.daftarIsi === '2' ? '1-2' : '1-3' }));
+    }
+    children.push(...body);
+    let footer: any = undefined;
+    if (S.nomorHalaman !== 'mati') {
+      footer = new Footer({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new PageNumberElement()] })] });
+    }
+    const doc = new Document({
+      sections: [{
+        properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: Math.round(S.marginAtasCm * TW), left: Math.round(S.marginKiriCm * TW), bottom: Math.round(S.marginBawahCm * TW), right: Math.round(S.marginKananCm * TW) } } },
+        footers: footer ? { default: footer } : undefined,
+        children,
+      }],
+    });
+    const buf = await Packer.toBuffer(doc);
+    const ringkasan = { tarif, paragrafDiubah: diubah, judulDitandai: ditandai, bagian: 1, paragrafTabelDilewati: 0, gratis: tarif === 0 };
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename="${req.file.originalname.replace(/\.docx$/i, '')} (rapih).docx"`);
+    res.setHeader('X-Rapih-Ringkasan', encodeURIComponent(JSON.stringify(ringkasan)));
+    res.send(Buffer.from(buf));
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// Rapihkan .docx (legacy satu-langkah; disarankan /rapihkan/analisis + /rapihkan/terapkan)
 router.post('/rapihkan', requireAuthOrKey, upload.single('file'), async (req: AuthRequest, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'Upload file .docx (maks 15 MB)' });
