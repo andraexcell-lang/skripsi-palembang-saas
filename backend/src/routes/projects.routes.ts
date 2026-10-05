@@ -346,4 +346,53 @@ router.post('/:id/generate-subbab-stream', requireAuthOrKey, async (req: AuthReq
   }
 });
 
+// Lanjutkan skripsi dari file: deteksi bab selesai (BAB I-VII) lalu jadi proyek Studio
+router.post('/from-file', requireAuthOrKey, async (req: AuthRequest, res) => {
+  try {
+    const multer = (await import('multer')).default;
+    const up = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } }).single('file');
+    await new Promise<void>((resolve, reject) => up(req as any, res as any, (e: any) => (e ? reject(e) : resolve())));
+    const judul = String(req.body?.judul || '').trim();
+    const jenis = String(req.body?.jenis || 'skripsi');
+    if (judul.length < 10) return res.status(400).json({ error: 'Judul minimal 10 karakter' });
+    if (!(req as any).file) return res.status(400).json({ error: 'Upload file .docx/.pdf (maks 15 MB)' });
+    const f = (req as any).file as { originalname: string; buffer: Buffer };
+    let text = '';
+    if (/\.docx$/i.test(f.originalname)) {
+      const mammoth = await import('mammoth');
+      const r = await (mammoth as any).extractRawText({ buffer: f.buffer });
+      text = String(r.value || '');
+    } else if (/\.pdf$/i.test(f.originalname)) {
+      const pdf = await import('pdf-parse');
+      const fn = (pdf as any).default || pdf;
+      text = String((await fn(f.buffer)).text || '');
+    } else {
+      text = f.buffer.toString('utf-8');
+    }
+    text = text.slice(0, 60000);
+    const ROMAWI: Record<string, string> = { I: 'bab1', II: 'bab2', III: 'bab3', IV: 'bab4', V: 'bab5', VI: 'bab6', VII: 'bab7' };
+    const parts = text.split(/(?=\bBAB\s+[IVX]+\b)/i);
+    const content: Record<string, string> = {};
+    const found: string[] = [];
+    for (const part of parts) {
+      const m = part.match(/^\s*BAB\s+([IVX]+)/i);
+      if (!m) continue;
+      const key = ROMAWI[m[1].toUpperCase()];
+      if (!key) continue;
+      const body = part.slice(m[0].length).trim();
+      if (body.length > 500) {
+        content[key] = body.slice(0, 30000);
+        found.push(key);
+      }
+    }
+    const db2 = (supabaseAdmin || supabaseAnon);
+    const { data, error } = await db2.from('projects').insert({
+      user_id: (req as AuthRequest).userId!, judul, jenis, tahap: found.length >= 3 ? 'full' : 'proposal',
+      content, initial_data: `Diimpor dari file ${f.originalname}. Bab terdeteksi: ${found.join(', ') || 'tidak ada (mulai dari nol)'}.`,
+    }).select().single();
+    if (error) throw new Error(error.message);
+    res.json({ item: data, detected: found });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 export default router;
