@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import multer from 'multer';
 import { AuthRequest, requireAuth } from '../middleware/auth';
 import { requireAuthOrKey } from '../middleware/apiKey';
 import { supabaseAdmin, supabaseAnon } from '../config/supabase';
@@ -8,7 +9,7 @@ import { generateContent, generateContentStream } from '../services/ai.service';
 const router = Router();
 const db = () => supabaseAdmin || supabaseAnon;
 
-const BAB_LIST = ['bab1', 'bab2', 'bab3', 'bab4', 'bab5'];
+const BAB_LIST = ['bab1', 'bab2', 'bab3', 'bab4', 'bab5', 'lampiran'];
 
 export const OUTLINE: Record<string, { bab: string; subs: string[] }> = {
   bab1: { bab: 'Bab I Pendahuluan', subs: ['1.1 Latar Belakang', '1.2 Identifikasi Masalah', '1.3 Rumusan Masalah', '1.4 Tujuan Penelitian', '1.5 Manfaat Penelitian', '1.6 Batasan Masalah', '1.7 Sistematika Penulisan'] },
@@ -91,6 +92,9 @@ function babPrompt(bab: string, p: any, refs: { doi: string; title: string; auth
     bab3: `Susun BAB III METODE PENELITIAN (pendekatan, populasi/sampel, variabel & indikator, teknik pengumpulan data, uji/analisis).\n${base}${ref}\nIkuti kaidah metodologi standar Indonesia.\n${scopeNote}${outlineNote}${SITASI}`,
     bab4: `Susun BAB IV HASIL DAN PEMBAHASAN (deskripsi data, hasil analisis, pembahasan dikaitkan teori Bab II).\n${base}${ref}\nGunakan tabel Markdown bila perlu.\n${scopeNote}${outlineNote}${SITASI}`,
     bab5: `Susun BAB V PENUTUP (kesimpulan menjawab rumusan masalah + saran praktis/metodologis).\n${base}${ref}\nRingkas dan tegas.\n${scopeNote}${outlineNote}${SITASI}`,
+    lampiran: `Susun LAMPIRAN skripsi (bab penunjang setelah Bab V) berisi instrumen penelitian.\n${base}${ref}\nIsinya diturunkan dari kajian pustaka dan metode artikelmu: ${p.metode === 'Kualitatif'
+      ? 'kisi-kisi wawancara/pedoman wawancara, daftar informan, contoh transkrip, lembar observasi'
+      : 'kisi-kisi kuisioner, daftar pernyataan per indikator skala Likert, contoh lembar jawaban responden'} serta Lembar Pernyataan/Afirasi. Susun per bagian bernomor 6.1, 6.2, dst. gunakan tabel Markdown bila membantu.\n${scopeNote}${outlineNote}${SITASI}`,
   };
   return map[bab] || map.bab1;
 }
@@ -226,13 +230,127 @@ router.post('/:id/generate-artikel', requireAuthOrKey, async (req: AuthRequest, 
 
 router.get('/meta/outline', async (_req, res) => res.json({ outline: OUTLINE }));
 
-// Referensi proyek (untuk Unduh RIS): Crossref by judul, tanpa AI, tanpa kredit
+// Referensi proyek (untuk Unduh RIS + tab Pustaka): unggahan user dahulu, lalu Crossref by judul — tanpa AI, tanpa kredit
 router.get('/:id/references', requireAuthOrKey, async (req: AuthRequest, res) => {
   try {
-    const { data: p, error } = await db().from('projects').select('judul,min_year').eq('id', String(req.params.id)).eq('user_id', req.userId!).single();
+    const { data: p, error } = await db().from('projects').select('judul,min_year,identitas').eq('id', String(req.params.id)).eq('user_id', req.userId!).single();
     if (error || !p) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
-    res.json({ items: await crossrefTop(p.judul, 20, p.min_year) });
+    const custom = Array.isArray(p.identitas?.refs) ? p.identitas.refs : [];
+    res.json({ items: [...custom, ...(await crossrefTop(p.judul, 20, p.min_year))] });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ---------------------------------------------------------------------------
+// Unggah Artikel Sendiri (GRATIS): PDF/DOCX jurnal atau arahan pembimbing →
+// diekstrak metadatanya (DOI dulu, lalu Crossref by judul) → masuk Daftar Pustaka.
+// Disimpan di identitas.refs (tanpa migrasi kolom).
+// ---------------------------------------------------------------------------
+const upArtikel = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 * 1024 * 1024 } }).single('file');
+
+async function crossrefByDoi(doi: string) {
+  try {
+    const res = await fetch(`https://api.crossref.org/works/${encodeURIComponent(doi)}?mailto=admin@skripsiplg.my.id`);
+    if (!res.ok) return null;
+    const it: any = (await res.json()).message || {};
+    return {
+      doi: it.DOI || doi,
+      title: (it.title || [''])[0] || '',
+      authors: (it.author || []).map((a: any) => `${a.family || ''}${a.given ? ', ' + a.given : ''}`).join('; ').slice(0, 300),
+      year: String(it.published?.['date-parts']?.[0]?.[0] || ''),
+      url: it.URL || `https://doi.org/${doi}`,
+      jurnal: (it['container-title'] || [''])[0] || '',
+    };
+  } catch { return null; }
+}
+
+router.post('/:id/references/upload', requireAuthOrKey, async (req: AuthRequest, res) => {
+  try {
+    await new Promise<void>((resolve, reject) => upArtikel(req as any, res as any, (e: any) => (e ? reject(e) : resolve())));
+    const id = String(req.params.id);
+    const f = (req as any).file as { originalname: string; buffer: Buffer } | undefined;
+    if (!f) return res.status(400).json({ error: 'Pilih berkas PDF/DOCX (maks 8 MB)' });
+    if (!/\.(pdf|docx)$/i.test(f.originalname)) return res.status(400).json({ error: 'Format harus PDF atau DOCX' });
+    const { data: p, error } = await db().from('projects').select('*').eq('id', id).eq('user_id', req.userId!).single();
+    if (error || !p) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
+
+    let text = '';
+    if (/\.docx$/i.test(f.originalname)) {
+      const mammoth = await import('mammoth');
+      const r = await (mammoth as any).extractRawText({ buffer: f.buffer });
+      text = String(r.value || '');
+    } else {
+      const pdf = await import('pdf-parse');
+      const fn = (pdf as any).default || pdf;
+      text = String((await fn(f.buffer)).text || '');
+    }
+    const head = text.slice(0, 12000);
+
+    // 1) DOI di dalam berkas
+    const mDoi = head.match(/\b10\.\d{4,9}\/[-._;()/:A-Z0-9]+/i);
+    let ref: any = mDoi ? await crossrefByDoi(String(mDoi[0]).replace(/[.,;)]+$/, '')) : null;
+
+    // 2) Kalimat judul: baris panjang tanpa angka berlebih sebelum kata Abstrak/Keywords
+    const baris = head.split('\n').map((l) => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
+    const hentikan = (l: string) => /^(abstrak|abstract|kata kunci|keywords|pendahuluan|introduction|1\.|http|doi)/i.test(l);
+    let judulTeuken = '';
+    for (const l of baris.slice(0, 40)) {
+      if (hentikan(l)) break;
+      if (l.length >= 25 && l.length <= 220 && (l.match(/[a-zA-Z]/g) || []).length / l.length > 0.6 && !/^\d+$/.test(l)) {
+        judulTeuken = l.replace(/^[\d.\s]+/, '');
+        if (judulTeuken.split(' ').length >= 5) break;
+      }
+    }
+    if (!ref && judulTeuken) {
+      const kandidat = await crossrefTop(judulTeuken, 3);
+      const skor = (t: string) => {
+        const a = new Set(t.toLowerCase().split(/\s+/).filter((w) => w.length > 3));
+        const b = new Set(judulTeuken.toLowerCase().split(/\s+/).filter((w) => w.length > 3));
+        if (!a.size) return 0;
+        let sama = 0; a.forEach((w) => { if (b.has(w)) sama++; });
+        return sama / a.size;
+      };
+      const cocok = kandidat.map((k) => ({ k, s: skor(k.title) })).sort((x, y) => y.s - x.s)[0];
+      if (cocok && cocok.s >= 0.5) ref = { ...cocok.k, jurnal: '' };
+    }
+
+    if (!ref) {
+      const th = head.match(/\b(19|20)\d{2}\b/);
+      const aLines = baris.slice(0, 12);
+      const penulis = aLines.find((l) => /^[\p{L}][\p{L}. ,'&-]{4,80}$/u.test(l) && !hentikan(l)) || '';
+      ref = {
+        doi: mDoi ? String(mDoi[0]) : '',
+        title: judulTeuken || f.originalname.replace(/\.(pdf|docx)$/i, ''),
+        authors: penulis,
+        year: th ? th[0] : '',
+        url: '',
+        jurnal: '',
+      };
+      if (!judulTeuken && !mDoi) return res.status(422).json({ error: 'Judul/DOI artikel tidak terbaca. Coba berkas yang halaman awalnya memuat judul artikel.' });
+    }
+
+    const custom = Array.isArray(p.identitas?.refs) ? [...p.identitas.refs] : [];
+    const kembar = custom.some((c: any) => String(c.doi || '') === String(ref.doi || '') && String(c.title || '').toLowerCase() === String(ref.title || '').toLowerCase());
+    if (kembar) return res.status(409).json({ error: 'Artikel ini sudah ada di Daftar Pustaka proyek.' });
+    if (custom.length >= 30) return res.status(400).json({ error: 'Maksimal 30 artikel unggahan per proyek.' });
+
+    const entri = {
+      doi: String(ref.doi || ''),
+      title: String(ref.title || ''),
+      authors: String(ref.authors || ''),
+      year: String(ref.year || ''),
+      url: String(ref.url || ''),
+      jurnal: String(ref.jurnal || ''),
+      file: f.originalname,
+      sumber: 'unggahan',
+    };
+    const ident = { ...(p.identitas || {}), refs: [entri, ...custom] };
+    const { error: e2 } = await db().from('projects').update({ identitas: ident, updated_at: new Date().toISOString() }).eq('id', id);
+    if (e2) throw new Error(e2.message);
+    res.json({ ref: entri, refs: ident.refs, total: ident.refs.length });
+  } catch (e: any) {
+    if (e?.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: 'Berkas terlalu besar (maks 8 MB).' });
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // Simpan/ubah isi konten (dipakai Lab Revisi tab Proyek Web)
@@ -522,6 +640,10 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
     }
     const order = ['bab1', 'bab2', 'bab3', 'bab4', 'bab5'];
     for (const b of order) if (pr.content?.[b]) mdBody(pr.content[b]);
+    if (pr.content?.lampiran) {
+      C.push(new Paragraph({ heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'LAMPIRAN', font: 'Times New Roman', size: 28, bold: true })] }));
+      mdBody(pr.content.lampiran);
+    }
     const doc = new Document({
       creator: 'Skripsi Palembang',
       title: String(pr.judul || ''),
@@ -539,6 +661,241 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     res.setHeader('Content-Disposition', 'attachment; filename="skripsi.docx"');
     res.send(Buffer.from(buf));
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ---------------------------------------------------------------------------
+// Helpers: ambil / ganti satu sub-bab di dalam teks sebuah bab
+// ---------------------------------------------------------------------------
+const RE_SUB = /^\d+\.\d+(?:\.\d+)?\s+\S/;
+
+function batasBagian(lines: string[], start: number): number {
+  for (let j = start + 1; j < lines.length; j++) {
+    const t = lines[j].trim();
+    if (!t) continue;
+    if (RE_SUB.test(t) || /^BAB\s+[IVX]+/i.test(t) || /^DAFTAR PUSTAKA/i.test(t)) return j;
+  }
+  return lines.length;
+}
+
+function ambilBagian(text: string, re: RegExp): string {
+  const lines = String(text || '').split('\n');
+  const start = lines.findIndex((l) => re.test(l.trim()));
+  if (start < 0) return '';
+  return lines.slice(start + 1, batasBagian(lines, start)).join('\n').trim();
+}
+
+function gantiBagian(text: string, re: RegExp, body: string): string | null {
+  const lines = String(text || '').split('\n');
+  const start = lines.findIndex((l) => re.test(l.trim()));
+  if (start < 0) return null;
+  const end = batasBagian(lines, start);
+  const isi = String(body || '').split('\n').map((l) => l.trim()).filter(Boolean);
+  if (!isi.length) return null;
+  return [...lines.slice(0, start), lines[start], '', ...isi, '', ...lines.slice(end)]
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n');
+}
+
+function parseJson<T>(s: string, fallback: T): T {
+  const t = String(s || '').replace(/```json/gi, '').replace(/```/g, '').trim();
+  const a = t.indexOf('{'), b = t.lastIndexOf('}');
+  if (a < 0 || b <= a) return fallback;
+  try { return JSON.parse(t.slice(a, b + 1)) as T; } catch { return fallback; }
+}
+
+function ambilTeks(content: any, keys: string[], perBab = 6000) {
+  return keys.map((k) => (content?.[k] ? `\n=== ${k.toUpperCase()} ===\n${String(content[k]).slice(0, perBab)}` : '')).join('').slice(0, perBab * keys.length);
+}
+
+// Kembalikan kredit bila generate gagal / hasil tidak terbaca (sama seperti pola bab)
+async function addCreditsRefund(userId: string, feature: string, ref: string) {
+  try {
+    const { addCredits, FEATURE_COSTS } = await import('../services/credits.service');
+    await addCredits(userId, FEATURE_COSTS[feature] ?? 1, ref);
+  } catch { /* abaikan */ }
+}
+
+// Tinjau Hasil (5 kredit): kelebihan, kekurangan & pertanyaan penguji dari draf sekarang
+router.post('/:id/tinjau', requireAuthOrKey, async (req: AuthRequest, res) => {
+  const id = String(req.params.id);
+  try {
+    const { data: pr, error } = await db().from('projects').select('*').eq('id', id).eq('user_id', req.userId!).single();
+    if (error || !pr) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
+    if (!pr.content || !Object.keys(pr.content).length) return res.status(400).json({ error: 'Belum ada bab yang bisa ditinjau. Generate minimal Bab I dulu.' });
+    try {
+      await consumeCredits(req.userId!, 'tinjau', `proyek:${id}:tinjau`);
+    } catch (e: any) {
+      if (e.code === 'INSUFFICIENT_CREDITS') return res.status(402).json({ error: e.message, remaining: e.remaining });
+      throw e;
+    }
+    const teks = ambilTeks(pr.content, ['bab1', 'bab2', 'bab3', 'bab4', 'bab5', 'abstrak', 'lampiran'], 5000);
+    let out = '';
+    try {
+      out = await generateContent(
+        `Kamu dosen pembimbing dan penguji skripsi yang kritis. Analisis draf skripsi berikut (judul: ${pr.judul}; metode: ${pr.metode}).\n` +
+        `${teks.slice(0, 30000)}\n\n` +
+        `Balas HANYA JSON valid tanpa teks lain, tanpa markdown, dengan struktur:\n` +
+        `{"kelebihan":["3-5 butir spesifik yang sudah baik"],"kekurangan":["4-6 butir paling rawan diperiksa penguji, konkret + lokasi sub-babnya"],"pertanyaan":["4-6 pertanyaan penguji yang paling mungkin diajukan beserta inti jawabannya"]}`
+      );
+    } catch (e: any) {
+      await addCreditsRefund(req.userId!, 'tinjau', `refund:${id}:tinjau-gagal`);
+      throw e;
+    }
+    const j: any = parseJson(out, {});
+    const hasil = {
+      kelebihan: (j.kelebihan || []).filter((x: any) => typeof x === 'string').slice(0, 8),
+      kekurangan: (j.kekurangan || []).filter((x: any) => typeof x === 'string').slice(0, 10),
+      pertanyaan: (j.pertanyaan || []).filter((x: any) => typeof x === 'string').slice(0, 10),
+    };
+    if (!hasil.kelebihan.length && !hasil.kekurangan.length) {
+      await addCreditsRefund(req.userId!, 'tinjau', `refund:${id}:tinjau-gagal`);
+      return res.status(502).json({ error: 'Hasil tinjauan tidak terbaca. Coba lagi.' });
+    }
+    res.json({ hasil });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// Sesuaikan Skripsi (5 kredit): rapikan tujuan, hipotesis, kerangka konsep & Bab III
+// agar selaras dengan rumusan masalah terbaru, lalu timpa bagiannya di naskah.
+router.post('/:id/sesuaikan', requireAuthOrKey, async (req: AuthRequest, res) => {
+  const id = String(req.params.id);
+  try {
+    const { data: pr, error } = await db().from('projects').select('*').eq('id', id).eq('user_id', req.userId!).single();
+    if (error || !pr) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
+    const c = pr.content || {};
+    const rumusan = ambilBagian(c.bab1 || '', /rumusan masalah/i);
+    if (!rumusan) return res.status(400).json({ error: 'Rumusan Masalah belum ada di Bab I. Generate Bab I dulu, baru Sesuaikan Skripsi.' });
+    if (!c.bab1 && !c.bab2 && !c.bab3) return res.status(400).json({ error: 'Belum ada Bab I–III untuk disesuaikan.' });
+    try {
+      await consumeCredits(req.userId!, 'sesuaikan', `proyek:${id}:sesuaikan`);
+    } catch (e: any) {
+      if (e.code === 'INSUFFICIENT_CREDITS') return res.status(402).json({ error: e.message, remaining: e.remaining });
+      throw e;
+    }
+
+    const hipotesis = ambilBagian(c.bab2 || '', /hipotesis/i);
+    const kerangka = ambilBagian(c.bab2 || '', /kerangka (berpikir|teori|konsep)/i);
+    let out = '';
+    try {
+      out = await generateContent(
+        `Tugas: menyesuaikan bagian-bagian skripsi berikut agar selaras RUMUSAN MASALAH.\nJudul: ${pr.judul}\nMetode: ${pr.metode}\n\n` +
+        `--- RUMUSAN MASALAH (Bab I) ---\n${rumusan.slice(0, 4000)}\n\n` +
+        `--- TUJUAN PENELITIAN saat ini ---\n${ambilBagian(c.bab1 || '', /tujuan penelitian/i).slice(0, 2000) || '(belum ada)'}\n\n` +
+        `--- HIPOTESIS saat ini ---\n${hipotesis.slice(0, 2000) || '(belum ada)'}\n\n` +
+        `--- KERANGKA BERPIKIR saat ini ---\n${kerangka.slice(0, 2000) || '(belum ada)'}\n\n` +
+        `--- BAB III (metode) ---\n${String(c.bab3 || '').slice(0, 6000) || '(belum ada)'}\n\n` +
+        `Balas HANYA JSON valid tanpa markdown, tanpa penjelasan:\n` +
+        `{"tujuan":"isi paragraf tujuan penelitian baru (tanpa judul sub-bab), tiap butik rumusan masalah sejajar","hipotesis":"isi hipotesis baru tanpa judul sub-bab (kosong bila kualitatif/hipotesis tidak ada)","kerangka":"isi kerangka berpikir baru tanpa judul sub-bab","catatan_bab3":["3-5 butir penyesuaian Bab III yang perlu kamu lakukan manual"]}`
+      );
+    } catch (e: any) {
+      await addCreditsRefund(req.userId!, 'sesuaikan', `refund:${id}:sesuaikan-gagal`);
+      throw e;
+    }
+    const j: any = parseJson(out, {});
+
+    const baru: Record<string, string> = {};
+    const diterapkan: { key: string; judul: string }[] = [];
+    const pasang = (key: string, re: RegExp, judul: string, body: any) => {
+      const teks = Array.isArray(body) ? body.join('\n\n') : String(body || '').trim();
+      if (!teks) return;
+      const g = gantiBagian(String(baru[key] ?? c[key] ?? ''), re, teks);
+      if (g) { baru[key] = g; diterapkan.push({ key, judul }); }
+    };
+    pasang('bab1', /tujuan penelitian/i, '1.x Tujuan Penelitian (Bab I)', j.tujuan);
+    if (c.bab2) {
+      pasang('bab2', /hipotesis/i, 'Hipotesis (Bab II)', j.hipotesis);
+      pasang('bab2', /kerangka (berpikir|teori|konsep)/i, 'Kerangka Berpikir (Bab II)', j.kerangka);
+    }
+
+    if (!diterapkan.length) {
+      await addCreditsRefund(req.userId!, 'sesuaikan', `refund:${id}:sesuaikan-tidak-diterapkan`);
+      return res.status(422).json({
+        error: 'Sub-bab Tujuan Penelitian/Hipotesis/Kerangka tidak ditemukan di naskah, jadi belum ada yang ditimpa. Kredit dikembalikan.',
+        catatan: (j.catatan_bab3 || []).filter((x: any) => typeof x === 'string'),
+      });
+    }
+
+    const content = { ...c, ...baru };
+    const { error: e2 } = await db().from('projects').update({ content, updated_at: new Date().toISOString() }).eq('id', id);
+    if (e2) throw new Error(e2.message);
+    res.json({
+      ok: true,
+      diterapkan,
+      catatan: (j.catatan_bab3 || []).filter((x: any) => typeof x === 'string').slice(0, 8),
+      isi: { tujuan: String(j.tujuan || ''), hipotesis: String(j.hipotesis || ''), kerangka: String(j.kerangka || '') },
+    });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// Cek Sitasi (GRATIS): deteksi sitasi "yatim" (tidak ada di daftar referensi proyek)
+router.post('/:id/cek-sitasi', requireAuthOrKey, async (req: AuthRequest, res) => {
+  try {
+    const id = String(req.params.id);
+    const { data: pr, error } = await db().from('projects').select('*').eq('id', id).eq('user_id', req.userId!).single();
+    if (error || !pr) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
+    const c = pr.content || {};
+    const teks = ambilTeks(c, ['bab1', 'bab2', 'bab3', 'bab4', 'bab5', 'abstrak', 'lampiran', 'artikel', 'karil'], 40000);
+
+    // 1) Kumpulkan sitasi: (Penulis, Tahun) termasuk gabungan (A, 2020; B, 2018) dan gaya naratif Penulis (2020)
+    const unik = new Map<string, { penulis: string; tahun: string }>();
+    const simpan = (raw: string, penulis: string, tahun: string) => {
+      const k = raw.trim().replace(/\s+/g, ' ');
+      if (k.length < 6 || !/^(19|20)\d{2}$/.test(tahun)) return;
+      if (!unik.has(k)) unik.set(k, { penulis: penulis.trim(), tahun });
+    };
+    for (const g of teks.match(/\([^()]{1,200}\)/g) || []) {
+      if (!/\b(19|20)\d{2}\b/.test(g)) continue;
+      for (const potong of g.slice(1, -1).split(';')) {
+        const t = potong.trim().replace(/\s+/g, ' ');
+        const m = t.match(/^(.{2,70}?)\s*,?\s+((?:19|20)\d{2})[a-z]?$/i);
+        if (m && m[1].length > 1) simpan(t, m[1], m[2]);
+      }
+    }
+    const nar = [...teks.matchAll(/\b([\p{L}][\p{L}'’.-]{2,30}(?:\s+(?:dkk\.?|et al\.?|dll\.?))?)\s+\(((?:19|20)\d{2})[a-z]?\)/gu)];
+    for (const m of nar) simpan(`${m[1]}, ${m[2]}`, m[1], m[2]);
+
+    const daftar = [...unik.entries()].slice(0, 300).map(([raw, v]) => ({ raw, ...v }));
+    if (!daftar.length) return res.json({ total: 0, nyata: 0, perluDitinjau: 0, semuaCocok: true, temuan: [], catatan: 'Belum ada sitasi (Penulis, Tahun) di naskah.' });
+
+    // 2) Cocokkan dengan Daftar Pustaka proyek (unggahan + Crossref by judul)
+    const custom = Array.isArray(pr.identitas?.refs) ? pr.identitas.refs : [];
+    const refs = [...custom, ...(await crossrefTop(pr.judul, 20, pr.min_year))];
+    const nurut = (s: string) => String(s || '').toLowerCase().replace(/[^\p{L}\s]/gu, '');
+    const kata = (s: string) => nurut(s).split(/\s+/).filter(Boolean);
+    const cocokRef = (penulis: string, tahun: string) => {
+      const p = kata(penulis).filter((w) => !['et', 'al', 'dkk', 'dll', 'dan', 'dkk', 'dengan', 'lain', 'the', 'of'].includes(w));
+      const nama = p[0] || '';
+      if (!nama) return null;
+      return refs.find((r: any) => String(r.year || '') === tahun && p.every((w) => nurut(r.authors).includes(w))) || null;
+    };
+
+    const temuan = daftar.map((d) => {
+      const r = cocokRef(d.penulis, d.tahun);
+      return {
+        raw: d.raw, penulis: d.penulis, tahun: d.tahun,
+        status: r ? 'nyata' : 'yatim',
+        dukungan: r ? (r.doi || r.url ? 'kuat' : 'lemah') : null,
+        rujukan: r ? { title: r.title, authors: r.authors, year: r.year, doi: r.doi || '', url: r.url || '', sumber: r.sumber || 'crossref' } : null,
+        saran: null as any,
+      };
+    });
+
+    // 3) Sitasi yatim diverifikasi ke Crossref (maks 8) — boleh nyata di luar, tapi belum ada di Daftar Pustakamu
+    const yatim = temuan.filter((t) => t.status === 'yatim').slice(0, 8);
+    await Promise.all(yatim.map(async (t) => {
+      const cari = await crossrefTop(`${t.penulis} ${t.tahun}`, 5, Number(t.tahun) || null);
+      const nama = kata(t.penulis).filter((w) => !['et', 'al', 'dkk', 'dll', 'dan'].includes(w))[0] || '';
+      const ada = cari.find((r) => String(r.year) === t.tahun && nurut(r.authors).includes(nama) && (r.title || '').length > 10);
+      if (ada) { t.dukungan = 'lemah'; t.saran = { title: ada.title, authors: ada.authors, year: ada.year, doi: ada.doi, url: ada.url }; }
+    }));
+
+    const nyata = temuan.filter((t) => t.status === 'nyata').length;
+    const perluDitinjau = temuan.length - nyata;
+    res.json({
+      total: temuan.length, nyata, perluDitinjau, semuaCocok: perluDitinjau === 0,
+      temuan: [...temuan.filter((t) => t.status === 'yatim'), ...temuan.filter((t) => t.status === 'nyata')],
+    });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 

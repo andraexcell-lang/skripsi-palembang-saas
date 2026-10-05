@@ -27,9 +27,11 @@ async function authHeaders(): Promise<Record<string, string>> {
 
 export class ApiError extends Error {
   status: number;
-  constructor(message: string, status: number) {
+  data: any;
+  constructor(message: string, status: number, data: any = null) {
     super(message);
     this.status = status;
+    this.data = data;
   }
 }
 
@@ -50,7 +52,7 @@ export async function apiPost(path: string, body: any) {
     body: JSON.stringify(body),
   });
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new ApiError(json.error || `POST ${path} gagal (${res.status})`, res.status);
+  if (!res.ok) throw new ApiError(json.error || `POST ${path} gagal (${res.status})`, res.status, json);
   return json;
 }
 
