@@ -413,4 +413,66 @@ router.delete('/:id', requireAuthOrKey, async (req: AuthRequest, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// Abstrak ID + EN (1 kredit)
+router.post('/:id/generate-abstrak', requireAuthOrKey, async (req: AuthRequest, res) => {
+  try {
+    const id = String(req.params.id);
+    const { data: pr, error } = await db().from('projects').select('*').eq('id', id).eq('user_id', req.userId!).single();
+    if (error || !pr) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
+    try {
+      await consumeCredits(req.userId!, 'revisi', `proyek:${id}:abstrak`);
+    } catch (e: any) {
+      if (e.code === 'INSUFFICIENT_CREDITS') return res.status(402).json({ error: e.message, remaining: e.remaining });
+      throw e;
+    }
+    const text = await generateContent(
+      `Susun ABSTRAK (Indonesia, 1 paragraf 150-200 kata + 3-5 kata kunci urut abjad) dan ABSTRACT (Inggris, terjemahan setara) untuk karya: ${pr.judul}. Metode: ${pr.metode}. Isi: ${(pr.content?.bab1 || '').slice(0, 2000)}`
+    );
+    const content = { ...(pr.content || {}), abstrak: text };
+    await db().from('projects').update({ content, updated_at: new Date().toISOString() }).eq('id', id);
+    res.json({ text });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// Tambah sitasi ke bab (GRATIS): 1 paragraf ber-bodynote dari referensi nyata
+router.post('/:id/tambah-sitasi', requireAuthOrKey, async (req: AuthRequest, res) => {
+  try {
+    const id = String(req.params.id);
+    const { bab } = req.body || {};
+    if (!bab) return res.status(400).json({ error: 'bab wajib' });
+    const { data: pr, error } = await db().from('projects').select('*').eq('id', id).eq('user_id', req.userId!).single();
+    if (error || !pr) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
+    const refs = await crossrefTop(pr.judul, 4, pr.min_year);
+    if (!refs.length) return res.status(404).json({ error: 'Tidak ada referensi cocok' });
+    const text = await generateContent(
+      `Tulis 1 paragraf akademik (80-120 kata) relevan dengan "${bab}" untuk judul ${pr.judul}, dengan 2-3 bodynote ${pr.citation_style || 'APA 7th'} dari referensi berikut (jangan karang di luar daftar):\n${refs.map((r, i) => `${i + 1}. ${r.authors} (${r.year}). ${r.title}. https://doi.org/${r.doi}`).join('\n')}`
+    );
+    const content = { ...(pr.content || {}), [bab]: String(pr.content?.[bab] || '') + '\n\n' + text };
+    await db().from('projects').update({ content, updated_at: new Date().toISOString() }).eq('id', id);
+    res.json({ text });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// Karil UT (MKWI4560): artikel sistematika UT (15 kredit, pakai tarif artikel)
+router.post('/:id/generate-karil', requireAuthOrKey, async (req: AuthRequest, res) => {
+  try {
+    const id = String(req.params.id);
+    const { data: pr, error } = await db().from('projects').select('*').eq('id', id).eq('user_id', req.userId!).single();
+    if (error || !pr) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
+    try {
+      await consumeCredits(req.userId!, 'artikel', `proyek:${id}:karil`);
+    } catch (e: any) {
+      if (e.code === 'INSUFFICIENT_CREDITS') return res.status(402).json({ error: e.message, remaining: e.remaining });
+      throw e;
+    }
+    const refs = await crossrefTop(pr.judul, 10, pr.min_year);
+    const text = await generateContent(
+      `Susun KARYA ILMIAH UT (MKWI4560) berbahasa Indonesia, sistematika: Judul, Identitas (Nama/NIM/UPBJJ), Abstrak 150-200 kata + 3-5 kata kunci abjad, Pendahuluan, Metode, Hasil dan Pembahasan, Simpulan dan Saran, Daftar Pustaka APA (min 10 sumber, 5 jurnal 5 tahun terakhir). Penulis: mahasiswa pertama. Judul: ${pr.judul}.\n${refs.map((r, i) => `${i + 1}. ${r.authors} (${r.year}). ${r.title}. https://doi.org/${r.doi}`).join('\n')}\nJangan mengarang DOI.`
+    );
+    const content = { ...(pr.content || {}), karil: text };
+    await db().from('projects').update({ content, updated_at: new Date().toISOString() }).eq('id', id);
+    res.json({ text });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 export default router;

@@ -1,7 +1,7 @@
 'use client';
 import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { apiGet, apiPostStream, isInsufficientCredits } from '@/lib/api';
+import { apiGet, apiPost, apiPostStream, isInsufficientCredits } from '@/lib/api';
 
 const BABS = [
   { id: 'bab1', label: 'Bab I: Pendahuluan' },
@@ -22,6 +22,30 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
   const [soal, setSoal] = useState('');
   const [soalLoading, setSoalLoading] = useState(false);
   const [refs, setRefs] = useState<any[]>([]);
+  const [abstrakLoading, setAbstrakLoading] = useState(false);
+
+  async function generateAbstrak() {
+    setAbstrakLoading(true); setErr('');
+    try {
+      const r = await apiPost(`/api/projects/${id}/generate-abstrak`, {});
+      setProyek((p: any) => ({ ...p, content: { ...(p?.content || {}), abstrak: r.text } }));
+    } catch (e: any) {
+      setErr(e.message);
+      if (isInsufficientCredits(e)) setNeedsTopup(true);
+    }
+    setAbstrakLoading(false);
+  }
+
+  async function tambahSitasi() {
+    if (!active) return;
+    setLoading(true); setErr('');
+    try {
+      const r = await apiPost(`/api/projects/${id}/tambah-sitasi`, { bab: active });
+      await load();
+      setErr('');
+    } catch (e: any) { setErr(e.message); }
+    setLoading(false);
+  }
 
   function refId(r: any, i: number) {
     return `ref-${i}`;
@@ -170,11 +194,23 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
           <button onClick={prediksiSoal} disabled={soalLoading || !text} className="border border-border-strong bg-bg-surface px-5 py-2.5 rounded-lg text-sm font-bold text-text-primary hover:bg-bg-surface-hover disabled:opacity-50" title="1 kredit">
             {soalLoading ? 'Menyusun...' : 'Prediksi Soal'}
           </button>
+          <button onClick={tambahSitasi} disabled={loading || !text} className="border border-border-strong bg-bg-surface px-5 py-2.5 rounded-lg text-sm font-bold text-text-primary hover:bg-bg-surface-hover disabled:opacity-50" title="Gratis">
+            Tambah Sitasi
+          </button>
+          <button onClick={generateAbstrak} disabled={abstrakLoading} className="border border-border-strong bg-bg-surface px-5 py-2.5 rounded-lg text-sm font-bold text-text-primary hover:bg-bg-surface-hover disabled:opacity-50" title="1 kredit">
+            {abstrakLoading ? '...' : 'Abstrak ID+EN'}
+          </button>
         </div>
         {soal && (
           <div className="bg-bg-surface border border-border-subtle rounded-xl p-6 text-sm text-text-primary whitespace-pre-wrap">
             <h3 className="font-bold text-base mb-3 text-brand-primary">Prediksi Soal Sidang</h3>
             {soal}
+          </div>
+        )}
+        {proyek?.content?.abstrak && (
+          <div className="bg-bg-surface border border-border-subtle rounded-xl p-6 text-sm text-text-primary whitespace-pre-wrap">
+            <h3 className="font-bold text-base mb-3 text-brand-primary">Abstrak & Abstract</h3>
+            {proyek.content.abstrak}
           </div>
         )}
         {refs.length > 0 && (
