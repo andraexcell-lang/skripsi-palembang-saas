@@ -37,19 +37,43 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
     return line;
   }
 
+  function cleanMd(s: string): string {
+    return s.replace(/\*\*(.+?)\*\*/g, '$1').replace(/(^|\s)\*([^*\n]+)\*(?=\s|$)/g, '$1$2').trim();
+  }
+
   function renderDoc(body: string) {
     const lines = body.split('\n');
-    return lines.map((ln, i) => {
-      const t = ln.trim();
-      if (!t) return <div key={i} className="h-3" />;
-      if (/^(BAB [IVX]+|DAFTAR PUSTAKA|ABSTRAK|ABSTRACT|KATA PENGANTAR|DAFTAR ISI|DAFTAR TABEL|LEMBAR .*)$/i.test(t)) {
-        return <h3 key={i} className="text-center font-bold text-base mt-6 mb-3">{t}</h3>;
+    const out: any[] = [];
+    let i = 0;
+    while (i < lines.length) {
+      const t = lines[i].trim();
+      if (!t || /^---+$/.test(t)) { i++; continue; }
+      if (/^\|.+\|$/.test(t) && i + 1 < lines.length && /^\|[\s:\-|]+\|$/.test(lines[i + 1].trim())) {
+        const head = t.split('|').map((c) => c.trim()).filter(Boolean);
+        const rows: string[][] = [];
+        i += 2;
+        while (i < lines.length && /^\|.+\|$/.test(lines[i].trim())) {
+          rows.push(lines[i].trim().split('|').map((c) => c.trim()).filter(Boolean));
+          i++;
+        }
+        out.push(
+          <table key={`tbl-${i}`} className="w-full text-xs border-collapse my-4">
+            <thead><tr>{head.map((h, k) => <th key={k} className="border border-border-strong px-2 py-1 text-left">{h}</th>)}</tr></thead>
+            <tbody>{rows.map((r, k) => <tr key={k}>{r.map((c, j) => <td key={j} className="border border-border-strong px-2 py-1">{c}</td>)}</tr>)}</tbody>
+          </table>
+        );
+        continue;
       }
-      if (/^\d+\.\d+\s+\S/.test(t)) {
-        return <h4 key={i} className="font-bold text-sm mt-5 mb-2">{fmtHeading(t)}</h4>;
+      if (/^(BAB [IVX]+|DAFTAR PUSTAKA|ABSTRAK|ABSTRACT|KATA PENGANTAR|DAFTAR ISI|DAFTAR TABEL|LEMBAR .*)$/i.test(cleanMd(t))) {
+        out.push(<h3 key={i} className="text-center font-bold text-base mt-6 mb-3">{cleanMd(t)}</h3>);
+      } else if (/^\d+\.\d+\s+\S/.test(cleanMd(t))) {
+        out.push(<h4 key={i} className="font-bold text-sm mt-5 mb-2">{fmtHeading(cleanMd(t))}</h4>);
+      } else {
+        out.push(<p key={i} className="text-justify indent-8 mb-3 leading-relaxed">{renderSitasi(cleanMd(t), `l${i}-`)}</p>);
       }
-      return <p key={i} className="text-justify indent-8 mb-3 leading-relaxed">{renderSitasi(t, `l${i}-`)}</p>;
-    });
+      i++;
+    }
+    return out;
   }
   const [showDisc, setShowDisc] = useState(false);
 
