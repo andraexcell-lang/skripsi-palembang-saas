@@ -279,9 +279,8 @@ router.post('/:id/references/upload', requireAuthOrKey, async (req: AuthRequest,
       const r = await (mammoth as any).extractRawText({ buffer: f.buffer });
       text = String(r.value || '');
     } else {
-      const pdf = await import('pdf-parse');
-      const fn = (pdf as any).default || pdf;
-      text = String((await fn(f.buffer)).text || '');
+      const { pdfText } = await import('../utils/pdf');
+      text = await pdfText(f.buffer, 60000);
     }
     const head = text.slice(0, 12000);
 
@@ -491,9 +490,8 @@ router.post('/from-file', requireAuthOrKey, async (req: AuthRequest, res) => {
       const r = await (mammoth as any).extractRawText({ buffer: f.buffer });
       text = String(r.value || '');
     } else if (/\.pdf$/i.test(f.originalname)) {
-      const pdf = await import('pdf-parse');
-      const fn = (pdf as any).default || pdf;
-      text = String((await fn(f.buffer)).text || '');
+      const { pdfText } = await import('../utils/pdf');
+      text = await pdfText(f.buffer, 60000);
     } else {
       text = f.buffer.toString('utf-8');
     }

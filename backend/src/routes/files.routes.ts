@@ -13,10 +13,8 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 *
 async function extractText(file: Express.Multer.File): Promise<string> {
   const name = file.originalname.toLowerCase();
   if (name.endsWith('.pdf')) {
-    const pdf = await import('pdf-parse');
-    const fn = (pdf as any).default || pdf;
-    const r = await fn(file.buffer);
-    return String(r.text || '').slice(0, 20000);
+    const { pdfText } = await import('../utils/pdf');
+    return (await pdfText(file.buffer, 20000)).slice(0, 20000);
   }
   if (name.endsWith('.docx')) {
     const mammoth = await import('mammoth');
