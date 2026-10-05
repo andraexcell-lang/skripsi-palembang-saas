@@ -3,7 +3,7 @@ import { AuthRequest, requireAuth } from '../middleware/auth';
 import { requireAuthOrKey } from '../middleware/apiKey';
 import { supabaseAdmin, supabaseAnon } from '../config/supabase';
 import { consumeCredits } from '../services/credits.service';
-import { generateContent } from '../services/ai.service';
+import { generateContent, generateContentStream } from '../services/ai.service';
 
 const router = Router();
 const db = () => supabaseAdmin || supabaseAnon;
@@ -226,6 +226,62 @@ router.post('/:id/generate-subbab', requireAuthOrKey, async (req: AuthRequest, r
     await d.from('projects').update({ content, updated_at: new Date().toISOString() }).eq('id', id);
     res.json({ text, cost });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// Streaming SSE per sub-bab (kata-per-kata). Kredit sama seperti generate-subbab.
+router.post('/:id/generate-subbab-stream', requireAuthOrKey, async (req: AuthRequest, res) => {
+  try {
+    const id = String(req.params.id);
+    const { bab, sub } = req.body || {};
+    if (!OUTLINE[bab]) return res.status(400).json({ error: 'bab tidak dikenal' });
+    if (!sub || String(sub).trim().length < 2) return res.status(400).json({ error: 'sub wajib diisi' });
+    const { data: p, error } = await db().from('projects').select('*').eq('id', id).eq('user_id', req.userId!).single();
+    if (error || !p) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
+    const key = `${bab}:${sub}`;
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    const send = (ev: string, data: any) => res.write(`event: ${ev}\ndata: ${JSON.stringify(data)}\n\n`);
+    if ((p.content || {})[key]) {
+      send('Cached', true);
+      for (const w of String(p.content[key]).split(/(\s+)/)) send('chunk', { t: w });
+      send('done', { cost: 0, cached: true });
+      return res.end();
+    }
+    const d = db();
+    const { data: paid } = await d.from('credit_ledger').select('id').eq('user_id', req.userId!).eq('ref', `proyek:${id}:${bab}`).limit(1);
+    let cost = 0;
+    if ((!paid || !paid.length) && !(p.content || {})[bab]) {
+      try {
+        const r = await consumeCredits(req.userId!, 'bab', `proyek:${id}:${bab}`);
+        cost = r.cost;
+      } catch (e: any) {
+        if (e.code === 'INSUFFICIENT_CREDITS') { send('error', { error: e.message }); return res.end(); }
+        throw e;
+      }
+    }
+    send('cost', { cost });
+    const refs = await crossrefTop(`${p.judul} ${sub}`, 5, p.min_year);
+    const prompt = `Susun sub-bab "${sub}" dari ${(OUTLINE[bab] || {}).bab || bab} untuk karya berikut. Judul: ${p.judul}. Metode: ${p.metode}. Bahasa: ${p.language || 'Indonesia'}. Gaya sitasi: ${p.citation_style || 'APA 7th'}.\n${refBlock(refs)}\nTulis 300-600 kata akademik dengan bodynote bila memakai teori. Jangan mengarang DOI.`;
+    let full = '';
+    try {
+      for await (const t of generateContentStream(prompt)) {
+        full += t;
+        send('chunk', { t });
+      }
+    } catch (e: any) {
+      const { addCredits } = await import('../services/credits.service');
+      if (cost) await addCredits(req.userId!, cost, `refund:${id}:${bab}-stream-gagal`).catch(() => {});
+      send('error', { error: e.message || 'Gagal generate' });
+      return res.end();
+    }
+    const content = { ...(p.content || {}), [key]: full };
+    await d.from('projects').update({ content, updated_at: new Date().toISOString() }).eq('id', id);
+    send('done', { cost });
+    res.end();
+  } catch (e: any) {
+    try { res.write(`event: error\ndata: ${JSON.stringify({ error: e.message })}\n\n`); res.end(); } catch { /* abaikan */ }
+  }
 });
 
 export default router;

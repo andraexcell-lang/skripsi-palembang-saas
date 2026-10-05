@@ -217,13 +217,58 @@
     const pid = $('proj').value;
     if (!pid) return msg2('Pilih proyek dulu.');
     if (btn) { btn.disabled = true; btn.dataset.label = btn.innerText; btn.innerText = 'Menulis...'; }
-    msg2('Menggenerate ' + sub + '...');
+    const t0 = Date.now();
+    const tick = setInterval(() => {
+      const s = Math.floor((Date.now() - t0) / 1000);
+      msg2('Menulis draf... ' + Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') + ' berjalan. Jangan tutup Word.');
+    }, 1000);
     try {
-      const j = await call('/api/projects/' + pid + '/generate-subbab', { bab, sub });
-      await insertEnd(sub + '\n\n' + j.text);
-      msg2(sub + ' selesai' + (j.cost ? '' : ' (gratis — bab sudah dibayar).'));
+      const r = await fetch(api() + '/api/projects/' + pid + '/generate-subbab-stream', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': key() },
+        body: JSON.stringify({ bab, sub })
+      });
+      if (!r.ok || !r.body) {
+        const j = await r.json().catch(() => ({}));
+        throw new Error(j.error || ('HTTP ' + r.status));
+      }
+      const reader = r.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '', full = '', nwords = 0;
+      for (;;) {
+        const rd = await reader.read();
+        if (rd.done) break;
+        buf += dec.decode(rd.value, { stream: true });
+        let idx;
+        while ((idx = buf.indexOf('\n\n')) >= 0) {
+          const block = buf.slice(0, idx);
+          buf = buf.slice(idx + 2);
+          for (const line of block.split('\n')) {
+            if (!line.startsWith('data: ')) continue;
+            let d = {};
+            try { d = JSON.parse(line.slice(6)); } catch (e) { continue; }
+            if (typeof d.t === 'string') {
+              full += d.t;
+              nwords = full.split(/\s+/).length;
+              const s = Math.floor((Date.now() - t0) / 1000);
+              msg2('Menulis draf... ' + nwords + ' kata, ' + Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') + '. Jangan tutup Word.');
+            } else if (d.error) {
+              throw new Error(d.error);
+            } else if (typeof d.cost === 'number' && d.cost) {
+              msg2('Menulis draf... (10 kredit)');
+            }
+          }
+        }
+      }
+      await Word.run(async (ctx) => {
+        const h = ctx.document.body.insertParagraph(sub, Word.InsertLocation.end);
+        h.font.bold = true; h.font.size = 13;
+        ctx.document.body.insertParagraph(full.slice(0, 15000), Word.InsertLocation.end);
+        await ctx.sync();
+      });
+      msg2(sub + ' selesai (' + nwords + ' kata).');
       refresh();
     } catch (e) { msg2('Error: ' + e.message); }
+    clearInterval(tick);
     if (btn) { btn.disabled = false; btn.innerText = btn.dataset.label || 'Generate'; }
   }
   $('gen-custom').onclick = async () => {
