@@ -1,7 +1,7 @@
 'use client';
 import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { apiGet, apiPost, isInsufficientCredits } from '@/lib/api';
+import { apiGet, apiPostStream, isInsufficientCredits } from '@/lib/api';
 
 const BABS = [
   { id: 'bab1', label: 'Bab I: Pendahuluan' },
@@ -30,8 +30,11 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
   async function generate() {
     setLoading(true); setErr(''); setNeedsTopup(false);
     try {
-      const r = await apiPost(`/api/projects/${id}/generate-bab`, { bab: active });
-      setProyek((p: any) => ({ ...p, content: { ...(p?.content || {}), [active]: r.text } }));
+      const r = await apiPostStream(`/api/projects/${id}/generate-bab-stream`, { bab: active }, (t) => {
+        setProyek((p: any) => ({ ...p, content: { ...(p?.content || {}), [active]: t } }));
+      });
+      if (r.cached) setErr('');
+      await load();
     } catch (e: any) {
       setErr(e.message);
       if (isInsufficientCredits(e)) setNeedsTopup(true);

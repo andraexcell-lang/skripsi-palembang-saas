@@ -54,6 +54,41 @@ export async function apiPost(path: string, body: any) {
   return json;
 }
 
+export async function apiPostStream(path: string, body: any, onText: (t: string) => void): Promise<{ cost: number; cached?: boolean }> {
+  const res = await fetch(`${API}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok || !res.body) {
+    const json = await res.json().catch(() => ({}));
+    throw new ApiError(json.error || `POST ${path} gagal`, res.status);
+  }
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = '', full = '', cost = 0, cached = false;
+  for (;;) {
+    const rd = await reader.read();
+    if (rd.done) break;
+    buf += dec.decode(rd.value, { stream: true });
+    let idx: number;
+    while ((idx = buf.indexOf('\n\n')) >= 0) {
+      const block = buf.slice(0, idx);
+      buf = buf.slice(idx + 2);
+      for (const line of block.split('\n')) {
+        if (!line.startsWith('data: ')) continue;
+        let d: any = {};
+        try { d = JSON.parse(line.slice(6)); } catch { continue; }
+        if (typeof d.t === 'string') { full += d.t; onText(full); }
+        else if (d.error) throw new ApiError(d.error, 500);
+        else if (typeof d.cost === 'number') cost = d.cost;
+        else if (d.cached) cached = true;
+      }
+    }
+  }
+  return { cost, cached };
+}
+
 export async function aiGenerate(prompt: string, feature = 'bab', ref = '') {
   return apiPost('/api/ai/generate', { prompt, feature, ref });
 }

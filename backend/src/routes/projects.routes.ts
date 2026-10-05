@@ -153,8 +153,54 @@ router.post('/:id/generate-bab', requireAuthOrKey, async (req: AuthRequest, res)
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/:id/generate-artikel', requireAuthOrKey, async (req: AuthRequest, res) => {
+// Streaming SSE per BAB penuh (untuk Studio web).
+router.post('/:id/generate-bab-stream', requireAuthOrKey, async (req: AuthRequest, res) => {
   try {
+    const id = String(req.params.id);
+    const { bab } = req.body || {};
+    if (!BAB_LIST.includes(bab)) return res.status(400).json({ error: `bab harus salah satu: ${BAB_LIST.join(', ')}` });
+    const { data: p, error } = await db().from('projects').select('*').eq('id', id).eq('user_id', req.userId!).single();
+    if (error || !p) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    const send = (ev: string, data: any) => res.write(`event: ${ev}\ndata: ${JSON.stringify(data)}\n\n`);
+    if ((p.content || {})[bab]) {
+      send('cached', true);
+      for (const w of String(p.content[bab]).split(/(\s+)/)) send('chunk', { t: w });
+      send('done', { cost: 0, cached: true });
+      return res.end();
+    }
+    try {
+      const r = await consumeCredits(req.userId!, 'bab', `proyek:${id}:${bab}`);
+      send('cost', { cost: r.cost });
+    } catch (e: any) {
+      if (e.code === 'INSUFFICIENT_CREDITS') { send('error', { error: e.message }); return res.end(); }
+      throw e;
+    }
+    const refs = await crossrefTop(p.judul, 6, p.min_year);
+    let full = '';
+    try {
+      for await (const t of generateContentStream(babPrompt(bab, p, refs))) {
+        full += t;
+        send('chunk', { t });
+      }
+    } catch (e: any) {
+      const { addCredits } = await import('../services/credits.service');
+      await addCredits(req.userId!, 10, `refund:${id}:${bab}-stream-gagal`).catch(() => {});
+      send('error', { error: e.message || 'Gagal generate' });
+      return res.end();
+    }
+    const content = { ...(p.content || {}), [bab]: full };
+    await db().from('projects').update({ content, updated_at: new Date().toISOString() }).eq('id', id);
+    send('done', { cost: 10 });
+    res.end();
+  } catch (e: any) {
+    try { res.write(`event: error\ndata: ${JSON.stringify({ error: e.message })}\n\n`); res.end(); } catch { /* abaikan */ }
+  }
+});
+
+router.post('/:id/generate-artikel', requireAuthOrKey, async (req: AuthRequest, res) => {  try {
     const id = String(req.params.id);
     const { data: p, error } = await db().from('projects').select('*').eq('id', id).eq('user_id', req.userId!).single();
     if (error || !p) return res.status(404).json({ error: 'Proyek tidak ditemukan' });

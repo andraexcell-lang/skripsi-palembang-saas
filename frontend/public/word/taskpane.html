@@ -308,6 +308,7 @@
         await ctx.sync();
       });
       msg2(sub + ' selesai (' + nwords + ' kata).');
+      if (btn) btn.innerText = 'Ulangi';
       refresh();
     } catch (e) { msg2('Error: ' + e.message); }
     clearInterval(tick);
