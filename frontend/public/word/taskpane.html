@@ -16,6 +16,7 @@
   button:disabled { opacity: .5; }
   button.secondary { background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; }
   button.mini { width: auto; padding: 3px 10px; font-size: 11px; margin: 0; }
+  button.linkbtn { width: auto; padding: 3px 5px; font-size: 11px; margin: 0; background: transparent; border: none; color: #8A93A6; }
   button.link { background: none; border: none; color: #0066FF; width: auto; padding: 2px 0; font-size: 12px; text-align: left; }
   #msg { white-space: pre-wrap; font-size: 12px; color: #b91c1c; margin: 6px 0; }
   #bal { font-weight: bold; color: #0066FF; }
@@ -186,24 +187,65 @@
   };
   const BABS = ['bab1', 'bab2', 'bab3', 'bab4', 'bab5', 'lampiran'];
   let OUTLINE = null;
+  function structKey() { return 'spw_struktur_' + $('proj').value; }
+  function getOverrides() {
+    try { return JSON.parse(localStorage.getItem(structKey()) || '{}'); }
+    catch (e) { return {}; }
+  }
+  function setOverrides(o) {
+    try { localStorage.setItem(structKey(), JSON.stringify(o)); } catch (e) {}
+  }
   async function renderOutline() {
     const box = $('outline');
-    const p = projects.find((x) => x.id === $('proj').value);
-    if (!p) { box.innerHTML = '<p class="muted">Pilih proyek untuk melihat outline.</p>'; return; }
+    const pr = projects.find((x) => x.id === $('proj').value);
+    if (!pr) { box.innerHTML = '<p class="muted">Pilih proyek untuk melihat outline.</p>'; return; }
     if (!OUTLINE) {
       try {
         const o = await call('/api/projects/meta/outline');
         OUTLINE = o.outline;
       } catch (e) { box.innerHTML = '<p class="muted">Gagal memuat outline.</p>'; return; }
     }
-    box.innerHTML = BABS.map((b) =>
-      '<div class="bab">' + (OUTLINE[b] ? OUTLINE[b].bab : b) + '</div>' +
-      (OUTLINE[b] ? OUTLINE[b].subs.map((s) =>
-        '<div class="sub"><span>' + s + '</span><button class="mini" data-bab="' + b + '" data-sub="' + s.replace(/"/g, '') + '">Generate</button></div>'
-      ).join('') : '')
-    ).join('');
-    box.querySelectorAll('button[data-sub]').forEach((btn) => {
-      btn.onclick = () => genSub(btn.getAttribute('data-bab'), btn.getAttribute('data-sub'), btn);
+    const ov = getOverrides();
+    const ganti = ov.ganti || {}, hapus = ov.hapus || [], tambah = ov.tambah || {};
+    box.innerHTML = BABS.map((b) => {
+      const base = (OUTLINE[b] ? OUTLINE[b].subs : []).filter((s) => !hapus.includes(b + '|' + s))
+        .map((s) => ({ key: b + '|' + s, label: ganti[b + '|' + s] || s }));
+      const extra = (tambah[b] || []).map((s, i) => ({ key: b + '|+|' + i + '|' + s, label: s, custom: true }));
+      const rows = base.concat(extra);
+      return '<div class="bab">' + (OUTLINE[b] ? OUTLINE[b].bab : b) + '</div>' +
+        rows.map((r) =>
+          '<div class="sub"><span>' + r.label.replace(/</g, '&lt;') + '</span>' +
+          '<button class="mini linkbtn" data-act="ren" data-bab="' + b + '" data-key="' + r.key.replace(/"/g, '') + '">\u270E</button>' +
+          '<button class="mini linkbtn" data-act="del" data-bab="' + b + '" data-key="' + r.key.replace(/"/g, '') + '">\uD83D\uDDD1</button>' +
+          '<button class="mini" data-act="gen" data-bab="' + b + '" data-sub="' + r.label.replace(/"/g, '') + '">Generate</button></div>'
+        ).join('') +
+        '<button class="link" data-act="add" data-bab="' + b + '">+ Tambah sub-bab di ' + (OUTLINE[b] ? OUTLINE[b].bab : b) + '</button>';
+    }).join('');
+    box.querySelectorAll('button[data-act]').forEach((btn) => {
+      const act = btn.getAttribute('data-act'), b = btn.getAttribute('data-bab'), kk = btn.getAttribute('data-key');
+      if (act === 'gen') btn.onclick = () => genSub(b, btn.getAttribute('data-sub'), btn);
+      else if (act === 'del') btn.onclick = () => {
+        const o2 = getOverrides();
+        o2.hapus = (o2.hapus || []).concat([kk]);
+        setOverrides(o2); renderOutline();
+      };
+      else if (act === 'ren') btn.onclick = () => {
+        const cur = btn.parentElement.querySelector('span').innerText;
+        const nv = window.prompt('Ganti nama sub-bab:', cur);
+        if (nv && nv.trim() && nv.trim() !== cur) {
+          const o2 = getOverrides();
+          o2.ganti = o2.ganti || {}; o2.ganti[kk] = nv.trim();
+          setOverrides(o2); renderOutline();
+        }
+      };
+      else if (act === 'add') btn.onclick = () => {
+        const nv = window.prompt('Judul sub-bab baru:');
+        if (nv && nv.trim()) {
+          const o2 = getOverrides();
+          o2.tambah = o2.tambah || {}; o2.tambah[b] = (o2.tambah[b] || []).concat([nv.trim()]);
+          setOverrides(o2); renderOutline();
+        }
+      };
     });
   }
   $('proj').onchange = renderOutline;
