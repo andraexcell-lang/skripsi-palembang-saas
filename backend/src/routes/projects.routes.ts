@@ -748,24 +748,45 @@ router.post('/:id/tinjau', requireAuthOrKey, async (req: AuthRequest, res) => {
       throw e;
     }
     const j: any = parseJson(out, {});
-    const ambil = (...keys: string[]) => {
+    const rapih = (arr: any[]) => (Array.isArray(arr) ? arr : [])
+      .map((x) => (typeof x === 'string'
+        ? x
+        : x && typeof x === 'object'
+          ? String(x.pertanyaan ?? x.q ?? x.isi ?? x.tes ?? x.jawaban ?? x.teks ?? '')
+          : ''))
+      .map((x) => x.replace(/\*\*/g, '').replace(/^#+\s*/, '').replace(/^[-*•]\s*/, '').trim())
+      .filter(Boolean).slice(0, 10);
+    // Kunci JSON bisa berganti nama antar panggilan (model), jadi cari juga lewat token.
+    const pick = (keys: string[], tokens: string[]) => {
       const low: Record<string, any> = {};
       for (const k of Object.keys(j || {})) low[String(k).toLowerCase().trim()] = j[k];
       for (const k of keys) {
         const v = j?.[k] ?? low[k.toLowerCase()];
         if (Array.isArray(v)) return v;
       }
+      for (const [k, v] of Object.entries(low)) {
+        if (Array.isArray(v) && tokens.some((t) => k.includes(t))) return v;
+      }
       return [];
     };
-    const rapih = (arr: any[]) => arr
-      .filter((x) => typeof x === 'string')
-      .map((x) => x.replace(/\*\*/g, '').replace(/^#+\s*/, '').replace(/^[-*•]\s*/, '').trim())
-      .filter(Boolean).slice(0, 10);
     const hasil = {
-      kelebihan: rapih(ambil('kelebihan', 'strengths')),
-      kekurangan: rapih(ambil('kekurangan', 'kelemahan', 'weaknesses')),
-      pertanyaan: rapih(ambil('pertanyaan', 'pertanyaan_penguji', 'pertanyaan penelitian', 'questions')),
+      kelebihan: rapih(pick(['kelebihan', 'strengths'], ['kelebihan', 'strength'])),
+      kekurangan: rapih(pick(['kekurangan', 'kelemahan', 'weaknesses'], ['kekurangan', 'kelemahan', 'weakness'])),
+      pertanyaan: rapih(pick(['pertanyaan', 'pertanyaan_penguji', 'pertanyaan penelitian', 'questions'], ['pertanyaan', 'penguji', 'question'])),
     };
+    // Bila bagian pertanyaan tidak ikut terkirim, minta ulang secara khusus (tanpa potong kredit).
+    if (!hasil.pertanyaan.length) {
+      try {
+        const out2 = await generateContent(
+          `Dari draf skripsi berikut (judul: ${pr.judul}; metode: ${pr.metode}), buatkan 4-6 pertanyaan penguji sidang yang paling mungkin diajukan beserta inti jawabannya.\n` +
+          `${teks.slice(0, 8000)}\n\nBalas HANYA JSON valid: {"pertanyaan":["..."]}`
+        );
+        const j2: any = parseJson<any>(out2, {});
+        const v = Array.isArray(j2.pertanyaan) ? j2.pertanyaan
+          : Object.values(j2).find((x) => Array.isArray(x) && x.every((y: any) => typeof y === 'string' || typeof y === 'object')) || [];
+        hasil.pertanyaan = rapih(v as any[]);
+      } catch { /* biarkan kosong */ }
+    }
     if (!hasil.kelebihan.length && !hasil.kekurangan.length) {
       await addCreditsRefund(req.userId!, 'tinjau', `refund:${id}:tinjau-gagal`);
       return res.status(502).json({ error: 'Hasil tinjauan tidak terbaca. Coba lagi.' });
