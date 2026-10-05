@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { apiGet } from '@/lib/api';
 
 /** Isi dengan link Grup WA kita sendiri bila sudah ada. */
-const GRUP_WA = '';
+const GRUP_WA = 'https://chat.whatsapp.com/JFKzEThZQzDGwZKkMcxLq6';
 
 /* ---------- ikon (setara lucide) ---------- */
 const S = (cls: string) => ({ className: cls, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const });
