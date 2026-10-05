@@ -47,6 +47,8 @@ router.post('/rapihkan/analisis', requireAuthOrKey, upload.single('file'), async
     const cheerio = await import('cheerio');
     const { value: html } = await (mammoth as any).convertToHtml({ buffer: req.file.buffer });
     const $ = (cheerio as any).load(html);
+    const rawXml = req.file.buffer.toString('latin1');
+    const footCount = (rawXml.match(/w:footnoteReference/g) || []).length;
     const judul: any[] = [];
     const paragraf: any[] = [];
     let idx = 0, tables = 0, images = 0;
@@ -74,7 +76,7 @@ router.post('/rapihkan/analisis', requireAuthOrKey, upload.single('file'), async
       }
     });
     const setelan = {
-      marginAtasCm: 4, marginBawahCm: 3, marginKiriCm: 4, marginKananCm: 3,
+      marginAtasCm: 3, marginBawahCm: 3, marginKiriCm: 4, marginKananCm: 3,
       font: 'Times New Roman', ukuranPt: 12, spasi: 1.5, indentCm: 1.27,
       nomorBab: 'romawi', nomorSubBab: 'angka', daftarIsi: '3', nomorHalaman: 'romawi-arab',
       autoHeading: true, rataKiriKanan: true, babHalamanBaru: true,
@@ -83,7 +85,7 @@ router.post('/rapihkan/analisis', requireAuthOrKey, upload.single('file'), async
     res.json({
       setelan,
       judul, paragraf,
-      statistik: { paragraf: paragraf.length, tabel: tables, gambar: images, catatanKaki: 0, punyaTocLama: /daftar isi/i.test(html.slice(0, 2000)) },
+      statistik: { paragraf: paragraf.length, tabel: tables, gambar: images, catatanKaki: footCount, punyaTocLama: /daftar isi/i.test(html.slice(0, 2000)) },
       gagalWaras: judul.length === 0,
     });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
@@ -101,7 +103,7 @@ router.post('/rapihkan/terapkan', requireAuthOrKey, upload.single('file'), async
     let tarif = 1;
     if (!prev || !prev.length) {
       try {
-        await consumeCredits((req as any).userId!, 'dokumen', `rapihkan:${fhash}`);
+        await consumeCredits((req as any).userId!, 'rapihkan', `rapihkan:${fhash}`);
       } catch (e: any) {
         if (e.code === 'INSUFFICIENT_CREDITS') return res.status(402).json({ error: e.message, remaining: e.remaining });
         throw e;
@@ -110,7 +112,7 @@ router.post('/rapihkan/terapkan', requireAuthOrKey, upload.single('file'), async
     const setelan = JSON.parse(String(req.body?.setelan || '{}'));
     const koreksi: any[] = JSON.parse(String(req.body?.koreksi || '[]'));
     const S = {
-      marginAtasCm: 4, marginBawahCm: 3, marginKiriCm: 4, marginKananCm: 3,
+      marginAtasCm: 3, marginBawahCm: 3, marginKiriCm: 4, marginKananCm: 3,
       font: 'Times New Roman', ukuranPt: 12, spasi: 1.5, indentCm: 1.27,
       nomorBab: 'romawi', nomorSubBab: 'angka', daftarIsi: '3', nomorHalaman: 'romawi-arab',
       autoHeading: true, rataKiriKanan: true, babHalamanBaru: true,
@@ -125,6 +127,7 @@ router.post('/rapihkan/terapkan', requireAuthOrKey, upload.single('file'), async
     const lvlOf = new Map<number, number | null>(koreksi.map((k: any) => [k.idx, k.tingkat === 'bukan' ? null : Number(k.tingkat)]));
     const ROM = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
     let babNo = 0;
+    let inDapus = false;
     const body: any[] = [];
     let diubah = 0, ditandai = 0;
     const norm = (el: any) => $(el).text().replace(/\s+/g, ' ').trim();
@@ -149,6 +152,8 @@ router.post('/rapihkan/terapkan', requireAuthOrKey, upload.single('file'), async
           else lvl = null;
         }
       }
+      if (/^DAFTAR PUSTAKA$/i.test(text)) inDapus = true;
+      else if (lvl !== null && lvl !== undefined) inDapus = false;
       if (lvl === 1) {
         babNo++;
         let title = text.replace(/^(BAB\s+[IVX0-9]+)\b\s*[:.-]?\s*/i, '').trim() || text;
@@ -160,10 +165,11 @@ router.post('/rapihkan/terapkan', requireAuthOrKey, upload.single('file'), async
         ditandai++;
       } else {
         diubah++;
+        const hanging = S.gantungDaftarPustaka && inDapus;
         body.push(new Paragraph({
           alignment: S.rataKiriKanan ? AlignmentType.JUSTIFIED : AlignmentType.LEFT,
           spacing: { line: Math.round(S.spasi * 240) },
-          indent: S.indentCm ? { firstLine: Math.round(S.indentCm * TW) } : undefined,
+          indent: hanging ? { hanging: Math.round(1.27 * TW) } : (S.indentCm ? { firstLine: Math.round(S.indentCm * TW) } : undefined),
           children: [new TextRun({ text, ...F(S.ukuranPt) })],
         }));
       }

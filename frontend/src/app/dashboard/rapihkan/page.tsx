@@ -122,7 +122,7 @@ export default function RapihkanSkripsiPage() {
             {file ? <span className="text-sm text-text-primary truncate">{file.name} · {(file.size / 1024 / 1024).toFixed(1)} MB</span>
               : <span className="text-[13px] text-text-muted">Word (.docx) dari mana pun — maks 15 MB. Berkasnya tidak kami simpan.</span>}
           </div>
-          {stat && <p className="mt-2 text-[11px] text-text-muted">{stat.paragraf} paragraf · {judul.length} judul terdeteksi · {stat.tabel} tabel · {stat.gambar} gambar{stat.punyaTocLama ? ' · ada daftar isi lama' : ''}</p>}
+          {stat && <p className="mt-2 text-[11px] text-text-muted">{stat.paragraf} paragraf · {judul.length} judul terdeteksi · {stat.tabel} tabel · {stat.gambar} gambar · {stat.catatanKaki || 0} catatan kaki{stat.punyaTocLama ? ' · ada daftar isi lama' : ''}</p>}
         </div>
 
         {file && !reading && setelan && (
@@ -204,15 +204,18 @@ export default function RapihkanSkripsiPage() {
               <div className="max-h-[300px] divide-y divide-line overflow-y-auto">
                 {judul.length === 0 && <p className="px-4 py-8 text-center text-xs text-text-muted">Tak ada judul terdeteksi. Format tetap bisa dirapikan, atau tandai sendiri di bawah.</p>}
                 {judul.map((j) => (
-                  <div key={j.idx} className={`flex items-center gap-2 p-2 ${j.ragu ? 'bg-amber-50 dark:bg-amber-400/5' : ''}`}>
-                    <span className="text-[10px] text-text-muted w-7">#{j.idx}</span>
-                    <span className="flex-1 min-w-0 truncate text-xs text-text-primary">{j.teks || '(tanpa teks)'}</span>
-                    <select value={String(j.tingkat)} onChange={(e) => ubahTingkat(j.idx, e.target.value)} className="h-7 text-[11px] bg-bg-base border border-border-strong rounded">
-                      <option value="1">Bab / Judul</option>
-                      <option value="2">Sub-bab</option>
-                      <option value="3">Sub-sub-bab</option>
-                      <option value="bukan">Bukan judul</option>
-                    </select>
+                  <div key={j.idx} className={`border-b border-border-subtle ${j.ragu ? 'bg-amber-50 dark:bg-amber-400/5' : ''}`}>
+                    <div className="flex items-center gap-2 p-2">
+                      <span className="text-[10px] text-text-muted w-7">#{j.idx}</span>
+                      <span className="flex-1 min-w-0 truncate text-xs text-text-primary">{j.teks || '(tanpa teks)'}</span>
+                      <select value={String(j.tingkat)} onChange={(e) => ubahTingkat(j.idx, e.target.value)} className="h-7 text-[11px] bg-bg-base border border-border-strong rounded">
+                        <option value="1">Bab / Judul</option>
+                        <option value="2">Sub-bab</option>
+                        <option value="3">Sub-sub-bab</option>
+                        <option value="bukan">Bukan judul</option>
+                      </select>
+                    </div>
+                    {j.ragu && <p className="px-2 pb-2 text-[10px] text-text-muted">dari pola teks · periksa: benarkah ini judul?</p>}
                   </div>
                 ))}
               </div>
@@ -234,6 +237,7 @@ export default function RapihkanSkripsiPage() {
             <button onClick={terapkan} disabled={applying} className="bg-brand-primary text-white px-6 py-2.5 rounded-lg text-sm font-bold disabled:opacity-50">
               {applying ? 'Merapikan…' : 'Rapihkan & Unduh'}
             </button>
+            <span className="text-[11px] text-text-muted">3 kredit · mengulang berkas yang sama dalam 24 jam: gratis</span>
             <span className="text-[11px] text-text-muted">1 kredit · mengulang berkas yang sama dalam 24 jam: gratis</span>
             {doneUrl && <a href={doneUrl} download={doneName} className="ml-auto border border-border-strong px-4 py-2 rounded-lg text-sm font-bold">Unduh lagi</a>}
           </div>

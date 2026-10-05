@@ -11,6 +11,7 @@ export const FEATURE_COSTS: Record<string, number> = {
   parafrase: 1,
   ppt: 8,
   plagiasi: 15,
+  rapihkan: 3,
   artikel: 15,
   sidang_15: 15,
   sidang_30: 25,
