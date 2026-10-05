@@ -18,6 +18,37 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
   const [needsTopup, setNeedsTopup] = useState(false);
+  const [studi, setStudi] = useState('10');
+  const [soal, setSoal] = useState('');
+  const [soalLoading, setSoalLoading] = useState(false);
+
+  function renderSitasi(body: string) {
+    const parts = body.split(/(\([A-ZÀ-Ž][^()]{1,80}?,\s?\d{4}[a-z]?\))/g);
+    return parts.map((seg, i) => {
+      if (i % 2 === 1) {
+        return (
+          <a key={i} href="#dapus" title="Klik untuk verifikasi di Daftar Pustaka" className="text-brand-primary underline decoration-dotted font-semibold">
+            {seg}
+          </a>
+        );
+      }
+      return <span key={i}>{seg}</span>;
+    });
+  }
+
+  async function prediksiSoal() {
+    if (soalLoading) return;
+    setSoalLoading(true);
+    try {
+      const { aiGenerate } = await import('@/lib/api');
+      const data = await aiGenerate(
+        `Sebagai dosen penguji sidang skripsi. Judul: ${proyek?.judul}. Metode: ${proyek?.metode}. Materi: ${(text || '').slice(0, 3000)}. Buatkan 7 prediksi pertanyaan sidang paling mungkin + kata kunci jawabannya. Markdown bernomor.`,
+        'chat'
+      );
+      setSoal(data.result);
+    } catch (e: any) { setErr(e.message); }
+    setSoalLoading(false);
+  }
 
   async function load() {
     try {
@@ -30,7 +61,7 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
   async function generate() {
     setLoading(true); setErr(''); setNeedsTopup(false);
     try {
-      const r = await apiPostStream(`/api/projects/${id}/generate-bab-stream`, { bab: active }, (t) => {
+      const r = await apiPostStream(`/api/projects/${id}/generate-bab-stream`, { bab: active, studi: active === 'bab2' ? studi : undefined }, (t) => {
         setProyek((p: any) => ({ ...p, content: { ...(p?.content || {}), [active]: t } }));
       });
       if (r.cached) setErr('');
@@ -93,7 +124,18 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
             <Link href="/dashboard/billing" className="bg-brand-primary text-white px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap">Pilih Paket →</Link>
           </div>
         )}
-        <div className="flex gap-3">
+        <div className="bg-amber-50 dark:bg-amber-400/10 border border-amber-300 dark:border-amber-400/40 rounded-lg p-3 text-[11px] text-amber-900 dark:text-amber-200">
+          ⚠️ Hasil ini adalah <strong>DRAF AWAL</strong> AI. Wajib didalami, dikritisi, diverifikasi fakta/data/referensinya, dan direvisi menyeluruh — tanggung jawab karya akhir ada pada Anda (Permendiknas No. 17/2010 tentang Pencegahan Plagiat).
+        </div>
+        {active === 'bab2' && (
+          <div className="flex items-center gap-2 text-sm">
+            <label className="text-text-secondary text-xs font-bold">Studi terdahulu:</label>
+            <select value={studi} onChange={(e) => setStudi(e.target.value)} className="bg-bg-surface border border-border-strong rounded-lg p-2 text-sm text-text-primary">
+              {['10', '15', '20', '25', '30'].map((n) => <option key={n} value={n}>{n} (1 paragraf/studi)</option>)}
+            </select>
+          </div>
+        )}
+        <div className="flex gap-3 flex-wrap">
           <button onClick={generate} disabled={loading} className="bg-brand-primary text-white px-5 py-2.5 rounded-lg text-sm font-bold disabled:opacity-50">
             {loading ? 'Menggenerate...' : `Generate ${BABS.find((b) => b.id === active)?.label}`}
           </button>
@@ -105,8 +147,17 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
           <button onClick={downloadRis} className="border border-border-strong bg-bg-surface px-5 py-2.5 rounded-lg text-sm font-bold text-text-primary hover:bg-bg-surface-hover" title="Format Mendeley/Zotero">
             Unduh RIS
           </button>
+          <button onClick={prediksiSoal} disabled={soalLoading || !text} className="border border-border-strong bg-bg-surface px-5 py-2.5 rounded-lg text-sm font-bold text-text-primary hover:bg-bg-surface-hover disabled:opacity-50" title="1 kredit">
+            {soalLoading ? 'Menyusun...' : 'Prediksi Soal'}
+          </button>
         </div>
-        {text ? <div className="bg-bg-surface border border-border-subtle rounded-xl p-6 text-sm text-text-primary whitespace-pre-wrap">{text}</div>
+        {soal && (
+          <div className="bg-bg-surface border border-border-subtle rounded-xl p-6 text-sm text-text-primary whitespace-pre-wrap">
+            <h3 className="font-bold text-base mb-3 text-brand-primary">Prediksi Soal Sidang</h3>
+            {soal}
+          </div>
+        )}
+        {text ? <div id="dapus" className="bg-bg-surface border border-border-subtle rounded-xl p-6 text-sm text-text-primary whitespace-pre-wrap scroll-mt-24">{renderSitasi(text)}</div>
           : <p className="text-sm text-text-muted">Belum ada isi untuk bab ini. Klik generate (10 kredit).</p>}
       </div>
     </div>

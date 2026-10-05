@@ -159,10 +159,11 @@ router.post('/:id/generate-bab', requireAuthOrKey, async (req: AuthRequest, res)
 router.post('/:id/generate-bab-stream', requireAuthOrKey, async (req: AuthRequest, res) => {
   try {
     const id = String(req.params.id);
-    const { bab } = req.body || {};
+    const { bab, studi } = req.body || {};
     if (!BAB_LIST.includes(bab)) return res.status(400).json({ error: `bab harus salah satu: ${BAB_LIST.join(', ')}` });
     const { data: p, error } = await db().from('projects').select('*').eq('id', id).eq('user_id', req.userId!).single();
     if (error || !p) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
+    const extraStudi = bab === 'bab2' && studi ? ` Bahas ${Math.min(Math.max(parseInt(studi, 10) || 10, 5), 50)} studi terdahulu, 1 paragraf per studi.` : '';
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
@@ -183,7 +184,7 @@ router.post('/:id/generate-bab-stream', requireAuthOrKey, async (req: AuthReques
     const refs = await crossrefTop(p.judul, 6, p.min_year);
     let full = '';
     try {
-      for await (const t of generateContentStream(babPrompt(bab, p, refs))) {
+      for await (const t of generateContentStream(babPrompt(bab, p, refs) + extraStudi)) {
         full += t;
         send('chunk', { t });
       }
