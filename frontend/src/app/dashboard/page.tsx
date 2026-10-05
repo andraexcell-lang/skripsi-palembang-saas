@@ -10,6 +10,7 @@ export default function DashboardIndex() {
   const [initial, setInitial] = useState("?");
   const [bal, setBal] = useState<{ credits: number; plan: string } | null>(null);
   const [latest, setLatest] = useState<any>(null);
+  const [recent, setRecent] = useState<any[]>([]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -17,8 +18,25 @@ export default function DashboardIndex() {
       setInitial(n.charAt(0).toUpperCase());
     });
     apiGet('/api/credits/balance').then(setBal).catch(() => {});
-    apiGet('/api/projects').then((r) => setLatest(r.items?.[0] || null)).catch(() => {});
+    apiGet('/api/projects').then((r) => {
+      setLatest(r.items?.[0] || null);
+      setRecent((r.items || []).slice(0, 3));
+    }).catch(() => {});
   }, []);
+
+  async function hapus(id: string) {
+    if (!confirm('Hapus proyek ini?')) return;
+    try {
+      const { supabase: sb } = await import('@/lib/supabase');
+      const { data } = await sb.auth.getSession();
+      const t = data.session?.access_token || '';
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/projects/${id}`, {
+        method: 'DELETE', headers: t ? { Authorization: `Bearer ${t}` } : {},
+      });
+      setRecent(recent.filter((x) => x.id !== id));
+      if (latest?.id === id) setLatest(recent.find((x) => x.id !== id) || null);
+    } catch { /* abaikan */ }
+  }
 
   const doneCount = latest ? Object.keys(latest.content || {}).length : 0;
   const pct = latest ? Math.round((doneCount / 5) * 100) : 0;
@@ -154,6 +172,29 @@ export default function DashboardIndex() {
                 <div className="text-xs text-text-muted">Jurnal internasional</div>
               </div>
             </Link>
+          </div>
+        </div>
+
+        {/* Proyek terakhir */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-bold text-text-primary">Proyek terakhir</h3>
+            <Link href="/dashboard/proyek" className="text-xs text-text-secondary hover:text-text-primary">Lihat semua →</Link>
+          </div>
+          <div className="space-y-3">
+            {recent.length === 0 && <p className="text-sm text-text-muted">Belum ada proyek.</p>}
+            {recent.map((p: any) => {
+              const n = Object.keys(p.content || {}).length;
+              return (
+                <div key={p.id} className="bg-bg-surface border border-border-subtle rounded-xl p-4 flex items-center justify-between hover:border-brand-primary transition-colors">
+                  <Link href={p.jenis && p.jenis.startsWith('artikel') ? '/dashboard/artikel-sinta' : `/dashboard/studio/${p.id}`} className="flex-1">
+                    <h4 className="font-bold text-text-primary text-sm">{p.judul}</h4>
+                    <div className="text-xs text-text-muted mt-1">{p.jenis} · {n} bagian terisi</div>
+                  </Link>
+                  <button onClick={() => hapus(p.id)} className="text-text-muted hover:text-accent-red p-2" title="Hapus">🗑</button>
+                </div>
+              );
+            })}
           </div>
         </div>
 

@@ -395,4 +395,12 @@ router.post('/from-file', requireAuthOrKey, async (req: AuthRequest, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+router.delete('/:id', requireAuthOrKey, async (req: AuthRequest, res) => {
+  try {
+    const { error } = await db().from('projects').delete().eq('id', String(req.params.id)).eq('user_id', req.userId!);
+    if (error) throw new Error(error.message);
+    res.json({ ok: true });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 export default router;
