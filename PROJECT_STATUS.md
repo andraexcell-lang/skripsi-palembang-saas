@@ -35,8 +35,9 @@ Terakhir diperbarui: 3 Okt 2026. Acuan fitur: https://mantrariset.com (akun uji:
 - Affiliate kode + komisi 10% (mock confirm + webhook), admin plan bypass
 - Tema terang default + toggle, rebrand, slash palette `/`, tutorial, pengaturan + API key
 - Dashboard live (user/kredit/proyek), paritas form Skripsi
-- Plugin Word: pairing device-code, outline edit tersimpan, streaming, cover builder, Ulangi
+- Plugin Word: pairing device-code, outline edit tersimpan, streaming, cover builder, Ulangi, Judul bab, logo
 - Asisten chat (1 kredit), brainstorming penuh, Lab Revisi proyek tersimpan + upload, AI Writer dokumen + sitasi
+- Rapihkan .docx real (A4/TNR/TOC/halaman, 1 kredit), Lanjutkan dari file (deteksi Bab I-VII)
 
 ## Biaya kredit
 
