@@ -35,6 +35,16 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', message: 'MantraRiset Backend is running' });
 });
 
+// Error handler: pesan seragam (termasuk berkas kelewat batas dari multer)
+app.use((err: any, req: any, res: any, next: any) => {
+  if (res.headersSent) return next(err);
+  if (err && (err.code === 'LIMIT_FILE_SIZE' || /too large/i.test(String(err.message || '')))) {
+    return res.status(413).json({ error: 'Berkas terlalu besar (maks 8 MB).' });
+  }
+  console.error(err);
+  res.status(500).json({ error: err?.message || 'Gangguan server.' });
+});
+
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });

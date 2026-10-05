@@ -8,7 +8,7 @@ import { generateContent } from '../services/ai.service';
 import { crossrefTop } from './projects.routes';
 
 const router = Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 * 1024 * 1024 } });
 
 async function extractText(file: Express.Multer.File): Promise<string> {
   const name = file.originalname.toLowerCase();
@@ -41,7 +41,7 @@ router.post('/extract', requireAuth, upload.single('file'), async (req: AuthRequ
 // POST /rapihkan/analisis (multipart file) -> { setelan, judul[], paragraf[], statistik }
 router.post('/rapihkan/analisis', requireAuthOrKey, upload.single('file'), async (req: AuthRequest, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: 'Upload file .docx (maks 15 MB)' });
+    if (!req.file) return res.status(400).json({ error: 'Upload file .docx (maks 8 MB)' });
     if (!/\.docx$/i.test(req.file.originalname)) return res.status(400).json({ error: 'Berkas harus .docx (Word). PDF belum bisa.' });
     const mammoth = await import('mammoth');
     const cheerio = await import('cheerio');
@@ -96,7 +96,7 @@ router.post('/rapihkan/analisis', requireAuthOrKey, upload.single('file'), async
 // POST /rapihkan/terapkan (multipart file + setelan JSON + koreksi JSON) -> .docx + header X-Rapih-Ringkasan
 router.post('/rapihkan/terapkan', requireAuthOrKey, upload.single('file'), async (req: AuthRequest, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: 'Upload file .docx' });
+    if (!req.file) return res.status(400).json({ error: 'Upload file .docx (maks 8 MB)' });
     const { createHash } = await import('crypto');
     const fhash = createHash('sha256').update(req.file.buffer).digest('hex');
     const db = (await import('../config/supabase')).supabaseAdmin || (await import('../config/supabase')).supabaseAnon;
@@ -129,6 +129,7 @@ router.post('/rapihkan/terapkan', requireAuthOrKey, upload.single('file'), async
     const lvlOf = new Map<number, number | null>(koreksi.map((k: any) => [k.idx, k.tingkat === 'bukan' ? null : Number(k.tingkat)]));
     const ROM = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
     let babNo = 0;
+    let n2 = 0, n3 = 0;
     let inDapus = false;
     let firstBabIdx = -1;
     const splitRomawi = S.nomorHalaman === 'romawi-arab';
@@ -188,13 +189,13 @@ router.post('/rapihkan/terapkan', requireAuthOrKey, upload.single('file'), async
 
     // Run teks dari node HTML: tebal/miring/garisbawah/sub-sup + tautan + gambar + checkbox
     const ST = { b: false, i: false, u: false, sup: false, sub: false, link: false };
-    const mkRuns = (node: any, st: typeof ST): any[] => {
+    const mkRuns = (node: any, st: typeof ST, pakaiFont = true): any[] => {
       const out: any[] = [];
       for (const child of node.children || []) {
         if (child.type === 'text') {
           const text = String(child.data || '').replace(/\u00a0/g, ' ');
           if (text) out.push(new TextRun({
-            text, ...F(S.ukuranPt),
+            text, ...(pakaiFont ? F(S.ukuranPt) : {}),
             bold: st.b || undefined,
             italics: st.i || undefined,
             underline: (st.u || st.link) ? {} : undefined,
@@ -226,7 +227,7 @@ router.post('/rapihkan/terapkan', requireAuthOrKey, upload.single('file'), async
           sub: st.sub || tag === 'sub',
           link: st.link || tag === 'a',
         };
-        const inner = mkRuns(child, nst);
+        const inner = mkRuns(child, nst, pakaiFont);
         if (!inner.length) continue;
         if (tag === 'a') {
           const href = String((child.attribs && child.attribs.href) || '');
@@ -248,7 +249,7 @@ router.post('/rapihkan/terapkan', requireAuthOrKey, upload.single('file'), async
           const src: any[] = $(td).children('p').length ? ($(td).children('p').toArray() as any[]) : [td];
           const paras: any[] = [];
           for (const pe of src) {
-            const runs = mkRuns(pe, { ...ST, b: isTh });
+            const runs = mkRuns(pe, { ...ST, b: isTh }, !!S.sertakanTabel);
             if (!runs.length) continue;
             paras.push(new Paragraph({ alignment: AlignmentType.LEFT, spacing: { line: 240, before: 20, after: 20 }, children: runs }));
           }
@@ -284,7 +285,18 @@ router.post('/rapihkan/terapkan', requireAuthOrKey, upload.single('file'), async
       const text = norm(el);
       const hasImg = $(el).find('img').length > 0;
       if (!text && !hasImg) return;
-      if (text && isTocPara(text)) return;
+      if (text && isTocPara(text)) {
+        // Indeks tetap dilewati supaya koreksi level tidak meleset; hanya cetak ulang kalau toggle dimatikan
+        if (!S.buangDaftarIsiLama) {
+          diubah++;
+          body.push(new Paragraph({
+            alignment: S.rataKiriKanan ? AlignmentType.JUSTIFIED : AlignmentType.LEFT,
+            spacing: { line: Math.round(S.spasi * 240) },
+            children: mkRuns(el, ST),
+          }));
+        }
+        return;
+      }
       const myIdx = text ? idx++ : -1;
       let lvl: number | null | undefined = lvlOf.has(myIdx) ? lvlOf.get(myIdx) : undefined;
       if (lvl === undefined) {
@@ -306,14 +318,34 @@ router.post('/rapihkan/terapkan', requireAuthOrKey, upload.single('file'), async
       else if (lvl !== null && lvl !== undefined) inDapus = false;
       if (lvl === 1) {
         if (babNo === 0) firstBabIdx = body.length;
-        babNo++;
+        babNo++; n2 = 0; n3 = 0;
         let title = text.replace(/^(BAB\s+[IVX0-9]+)\b\s*[:.-]?\s*/i, '').trim() || text;
         const label = S.nomorBab === 'arab' ? `BAB ${babNo}` : `BAB ${ROM[babNo - 1] || babNo}`;
         const mulaiBagian = splitRomawi && firstBabIdx === body.length;
-        body.push(new Paragraph({ heading: HeadingLevel.HEADING_1, ...(S.babHalamanBaru && !mulaiBagian ? { pageBreakBefore: true } : {}), children: [new TextRun({ text: `${label} ${title}`.trim(), ...F(S.ukuranPt + 2), bold: true })] }));
+        const h1Runs = [new TextRun({ text: `${label} ${title}`.trim(), ...F(S.ukuranPt + 2), bold: true })];
+        if (S.autoHeading) {
+          body.push(new Paragraph({ heading: HeadingLevel.HEADING_1, ...(S.babHalamanBaru && !mulaiBagian ? { pageBreakBefore: true } : {}), children: h1Runs }));
+        } else {
+          body.push(new Paragraph({ alignment: AlignmentType.CENTER, ...(S.babHalamanBaru && !mulaiBagian ? { pageBreakBefore: true } : {}), spacing: { line: Math.round(S.spasi * 240) }, children: h1Runs }));
+        }
         ditandai++;
       } else if (lvl === 2 || lvl === 3) {
-        body.push(new Paragraph({ heading: lvl === 2 ? HeadingLevel.HEADING_2 : HeadingLevel.HEADING_3, children: [new TextRun({ text, ...F(S.ukuranPt), bold: true })] }));
+        // Penomoran sub-bab (angka 1.1 / huruf A.) — hanya ganti kalau memang sudah ada nomornya
+        if (lvl === 2) { n2++; n3 = 0; } else n3++;
+        const lead = text.match(/^\s*((?:\d+\.)+\s*|\d+\s+|[A-Z]\.[\s]*)/);
+        let isi = text;
+        if (lead) {
+          const nomor = S.nomorSubBab === 'huruf'
+            ? (lvl === 2 ? `${String.fromCharCode(64 + Math.min(n2, 26))}. ` : `${n3}. `)
+            : (lvl === 2 ? `${Math.max(babNo, 1)}.${n2} ` : `${Math.max(babNo, 1)}.${n2}.${n3} `);
+          isi = nomor + text.slice(lead[0].length);
+        }
+        const hRuns = [new TextRun({ text: isi, ...F(S.ukuranPt), bold: true })];
+        if (S.autoHeading) {
+          body.push(new Paragraph({ heading: lvl === 2 ? HeadingLevel.HEADING_2 : HeadingLevel.HEADING_3, children: hRuns }));
+        } else {
+          body.push(new Paragraph({ spacing: { line: Math.round(S.spasi * 240) }, children: hRuns }));
+        }
         ditandai++;
       } else {
         diubah++;
@@ -362,7 +394,7 @@ router.post('/rapihkan/terapkan', requireAuthOrKey, upload.single('file'), async
 // Rapihkan .docx (legacy satu-langkah; disarankan /rapihkan/analisis + /rapihkan/terapkan)
 router.post('/rapihkan', requireAuthOrKey, upload.single('file'), async (req: AuthRequest, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: 'Upload file .docx (maks 15 MB)' });
+    if (!req.file) return res.status(400).json({ error: 'Upload file .docx (maks 8 MB)' });
     if (!/\.docx$/i.test(req.file.originalname)) return res.status(400).json({ error: 'Hanya .docx yang didukung' });
     try {
       await consumeCredits(req.userId!, 'dokumen', 'rapihkan:docx');
