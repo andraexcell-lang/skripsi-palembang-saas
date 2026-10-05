@@ -676,16 +676,23 @@ function batasBagian(lines: string[], start: number): number {
   return lines.length;
 }
 
+// Cari judul sub-babnya: baris pendek lebih dulu (mis. "2.6 Hipotesis"),
+// biar paragraf biasa yang kebetulan menyebut kata kunci tidak dianggap judul.
+function cariJudul(lines: string[], re: RegExp): number {
+  const pendek = lines.findIndex((l) => l.trim().length <= 110 && re.test(l.trim()));
+  return pendek >= 0 ? pendek : lines.findIndex((l) => re.test(l.trim()));
+}
+
 function ambilBagian(text: string, re: RegExp): string {
   const lines = String(text || '').split('\n');
-  const start = lines.findIndex((l) => re.test(l.trim()));
+  const start = cariJudul(lines, re);
   if (start < 0) return '';
   return lines.slice(start + 1, batasBagian(lines, start)).join('\n').trim();
 }
 
 function gantiBagian(text: string, re: RegExp, body: string): string | null {
   const lines = String(text || '').split('\n');
-  const start = lines.findIndex((l) => re.test(l.trim()));
+  const start = cariJudul(lines, re);
   if (start < 0) return null;
   const end = batasBagian(lines, start);
   const isi = String(body || '').split('\n').map((l) => l.trim()).filter(Boolean);
@@ -733,7 +740,7 @@ router.post('/:id/tinjau', requireAuthOrKey, async (req: AuthRequest, res) => {
       out = await generateContent(
         `Kamu dosen pembimbing dan penguji skripsi yang kritis. Analisis draf skripsi berikut (judul: ${pr.judul}; metode: ${pr.metode}).\n` +
         `${teks.slice(0, 30000)}\n\n` +
-        `Balas HANYA JSON valid tanpa teks lain, tanpa markdown, dengan struktur:\n` +
+        `Balas HANYA JSON valid tanpa teks lain, tanpa markdown, dengan struktur (ketiga kunci wajib ada dan berisi butir):\n` +
         `{"kelebihan":["3-5 butir spesifik yang sudah baik"],"kekurangan":["4-6 butir paling rawan diperiksa penguji, konkret + lokasi sub-babnya"],"pertanyaan":["4-6 pertanyaan penguji yang paling mungkin diajukan beserta inti jawabannya"]}`
       );
     } catch (e: any) {
@@ -741,10 +748,23 @@ router.post('/:id/tinjau', requireAuthOrKey, async (req: AuthRequest, res) => {
       throw e;
     }
     const j: any = parseJson(out, {});
+    const ambil = (...keys: string[]) => {
+      const low: Record<string, any> = {};
+      for (const k of Object.keys(j || {})) low[String(k).toLowerCase().trim()] = j[k];
+      for (const k of keys) {
+        const v = j?.[k] ?? low[k.toLowerCase()];
+        if (Array.isArray(v)) return v;
+      }
+      return [];
+    };
+    const rapih = (arr: any[]) => arr
+      .filter((x) => typeof x === 'string')
+      .map((x) => x.replace(/\*\*/g, '').replace(/^#+\s*/, '').replace(/^[-*•]\s*/, '').trim())
+      .filter(Boolean).slice(0, 10);
     const hasil = {
-      kelebihan: (j.kelebihan || []).filter((x: any) => typeof x === 'string').slice(0, 8),
-      kekurangan: (j.kekurangan || []).filter((x: any) => typeof x === 'string').slice(0, 10),
-      pertanyaan: (j.pertanyaan || []).filter((x: any) => typeof x === 'string').slice(0, 10),
+      kelebihan: rapih(ambil('kelebihan', 'strengths')),
+      kekurangan: rapih(ambil('kekurangan', 'kelemahan', 'weaknesses')),
+      pertanyaan: rapih(ambil('pertanyaan', 'pertanyaan_penguji', 'pertanyaan penelitian', 'questions')),
     };
     if (!hasil.kelebihan.length && !hasil.kekurangan.length) {
       await addCreditsRefund(req.userId!, 'tinjau', `refund:${id}:tinjau-gagal`);
