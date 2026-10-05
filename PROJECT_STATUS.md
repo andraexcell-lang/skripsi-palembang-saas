@@ -52,8 +52,10 @@ Terakhir diperbarui: 6 Okt 2026. Acuan fitur: https://mantrariset.com (akun uji:
 | Tab Pustaka + RIS | ✅ 21 entri (1 unggahan) | ✅ |
 | Unggah Artikel Sendiri | ✅ DOI `10.24912/jmk.v5i2.23409` terbaca | ✅ panel biru + input file |
 | Cek Sitasi (gratis) | ✅ semua proyek (termasuk jalur yatim 17/17) | ✅ modal GRATIS |
-| Sesuaikan Skripsi (5) | ✅ 3 bagian ditimpa + catatan Bab III | ⏳ butuh ulang saat kuota AI pulih |
-| Tinjau Hasil (5) | ✅ 4/5/5 butir (parser tangguh + refund bila gagal) | ⏳ butuh ulang saat kuota AI pulih |
+| Sesuaikan Skripsi (5) | ✅ 3 bagian ditimpa + catatan Bab III | ✅ klik nyata → panel "2 bagian diperbarui" + catatan Bab III (12 dtk) |
+| Tinjau Hasil (5) | ✅ 4/5/5 butir (parser tangguh + refund bila gagal) | ✅ klik nyata → modal 4/5/5 butir (10 dtk) |
+
+Dua klik UI terakhir benar-benar terdebit di ledger (`-5` @ 20:55:16 dan `-5` @ 20:56:30, saldo 37 → 27) — bukan uji mock. Satu percobaan UI sebelumnya sempat gagal di AI dan **otomatis di-refund** (`+5` @ 20:39:09), membuktikan jalur refund jalan di produksi.
 
 ## Biaya kredit
 
@@ -63,11 +65,11 @@ bab 10 (termasuk Lampiran) · sesuaikan 5 · tinjau 5 · parafrase 1 · ppt 8 ·
 
 1. Project Supabase BARU (kunci bersih) + ulangi 5 migrasi + update env Railway/Vercel/lokal
 2. Midtrans Server Key sandbox → vars → uji QRIS → webhook URL Railway
-3. **Kuota Gemini free tier habis** (`GenerateRequestsPerDayPerProjectPerModel-FreeTier` = 20 req/hari, sempat 429 → retry ±4 jam). Semua fitur AI (generate bab, tinjau, sesuaikan, PPT) mati sampai kuota reset **tiap hari** → pasang billing/bayar di Google AI Studio atau pakai key berbayar sebelum user riil
+3. **Kuota Gemini free tier** (`GenerateRequestsPerDayPerProjectPerModel-FreeTier` = 20 req/hari per **model**; RPM 5, TPM 250 rb). **Sudah diakali dari kode** (commit `2228c7a`): `ai.service.ts` kini punya rantai fallback 8 model (`2.5-flash → 3.x flash → 3.x lite`) + jendela 4 request/menit per model; kalau satu model 429/kuota habis otomatis pindah model berikutnya, dan model yang kena `retryDelay` ditahan sesuai sisa waktunya → kapasitas harian = gabungan semua model (±150+ req/hari), bukan cuma 20. **Tetap disarankan**: pasang billing Google AI Studio (min $5) sebelum ada user riil, karena rantai fallback hanya menunda batas, bukan menghapusnya
 4. Konten: video tutorial, link Grup WA (`https://chat.whatsapp.com/JFKzEThZQzDGwZKkMcxLq6`), payout affiliate manual, plugin Word
 5. Custom domain `api.skripsiplg.my.id` (opsional)
 
 ## Akun uji (password minta ke owner)
 
-- tester.palembang@gmail.com (saldo ±41, ada proyek contoh)
+- tester.palembang@gmail.com (saldo 27, ada proyek contoh)
 - andraexcell@gmail.com (admin, bypass kredit)
