@@ -159,7 +159,7 @@ router.post('/:id/generate-bab', requireAuthOrKey, async (req: AuthRequest, res)
 router.post('/:id/generate-bab-stream', requireAuthOrKey, async (req: AuthRequest, res) => {
   try {
     const id = String(req.params.id);
-    const { bab, studi } = req.body || {};
+    const { bab, studi, force } = req.body || {};
     if (!BAB_LIST.includes(bab)) return res.status(400).json({ error: `bab harus salah satu: ${BAB_LIST.join(', ')}` });
     const { data: p, error } = await db().from('projects').select('*').eq('id', id).eq('user_id', req.userId!).single();
     if (error || !p) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
@@ -168,7 +168,7 @@ router.post('/:id/generate-bab-stream', requireAuthOrKey, async (req: AuthReques
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
     const send = (ev: string, data: any) => res.write(`event: ${ev}\ndata: ${JSON.stringify(data)}\n\n`);
-    if ((p.content || {})[bab]) {
+    if ((p.content || {})[bab] && !force) {
       send('cached', true);
       for (const w of String(p.content[bab]).split(/(\s+)/)) send('chunk', { t: w });
       send('done', { cost: 0, cached: true });
@@ -272,17 +272,17 @@ router.post('/:id/front-matter', requireAuthOrKey, async (req: AuthRequest, res)
 router.post('/:id/generate-subbab', requireAuthOrKey, async (req: AuthRequest, res) => {
   try {
     const id = String(req.params.id);
-    const { bab, sub } = req.body || {};
+    const { bab, sub, force } = req.body || {};
     if (!OUTLINE[bab]) return res.status(400).json({ error: 'bab tidak dikenal' });
     if (!sub || String(sub).trim().length < 2) return res.status(400).json({ error: 'sub wajib diisi' });
     const { data: p, error } = await db().from('projects').select('*').eq('id', id).eq('user_id', req.userId!).single();
     if (error || !p) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
     const d = db();
     const key = `${bab}:${sub}`;
-    if ((p.content || {})[key]) return res.json({ text: p.content[key], cached: true, cost: 0 });
+    if ((p.content || {})[key] && !force) return res.json({ text: p.content[key], cached: true, cost: 0 });
     const { data: paid } = await d.from('credit_ledger').select('id').eq('user_id', req.userId!).eq('ref', `proyek:${id}:${bab}`).limit(1);
     let cost = 0;
-    if ((!paid || !paid.length) && !(p.content || {})[bab]) {
+    if (force || ((!paid || !paid.length) && !(p.content || {})[bab])) {
       try {
         const r = await consumeCredits(req.userId!, 'bab', `proyek:${id}:${bab}`);
         cost = r.cost;
@@ -472,6 +472,73 @@ router.post('/:id/generate-karil', requireAuthOrKey, async (req: AuthRequest, re
     const content = { ...(pr.content || {}), karil: text };
     await db().from('projects').update({ content, updated_at: new Date().toISOString() }).eq('id', id);
     res.json({ text });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// Export .docx asli: sampul + semua bab + hyperlink DOI + footer romawi/arab + TOC
+router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) => {
+  try {
+    const id = String(req.params.id);
+    const { data: pr, error } = await db().from('projects').select('*').eq('id', id).eq('user_id', req.userId!).single();
+    if (error || !pr) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
+    const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, PageNumberElement, Footer, TableOfContents, ExternalHyperlink } = await import('docx');
+    const ident = pr.identitas || {};
+    const C: any[] = [];
+    const center = (text: string, bold = false, size = 24) =>
+      new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text, font: 'Times New Roman', size, bold })] });
+    const just = (text: string) =>
+      new Paragraph({ alignment: AlignmentType.JUSTIFIED, spacing: { line: 360 }, indent: { firstLine: 567 }, children: [new TextRun({ text, font: 'Times New Roman', size: 24 })] });
+    // Sampul
+    C.push(center(String(pr.judul || '').toUpperCase(), true, 28));
+    if (ident.nama) C.push(center(ident.nama, true));
+    if (ident.nim) C.push(center(`NIM: ${ident.nim}`));
+    if (ident.kampus || ident.jurusan || ident.fakultas) C.push(center([ident.kampus, ident.jurusan, ident.fakultas].filter(Boolean).join(' — '), true));
+    const mdBody = (md: string) => {
+      for (const raw of String(md || '').split('\n')) {
+        const line = raw.trim();
+        if (!line) continue;
+        const h = line.match(/^(#{1,3})\s+(.*)/);
+        if (h) {
+          C.push(new Paragraph({ heading: h[1].length === 1 ? HeadingLevel.HEADING_1 : HeadingLevel.HEADING_2, alignment: h[1].length === 1 ? AlignmentType.CENTER : AlignmentType.LEFT, children: [new TextRun({ text: h[2].replace(/\*\*/g, ''), font: 'Times New Roman', size: 28, bold: true })] }));
+          continue;
+        }
+        const parts = line.split(/(https?:\/\/doi\.org\/[^\s)]+|https?:\/\/[^\s)]+)/g);
+        const runs: any[] = [];
+        parts.forEach((seg, i) => {
+          if (/^https?:\/\//.test(seg)) runs.push(new ExternalHyperlink({ children: [new TextRun({ text: seg, style: 'Hyperlink', font: 'Times New Roman', size: 24 })], link: seg }));
+          else runs.push(new TextRun({ text: seg.replace(/\*\*/g, ''), font: 'Times New Roman', size: 24 }));
+        });
+        const mSub = line.match(/^(\d+\.\d+(?:\.\d+)?)\s+(\S.*)/);
+        if (mSub && line.length < 120) {
+          C.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: line.replace(/\*\*/g, ''), font: 'Times New Roman', size: 24, bold: true })] }));
+        } else {
+          C.push(new Paragraph({ alignment: AlignmentType.JUSTIFIED, spacing: { line: 360 }, indent: { firstLine: 567 }, children: runs }));
+        }
+      }
+    };
+    if (pr.content?.abstrak) {
+      C.push(new Paragraph({ heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'ABSTRAK', font: 'Times New Roman', size: 28, bold: true })] }));
+      mdBody(pr.content.abstrak);
+    }
+    const order = ['bab1', 'bab2', 'bab3', 'bab4', 'bab5'];
+    for (const b of order) if (pr.content?.[b]) mdBody(pr.content[b]);
+    const doc = new Document({
+      creator: 'Skripsi Palembang',
+      title: String(pr.judul || ''),
+      sections: [{
+        properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 2268, left: 2268, bottom: 1701, right: 1701 } } },
+        footers: { default: new Footer({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new PageNumberElement()] })] }) },
+        children: [
+          new Paragraph({ heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'DAFTAR ISI', font: 'Times New Roman', size: 28, bold: true })] }),
+          new TableOfContents('Daftar Isi', { hyperlink: true, headingStyleRange: '1-2' }),
+          ...C,
+        ],
+      }],
+    });
+    const buf = await Packer.toBuffer(doc);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', 'attachment; filename="skripsi.docx"');
+    res.send(Buffer.from(buf));
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 

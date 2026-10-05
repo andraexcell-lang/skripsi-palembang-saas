@@ -23,6 +23,47 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
   const [soalLoading, setSoalLoading] = useState(false);
   const [refs, setRefs] = useState<any[]>([]);
   const [abstrakLoading, setAbstrakLoading] = useState(false);
+  const [nomor, setNomor] = useState('1.1');
+
+  const ROMAWI_HURUF = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+  function fmtHeading(line: string): string {
+    if (nomor !== 'A') return line;
+    const m = line.match(/^(\d+)\.(\d+)\s+(.*)$/);
+    if (m) {
+      const a = ROMAWI_HURUF[(parseInt(m[1], 10) - 1 + 26) % 26] || m[1];
+      return `${a}. ${m[2]}. ${m[3]}`;
+    }
+    return line;
+  }
+
+  function renderDoc(body: string) {
+    const lines = body.split('\n');
+    return lines.map((ln, i) => {
+      const t = ln.trim();
+      if (!t) return <div key={i} className="h-3" />;
+      if (/^(BAB [IVX]+|DAFTAR PUSTAKA|ABSTRAK|ABSTRACT|KATA PENGANTAR|DAFTAR ISI|DAFTAR TABEL|LEMBAR .*)$/i.test(t)) {
+        return <h3 key={i} className="text-center font-bold text-base mt-6 mb-3">{t}</h3>;
+      }
+      if (/^\d+\.\d+\s+\S/.test(t)) {
+        return <h4 key={i} className="font-bold text-sm mt-5 mb-2">{fmtHeading(t)}</h4>;
+      }
+      return <p key={i} className="text-justify indent-8 mb-3 leading-relaxed">{renderSitasi(t, `l${i}-`)}</p>;
+    });
+  }
+  const [abstrakLoading, setAbstrakLoading] = useState(false);
+  const [showDisc, setShowDisc] = useState(false);
+
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem(`sp-disc-${id}`)) setShowDisc(true);
+    } catch { /* abaikan */ }
+  }, [id]);
+
+  function closeDisc() {
+    setShowDisc(false);
+    try { localStorage.setItem(`sp-disc-${id}`, '1'); } catch { /* abaikan */ }
+  }
 
   async function generateAbstrak() {
     setAbstrakLoading(true); setErr('');
@@ -102,10 +143,10 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
   }
   useEffect(() => { load(); }, [id]);
 
-  async function generate() {
+  async function generate(force = false) {
     setLoading(true); setErr(''); setNeedsTopup(false);
     try {
-      const r = await apiPostStream(`/api/projects/${id}/generate-bab-stream`, { bab: active, studi: active === 'bab2' ? studi : undefined }, (t) => {
+      const r = await apiPostStream(`/api/projects/${id}/generate-bab-stream${force ? '?ulang=1' : ''}`, { bab: active, studi: active === 'bab2' ? studi : undefined, force }, (t) => {
         setProyek((p: any) => ({ ...p, content: { ...(p?.content || {}), [active]: t } }));
       });
       if (r.cached) setErr('');
@@ -132,20 +173,21 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
     }).catch((e: any) => setErr(e.message));
   }
 
-  function downloadWord() {
-    const label = BABS.find((b) => b.id === active)?.label || active;
-    const ident = proyek?.identitas || {};
-    const logoImg = ident.logo ? `<img src="${ident.logo}" width="90"/><br/>` : '';
-    const cover = (ident.nama || ident.kampus || proyek?.judul)
-      ? `<div style="text-align:center">${logoImg}<h2>${String(proyek?.judul || '').replace(/</g, '&lt;')}</h2><br/><p>${String(ident.nama || '').replace(/</g, '&lt;')}</p><p>NIM: ${String(ident.nim || '').replace(/</g, '&lt;')}</p><p>${String(ident.kampus || '').replace(/</g, '&lt;')} — ${String(ident.jurusan || '').replace(/</g, '&lt;')} — ${String(ident.fakultas || '').replace(/</g, '&lt;')}</p><br style="mso-special-character:line-break;page-break-before:always"/></div>`
-      : '';
-    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${label}</title></head><body>${cover}<h1>${label}</h1>${String(text).split('\n').map((p) => `<p>${p.replace(/</g, '&lt;')}</p>`).join('')}</body></html>`;
-    const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `${active}-${String(id).slice(0, 8)}.doc`;
-    a.click();
-    URL.revokeObjectURL(a.href);
+  async function downloadWord() {
+    try {
+      const { supabase } = await import('@/lib/supabase');
+      const { data } = await supabase.auth.getSession();
+      const t = data.session?.access_token || '';
+      const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const res = await fetch(`${API}/api/projects/${id}/export-docx`, { headers: t ? { Authorization: `Bearer ${t}` } : {} });
+      if (!res.ok) throw new Error('Gagal ekspor Word');
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'skripsi.docx';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch (e: any) { setErr(e.message); }
   }
 
   const text = proyek?.content?.[active] || '';
