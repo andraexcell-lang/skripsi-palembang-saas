@@ -119,7 +119,7 @@ export default function DashboardIndex() {
 
   const doneCount = latest ? Object.keys(latest.content || {}).length : 0;
   const pct = latest ? Math.round((doneCount / 5) * 100) : 0;
-  const tampil = recent.filter((p) => (filter === 'semua' ? true : filter === 'artikel' ? isArtikel(p.jenis) : !isArtikel(p.jenis)));
+  const tampil = recent.filter((p) => (filter === 'semua' ? true : filter === 'artikel' ? isArtikel(p.jenis) : !isArtikel(p.jenis))).slice(0, 6);
   const paket = bal?.plan && bal.plan !== 'free' ? `Paket ${cap(bal.plan)}` : 'Paket Gratis';
 
   const btnPrimer = 'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-semibold transition-colors bg-brand-primary text-white hover:bg-brand-primary-hover px-4 py-2';
@@ -264,7 +264,10 @@ export default function DashboardIndex() {
                   </span>
                 </div>
                 <p className="mt-0.5 text-xs text-text-secondary">
-                  {berakhir ? <>Bulanan · berakhir {berakhir}</> : bal?.plan && bal.plan !== 'free' ? 'Bulanan · isi ulang kapan saja' : 'Tanpa bayar · isi ulang kapan saja'}
+                  {bal?.plan && !['free', 'admin'].includes(bal.plan)
+                    ? (berakhir ? <>Bulanan · berakhir {berakhir}</> : 'Bulanan · isi ulang kapan saja')
+                    : bal?.plan === 'admin' ? 'Akses penuh · tanpa masa berlaku'
+                    : 'Tanpa masa berlaku · isi ulang kapan saja'}
                 </p>
               </div>
             </div>
