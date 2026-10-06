@@ -1,0 +1,1442 @@
+{
+ "variants": {
+  "skripsi_kuantitatif": [
+   {
+    "bab": "bab1",
+    "nomor": 1,
+    "nama": "Bab I Pendahuluan",
+    "sub": [
+     {
+      "key": "latar_belakang",
+      "label": "Latar Belakang"
+     },
+     {
+      "key": "identifikasi_masalah",
+      "label": "Identifikasi Masalah"
+     },
+     {
+      "key": "rumusan_masalah",
+      "label": "Rumusan Masalah"
+     },
+     {
+      "key": "tujuan_penelitian",
+      "label": "Tujuan Penelitian"
+     },
+     {
+      "key": "manfaat_penelitian",
+      "label": "Manfaat Penelitian"
+     },
+     {
+      "key": "batasan_masalah",
+      "label": "Batasan Masalah"
+     },
+     {
+      "key": "sistematika_penulisan",
+      "label": "Sistematika Penulisan"
+     }
+    ]
+   },
+   {
+    "bab": "bab2",
+    "nomor": 2,
+    "nama": "Bab II Tinjauan Pustaka",
+    "sub": [
+     {
+      "key": "landasan_teori",
+      "label": "Landasan Teori"
+     },
+     {
+      "key": "kerangka_teori",
+      "label": "Kerangka Teori"
+     },
+     {
+      "key": "hubungan_variabel",
+      "label": "Hubungan Antar Variabel"
+     },
+     {
+      "key": "penelitian_terdahulu_naratif",
+      "label": "Penelitian Terdahulu"
+     },
+     {
+      "key": "kerangka_berpikir",
+      "label": "Kerangka Berpikir"
+     },
+     {
+      "key": "hipotesis",
+      "label": "Hipotesis"
+     }
+    ]
+   },
+   {
+    "bab": "bab3",
+    "nomor": 3,
+    "nama": "Bab III Metodologi",
+    "sub": [
+     {
+      "key": "jenis_desain_penelitian",
+      "label": "Jenis & Desain Penelitian"
+     },
+     {
+      "key": "populasi_sampel",
+      "label": "Populasi & Sampel"
+     },
+     {
+      "key": "definisi_operasional",
+      "label": "Definisi Operasional"
+     },
+     {
+      "key": "teknik_pengumpulan",
+      "label": "Teknik Pengumpulan Data"
+     },
+     {
+      "key": "analisis_spss",
+      "label": "Teknik Analisis Data"
+     },
+     {
+      "key": "jadwal_penelitian",
+      "label": "Jadwal Penelitian"
+     }
+    ]
+   },
+   {
+    "bab": "bab4",
+    "nomor": 4,
+    "nama": "Bab IV Hasil Penelitian dan Pembahasan",
+    "sub": [
+     {
+      "key": "gambaran_umum",
+      "label": "Gambaran Umum Objek Penelitian"
+     },
+     {
+      "key": "interpretasi_hasil",
+      "label": "Hasil Penelitian"
+     },
+     {
+      "key": "pembahasan",
+      "label": "Pembahasan"
+     },
+     {
+      "key": "implikasi_penelitian",
+      "label": "Implikasi"
+     }
+    ]
+   },
+   {
+    "bab": "bab5",
+    "nomor": 5,
+    "nama": "Bab V Penutup",
+    "sub": [
+     {
+      "key": "simpulan",
+      "label": "Simpulan"
+     },
+     {
+      "key": "saran",
+      "label": "Saran"
+     }
+    ]
+   },
+   {
+    "bab": "lampiran",
+    "nomor": 6,
+    "nama": "Lampiran",
+    "sub": [
+     {
+      "key": "kisi_kisi",
+      "label": "Kisi-Kisi Penelitian"
+     },
+     {
+      "key": "kuisioner",
+      "label": "Pernyataan Kuisioner"
+     }
+    ]
+   }
+  ],
+  "skripsi_kualitatif": [
+   {
+    "bab": "bab1",
+    "nomor": 1,
+    "nama": "Bab I Pendahuluan",
+    "sub": [
+     {
+      "key": "latar_belakang_umum_khusus",
+      "label": "Latar Belakang"
+     },
+     {
+      "key": "identifikasi_masalah",
+      "label": "Identifikasi Masalah"
+     },
+     {
+      "key": "rumusan_masalah",
+      "label": "Rumusan Masalah"
+     },
+     {
+      "key": "tujuan_penelitian",
+      "label": "Tujuan Penelitian"
+     },
+     {
+      "key": "manfaat_penelitian",
+      "label": "Manfaat Penelitian"
+     },
+     {
+      "key": "batasan_masalah",
+      "label": "Batasan Masalah"
+     },
+     {
+      "key": "sistematika_penulisan",
+      "label": "Sistematika Penulisan"
+     }
+    ]
+   },
+   {
+    "bab": "bab2",
+    "nomor": 2,
+    "nama": "Bab II Kajian Pustaka",
+    "sub": [
+     {
+      "key": "landasan_teori",
+      "label": "Landasan Teori"
+     },
+     {
+      "key": "kerangka_teori",
+      "label": "Kerangka Teori"
+     },
+     {
+      "key": "penelitian_terdahulu",
+      "label": "Penelitian Terdahulu"
+     },
+     {
+      "key": "kerangka_berpikir",
+      "label": "Kerangka Berpikir"
+     }
+    ]
+   },
+   {
+    "bab": "bab3",
+    "nomor": 3,
+    "nama": "Bab III Metodologi",
+    "sub": [
+     {
+      "key": "jenis_desain_penelitian",
+      "label": "Jenis & Pendekatan"
+     },
+     {
+      "key": "subjek_informan",
+      "label": "Subjek & Informan"
+     },
+     {
+      "key": "teknik_pengumpulan",
+      "label": "Teknik Pengumpulan Data"
+     },
+     {
+      "key": "teknik_analisis",
+      "label": "Teknik Analisis Data"
+     },
+     {
+      "key": "keabsahan_data",
+      "label": "Uji Keabsahan Data"
+     },
+     {
+      "key": "jadwal_penelitian",
+      "label": "Jadwal Penelitian"
+     }
+    ]
+   },
+   {
+    "bab": "bab4",
+    "nomor": 4,
+    "nama": "Bab IV Hasil Penelitian dan Pembahasan",
+    "sub": [
+     {
+      "key": "gambaran_umum",
+      "label": "Gambaran Umum Lokasi Penelitian"
+     },
+     {
+      "key": "deskripsi_informan",
+      "label": "Deskripsi Informan Penelitian"
+     },
+     {
+      "key": "penyajian_data",
+      "label": "Penyajian Data Hasil Penelitian"
+     },
+     {
+      "key": "triangulasi_data",
+      "label": "Triangulasi dan Keabsahan Temuan"
+     },
+     {
+      "key": "temuan_penelitian",
+      "label": "Temuan Penelitian"
+     },
+     {
+      "key": "pembahasan",
+      "label": "Pembahasan"
+     },
+     {
+      "key": "implikasi_penelitian",
+      "label": "Implikasi"
+     }
+    ]
+   },
+   {
+    "bab": "bab5",
+    "nomor": 5,
+    "nama": "Bab V Penutup",
+    "sub": [
+     {
+      "key": "simpulan",
+      "label": "Simpulan"
+     },
+     {
+      "key": "saran",
+      "label": "Saran"
+     }
+    ]
+   },
+   {
+    "bab": "lampiran",
+    "nomor": 6,
+    "nama": "Lampiran",
+    "sub": [
+     {
+      "key": "kisi_kisi",
+      "label": "Kisi-Kisi Penelitian"
+     },
+     {
+      "key": "pedoman_wawancara",
+      "label": "Pedoman Wawancara"
+     }
+    ]
+   }
+  ],
+  "skripsi_ptk": [
+   {
+    "bab": "bab1",
+    "nomor": 1,
+    "nama": "Bab I Pendahuluan",
+    "sub": [
+     {
+      "key": "latar_belakang",
+      "label": "Latar Belakang"
+     },
+     {
+      "key": "identifikasi_masalah",
+      "label": "Identifikasi Masalah"
+     },
+     {
+      "key": "rumusan_masalah",
+      "label": "Rumusan Masalah"
+     },
+     {
+      "key": "tujuan_penelitian",
+      "label": "Tujuan Penelitian"
+     },
+     {
+      "key": "manfaat_penelitian",
+      "label": "Manfaat Penelitian"
+     },
+     {
+      "key": "sistematika_penulisan",
+      "label": "Sistematika Penulisan"
+     }
+    ]
+   },
+   {
+    "bab": "bab2",
+    "nomor": 2,
+    "nama": "Bab II Kajian Pustaka",
+    "sub": [
+     {
+      "key": "landasan_teori",
+      "label": "Landasan Teori"
+     },
+     {
+      "key": "penelitian_terdahulu",
+      "label": "Penelitian Terdahulu"
+     },
+     {
+      "key": "kerangka_berpikir",
+      "label": "Kerangka Berpikir"
+     },
+     {
+      "key": "hipotesis_tindakan",
+      "label": "Hipotesis Tindakan"
+     }
+    ]
+   },
+   {
+    "bab": "bab3",
+    "nomor": 3,
+    "nama": "Bab III Metode Penelitian",
+    "sub": [
+     {
+      "key": "jenis_desain_penelitian",
+      "label": "Jenis & Desain Penelitian"
+     },
+     {
+      "key": "setting_subjek_penelitian",
+      "label": "Setting & Subjek Penelitian"
+     },
+     {
+      "key": "prosedur_siklus",
+      "label": "Prosedur Penelitian (Siklus)"
+     },
+     {
+      "key": "teknik_pengumpulan",
+      "label": "Teknik Pengumpulan Data"
+     },
+     {
+      "key": "instrumen_penelitian",
+      "label": "Instrumen Penelitian"
+     },
+     {
+      "key": "teknik_analisis",
+      "label": "Teknik Analisis Data"
+     },
+     {
+      "key": "indikator_keberhasilan",
+      "label": "Indikator Keberhasilan"
+     }
+    ]
+   },
+   {
+    "bab": "bab4",
+    "nomor": 4,
+    "nama": "Bab IV Hasil Penelitian dan Pembahasan",
+    "sub": [
+     {
+      "key": "deskripsi_prasiklus",
+      "label": "Deskripsi Kondisi Awal (Pra-Siklus)"
+     },
+     {
+      "key": "deskripsi_siklus_1",
+      "label": "Deskripsi Hasil Siklus I"
+     },
+     {
+      "key": "deskripsi_siklus_2",
+      "label": "Deskripsi Hasil Siklus II"
+     },
+     {
+      "key": "perbandingan_siklus",
+      "label": "Perbandingan Antar-Siklus"
+     },
+     {
+      "key": "pembahasan",
+      "label": "Pembahasan"
+     }
+    ]
+   },
+   {
+    "bab": "bab5",
+    "nomor": 5,
+    "nama": "Bab V Penutup",
+    "sub": [
+     {
+      "key": "simpulan",
+      "label": "Simpulan"
+     },
+     {
+      "key": "saran",
+      "label": "Saran"
+     }
+    ]
+   },
+   {
+    "bab": "lampiran",
+    "nomor": 6,
+    "nama": "Lampiran",
+    "sub": [
+     {
+      "key": "kisi_kisi",
+      "label": "Kisi-Kisi Instrumen"
+     },
+     {
+      "key": "lembar_observasi",
+      "label": "Lembar Observasi Aktivitas"
+     }
+    ]
+   }
+  ],
+  "skripsi_pustaka": [
+   {
+    "bab": "bab1",
+    "nomor": 1,
+    "nama": "Bab I Pendahuluan",
+    "sub": [
+     {
+      "key": "latar_belakang",
+      "label": "Latar Belakang"
+     },
+     {
+      "key": "rumusan_masalah",
+      "label": "Rumusan Masalah"
+     },
+     {
+      "key": "tujuan_penelitian",
+      "label": "Tujuan Penelitian"
+     },
+     {
+      "key": "manfaat_penelitian",
+      "label": "Manfaat Penelitian"
+     },
+     {
+      "key": "batasan_masalah",
+      "label": "Batasan Masalah / Penegasan Istilah"
+     },
+     {
+      "key": "sistematika_penulisan",
+      "label": "Sistematika Penulisan"
+     }
+    ]
+   },
+   {
+    "bab": "bab2",
+    "nomor": 2,
+    "nama": "Bab II Kajian Pustaka",
+    "sub": [
+     {
+      "key": "landasan_teori",
+      "label": "Landasan Teori"
+     },
+     {
+      "key": "penelitian_terdahulu",
+      "label": "Penelitian Terdahulu"
+     },
+     {
+      "key": "kerangka_berpikir",
+      "label": "Kerangka Berpikir"
+     }
+    ]
+   },
+   {
+    "bab": "bab3",
+    "nomor": 3,
+    "nama": "Bab III Metode Penelitian",
+    "sub": [
+     {
+      "key": "jenis_desain_penelitian",
+      "label": "Jenis & Pendekatan Penelitian"
+     },
+     {
+      "key": "sumber_data_pustaka",
+      "label": "Sumber Data (Primer & Sekunder)"
+     },
+     {
+      "key": "teknik_pengumpulan",
+      "label": "Teknik Pengumpulan Data"
+     },
+     {
+      "key": "teknik_analisis",
+      "label": "Teknik Analisis Data"
+     },
+     {
+      "key": "keabsahan_data",
+      "label": "Uji Keabsahan Data"
+     }
+    ]
+   },
+   {
+    "bab": "bab4",
+    "nomor": 4,
+    "nama": "Bab IV Hasil Penelitian dan Pembahasan",
+    "sub": [
+     {
+      "key": "penyajian_data",
+      "label": "Penyajian Data"
+     },
+     {
+      "key": "analisis_data_pustaka",
+      "label": "Analisis Data"
+     },
+     {
+      "key": "pembahasan",
+      "label": "Pembahasan"
+     }
+    ]
+   },
+   {
+    "bab": "bab5",
+    "nomor": 5,
+    "nama": "Bab V Penutup",
+    "sub": [
+     {
+      "key": "simpulan",
+      "label": "Simpulan"
+     },
+     {
+      "key": "saran",
+      "label": "Saran"
+     }
+    ]
+   }
+  ],
+  "rnd": [
+   {
+    "bab": "bab1",
+    "nomor": 1,
+    "nama": "Bab I Pendahuluan",
+    "sub": [
+     {
+      "key": "latar_belakang",
+      "label": "Latar Belakang"
+     },
+     {
+      "key": "rumusan_masalah",
+      "label": "Rumusan Masalah"
+     },
+     {
+      "key": "tujuan_penelitian",
+      "label": "Tujuan Penelitian"
+     },
+     {
+      "key": "spesifikasi_produk_bab1",
+      "label": "Spesifikasi Produk"
+     }
+    ]
+   },
+   {
+    "bab": "bab2",
+    "nomor": 2,
+    "nama": "Bab II Landasan Teori",
+    "sub": [
+     {
+      "key": "landasan_teori",
+      "label": "Landasan Teori"
+     },
+     {
+      "key": "penelitian_terdahulu_naratif",
+      "label": "Penelitian Terdahulu"
+     }
+    ]
+   },
+   {
+    "bab": "bab3",
+    "nomor": 3,
+    "nama": "Bab III Metodologi",
+    "sub": [
+     {
+      "key": "jenis_desain_penelitian",
+      "label": "Jenis Penelitian R&D"
+     },
+     {
+      "key": "model_pengembangan",
+      "label": "Model Pengembangan"
+     },
+     {
+      "key": "validasi_produk",
+      "label": "Validasi Produk"
+     }
+    ]
+   },
+   {
+    "bab": "bab4",
+    "nomor": 4,
+    "nama": "Bab IV Hasil",
+    "sub": [
+     {
+      "key": "pembahasan",
+      "label": "Pembahasan"
+     }
+    ]
+   },
+   {
+    "bab": "bab5",
+    "nomor": 5,
+    "nama": "Bab V Penutup",
+    "sub": [
+     {
+      "key": "simpulan",
+      "label": "Kesimpulan"
+     },
+     {
+      "key": "saran",
+      "label": "Saran"
+     }
+    ]
+   },
+   {
+    "bab": "lampiran",
+    "nomor": 6,
+    "nama": "Lampiran",
+    "sub": [
+     {
+      "key": "kisi_kisi",
+      "label": "Kisi-Kisi Instrumen"
+     },
+     {
+      "key": "lembar_validasi",
+      "label": "Lembar Validasi Ahli"
+     }
+    ]
+   }
+  ],
+  "mixed": [
+   {
+    "bab": "bab1",
+    "nomor": 1,
+    "nama": "Bab I Pendahuluan",
+    "sub": [
+     {
+      "key": "latar_belakang",
+      "label": "Latar Belakang"
+     },
+     {
+      "key": "identifikasi_masalah",
+      "label": "Identifikasi Masalah"
+     },
+     {
+      "key": "rumusan_masalah",
+      "label": "Rumusan Masalah"
+     },
+     {
+      "key": "tujuan_penelitian",
+      "label": "Tujuan Penelitian"
+     },
+     {
+      "key": "manfaat_penelitian",
+      "label": "Manfaat Penelitian"
+     },
+     {
+      "key": "batasan_masalah",
+      "label": "Batasan Masalah"
+     },
+     {
+      "key": "sistematika_penulisan",
+      "label": "Sistematika Penulisan"
+     }
+    ]
+   },
+   {
+    "bab": "bab2",
+    "nomor": 2,
+    "nama": "Bab II Tinjauan Pustaka",
+    "sub": [
+     {
+      "key": "landasan_teori",
+      "label": "Landasan Teori"
+     },
+     {
+      "key": "kerangka_teori",
+      "label": "Kerangka Teori"
+     },
+     {
+      "key": "hubungan_variabel",
+      "label": "Hubungan Antar Variabel"
+     },
+     {
+      "key": "penelitian_terdahulu_naratif",
+      "label": "Penelitian Terdahulu"
+     },
+     {
+      "key": "kerangka_berpikir",
+      "label": "Kerangka Berpikir"
+     },
+     {
+      "key": "hipotesis",
+      "label": "Hipotesis"
+     }
+    ]
+   },
+   {
+    "bab": "bab3",
+    "nomor": 3,
+    "nama": "Bab III Metodologi",
+    "sub": [
+     {
+      "key": "jenis_desain_penelitian",
+      "label": "Jenis & Desain Penelitian"
+     },
+     {
+      "key": "populasi_sampel",
+      "label": "Populasi & Sampel"
+     },
+     {
+      "key": "definisi_operasional",
+      "label": "Definisi Operasional"
+     },
+     {
+      "key": "teknik_pengumpulan",
+      "label": "Teknik Pengumpulan Data"
+     },
+     {
+      "key": "analisis_spss",
+      "label": "Teknik Analisis Data"
+     },
+     {
+      "key": "jadwal_penelitian",
+      "label": "Jadwal Penelitian"
+     }
+    ]
+   },
+   {
+    "bab": "bab4",
+    "nomor": 4,
+    "nama": "Bab IV Hasil Penelitian dan Pembahasan",
+    "sub": [
+     {
+      "key": "gambaran_umum",
+      "label": "Gambaran Umum Objek Penelitian"
+     },
+     {
+      "key": "interpretasi_hasil",
+      "label": "Hasil Penelitian"
+     },
+     {
+      "key": "pembahasan",
+      "label": "Pembahasan"
+     },
+     {
+      "key": "implikasi_penelitian",
+      "label": "Implikasi"
+     }
+    ]
+   },
+   {
+    "bab": "bab5",
+    "nomor": 5,
+    "nama": "Bab V Penutup",
+    "sub": [
+     {
+      "key": "simpulan",
+      "label": "Simpulan"
+     },
+     {
+      "key": "saran",
+      "label": "Saran"
+     }
+    ]
+   },
+   {
+    "bab": "lampiran",
+    "nomor": 6,
+    "nama": "Lampiran",
+    "sub": [
+     {
+      "key": "kisi_kisi",
+      "label": "Kisi-Kisi Penelitian"
+     },
+     {
+      "key": "kuisioner",
+      "label": "Pernyataan Kuisioner"
+     },
+     {
+      "key": "pedoman_wawancara",
+      "label": "Pedoman Wawancara"
+     }
+    ]
+   }
+  ],
+  "hukum_normatif": [
+   {
+    "bab": "bab1",
+    "nomor": 1,
+    "nama": "Bab I Pendahuluan",
+    "sub": [
+     {
+      "key": "latar_belakang",
+      "label": "Latar Belakang Masalah"
+     },
+     {
+      "key": "identifikasi_masalah",
+      "label": "Identifikasi Masalah"
+     },
+     {
+      "key": "batasan_masalah",
+      "label": "Batasan Masalah"
+     },
+     {
+      "key": "rumusan_masalah",
+      "label": "Rumusan Masalah"
+     },
+     {
+      "key": "tujuan_penelitian",
+      "label": "Tujuan Penelitian"
+     },
+     {
+      "key": "manfaat_penelitian",
+      "label": "Manfaat Penelitian"
+     },
+     {
+      "key": "keaslian_penelitian",
+      "label": "Keaslian Penelitian"
+     },
+     {
+      "key": "kerangka_konseptual",
+      "label": "Kerangka Konseptual"
+     },
+     {
+      "key": "sistematika_penulisan",
+      "label": "Sistematika Penulisan"
+     }
+    ]
+   },
+   {
+    "bab": "bab2",
+    "nomor": 2,
+    "nama": "Bab II Tinjauan Pustaka dan Kerangka Teori",
+    "sub": [
+     {
+      "key": "tinjauan_konsep_utama",
+      "label": "Tinjauan Umum Konsep Utama"
+     },
+     {
+      "key": "tinjauan_konsep_kedua",
+      "label": "Tinjauan Umum Konsep Kedua"
+     },
+     {
+      "key": "tinjauan_konsep_pendukung",
+      "label": "Tinjauan Umum Konsep Pendukung"
+     },
+     {
+      "key": "landasan_teori",
+      "label": "Landasan Teori"
+     },
+     {
+      "key": "asas_hukum",
+      "label": "Asas-Asas Hukum yang Relevan"
+     },
+     {
+      "key": "kerangka_berpikir",
+      "label": "Kerangka Berpikir"
+     }
+    ]
+   },
+   {
+    "bab": "bab3",
+    "nomor": 3,
+    "nama": "Bab III Metode Penelitian",
+    "sub": [
+     {
+      "key": "jenis_penelitian_hukum",
+      "label": "Jenis dan Sifat Penelitian"
+     },
+     {
+      "key": "pendekatan_penelitian_hukum",
+      "label": "Pendekatan Penelitian"
+     },
+     {
+      "key": "bahan_hukum",
+      "label": "Jenis dan Sumber Bahan Hukum"
+     },
+     {
+      "key": "teknik_pengumpulan_bahan_hukum",
+      "label": "Teknik Pengumpulan Bahan Hukum"
+     },
+     {
+      "key": "teknik_analisis_bahan_hukum",
+      "label": "Teknik Analisis Bahan Hukum"
+     },
+     {
+      "key": "teknik_penarikan_kesimpulan",
+      "label": "Teknik Penarikan Kesimpulan"
+     }
+    ]
+   },
+   {
+    "bab": "bab4",
+    "nomor": 4,
+    "nama": "Bab IV Hasil Penelitian dan Pembahasan",
+    "sub": [
+     {
+      "key": "pengaturan_hukum",
+      "label": "Pengaturan Hukum terhadap Masalah Penelitian"
+     },
+     {
+      "key": "analisis_hukum_pertama",
+      "label": "Analisis Permasalahan Hukum Pertama"
+     },
+     {
+      "key": "analisis_hukum_kedua",
+      "label": "Analisis Permasalahan Hukum Kedua"
+     },
+     {
+      "key": "kelemahan_pengaturan",
+      "label": "Kelemahan Pengaturan Hukum"
+     },
+     {
+      "key": "konsep_pembaruan_hukum",
+      "label": "Konsep Pembaruan Hukum"
+     }
+    ]
+   },
+   {
+    "bab": "bab5",
+    "nomor": 5,
+    "nama": "Bab V Penutup",
+    "sub": [
+     {
+      "key": "simpulan",
+      "label": "Kesimpulan"
+     },
+     {
+      "key": "saran",
+      "label": "Saran"
+     }
+    ]
+   }
+  ],
+  "hukum_empiris": [
+   {
+    "bab": "bab1",
+    "nomor": 1,
+    "nama": "Bab I Pendahuluan",
+    "sub": [
+     {
+      "key": "latar_belakang",
+      "label": "Latar Belakang Masalah"
+     },
+     {
+      "key": "identifikasi_masalah",
+      "label": "Identifikasi Masalah"
+     },
+     {
+      "key": "batasan_masalah",
+      "label": "Batasan Masalah"
+     },
+     {
+      "key": "rumusan_masalah",
+      "label": "Rumusan Masalah"
+     },
+     {
+      "key": "tujuan_penelitian",
+      "label": "Tujuan Penelitian"
+     },
+     {
+      "key": "manfaat_penelitian",
+      "label": "Manfaat Penelitian"
+     },
+     {
+      "key": "keaslian_penelitian",
+      "label": "Keaslian Penelitian"
+     },
+     {
+      "key": "definisi_konseptual_operasional",
+      "label": "Definisi Konseptual dan Operasional"
+     },
+     {
+      "key": "sistematika_penulisan",
+      "label": "Sistematika Penulisan"
+     }
+    ]
+   },
+   {
+    "bab": "bab2",
+    "nomor": 2,
+    "nama": "Bab II Tinjauan Pustaka dan Kerangka Teori",
+    "sub": [
+     {
+      "key": "tinjauan_peraturan",
+      "label": "Tinjauan Umum Peraturan yang Diteliti"
+     },
+     {
+      "key": "tinjauan_objek_penelitian",
+      "label": "Tinjauan Umum Objek Penelitian"
+     },
+     {
+      "key": "landasan_teori",
+      "label": "Teori Utama"
+     },
+     {
+      "key": "teori_pendukung",
+      "label": "Teori Pendukung"
+     },
+     {
+      "key": "penelitian_terdahulu",
+      "label": "Penelitian Terdahulu"
+     },
+     {
+      "key": "kerangka_berpikir",
+      "label": "Kerangka Berpikir"
+     }
+    ]
+   },
+   {
+    "bab": "bab3",
+    "nomor": 3,
+    "nama": "Bab III Metode Penelitian",
+    "sub": [
+     {
+      "key": "jenis_penelitian_hukum",
+      "label": "Jenis dan Sifat Penelitian"
+     },
+     {
+      "key": "pendekatan_penelitian_hukum",
+      "label": "Pendekatan Penelitian"
+     },
+     {
+      "key": "lokasi_waktu_penelitian",
+      "label": "Lokasi dan Waktu Penelitian"
+     },
+     {
+      "key": "populasi_sampel_informan",
+      "label": "Populasi, Sampel, dan Informan"
+     },
+     {
+      "key": "jenis_sumber_data",
+      "label": "Jenis dan Sumber Data"
+     },
+     {
+      "key": "teknik_pengumpulan",
+      "label": "Teknik Pengumpulan Data"
+     },
+     {
+      "key": "instrumen_penelitian",
+      "label": "Instrumen Penelitian"
+     },
+     {
+      "key": "keabsahan_data",
+      "label": "Teknik Keabsahan Data"
+     },
+     {
+      "key": "teknik_analisis",
+      "label": "Teknik Pengolahan dan Analisis Data"
+     },
+     {
+      "key": "etika_penelitian",
+      "label": "Etika Penelitian"
+     },
+     {
+      "key": "jadwal_penelitian",
+      "label": "Jadwal Penelitian"
+     }
+    ]
+   },
+   {
+    "bab": "bab4",
+    "nomor": 4,
+    "nama": "Bab IV Hasil Penelitian dan Pembahasan",
+    "sub": [
+     {
+      "key": "gambaran_umum",
+      "label": "Gambaran Umum Lokasi Penelitian"
+     },
+     {
+      "key": "deskripsi_informan",
+      "label": "Gambaran Subjek Penelitian"
+     },
+     {
+      "key": "pelaksanaan_hukum",
+      "label": "Pelaksanaan Hukum di Lokasi Penelitian"
+     },
+     {
+      "key": "analisis_hukum_pertama",
+      "label": "Analisis Rumusan Masalah Pertama"
+     },
+     {
+      "key": "faktor_penghambat",
+      "label": "Faktor Pendukung dan Penghambat"
+     },
+     {
+      "key": "upaya_penyelesaian",
+      "label": "Upaya Penyelesaian dan Strategi Perbaikan"
+     },
+     {
+      "key": "efektivitas_hukum",
+      "label": "Pembahasan Efektivitas Hukum"
+     },
+     {
+      "key": "temuan_penelitian",
+      "label": "Temuan Penelitian"
+     }
+    ]
+   },
+   {
+    "bab": "bab5",
+    "nomor": 5,
+    "nama": "Bab V Penutup",
+    "sub": [
+     {
+      "key": "simpulan",
+      "label": "Kesimpulan"
+     },
+     {
+      "key": "saran",
+      "label": "Saran"
+     }
+    ]
+   },
+   {
+    "bab": "lampiran",
+    "nomor": 6,
+    "nama": "Lampiran",
+    "sub": [
+     {
+      "key": "kisi_kisi",
+      "label": "Kisi-Kisi Penelitian"
+     },
+     {
+      "key": "pedoman_wawancara",
+      "label": "Pedoman Wawancara"
+     }
+    ]
+   }
+  ],
+  "eksakta": [
+   {
+    "bab": "bab1",
+    "nomor": 1,
+    "nama": "Bab I Pendahuluan",
+    "sub": [
+     {
+      "key": "latar_belakang",
+      "label": "Latar Belakang"
+     },
+     {
+      "key": "identifikasi_masalah",
+      "label": "Identifikasi Masalah"
+     },
+     {
+      "key": "rumusan_masalah",
+      "label": "Rumusan Masalah"
+     },
+     {
+      "key": "tujuan_penelitian",
+      "label": "Tujuan Penelitian"
+     },
+     {
+      "key": "manfaat_penelitian",
+      "label": "Manfaat Penelitian"
+     },
+     {
+      "key": "batasan_masalah",
+      "label": "Batasan Masalah"
+     },
+     {
+      "key": "sistematika_penulisan",
+      "label": "Sistematika Penulisan"
+     }
+    ]
+   },
+   {
+    "bab": "bab2",
+    "nomor": 2,
+    "nama": "Bab II Tinjauan Pustaka",
+    "sub": [
+     {
+      "key": "landasan_teori",
+      "label": "Landasan Teori"
+     },
+     {
+      "key": "kerangka_teori",
+      "label": "Teori & Konsep Pendukung"
+     },
+     {
+      "key": "penelitian_terdahulu_naratif",
+      "label": "Penelitian Terdahulu"
+     },
+     {
+      "key": "kerangka_berpikir",
+      "label": "Kerangka Berpikir"
+     }
+    ]
+   },
+   {
+    "bab": "bab3",
+    "nomor": 3,
+    "nama": "Bab III Metodologi Penelitian",
+    "sub": [
+     {
+      "key": "jenis_desain_penelitian",
+      "label": "Jenis & Tahapan Penelitian"
+     },
+     {
+      "key": "alat_bahan",
+      "label": "Alat & Bahan / Spesifikasi Sistem"
+     },
+     {
+      "key": "sumber_data_eksakta",
+      "label": "Sumber Data / Dataset"
+     },
+     {
+      "key": "perancangan_sistem",
+      "label": "Perancangan Sistem / Prosedur Eksperimen"
+     },
+     {
+      "key": "teknik_analisis_eksakta",
+      "label": "Metrik & Teknik Pengujian"
+     },
+     {
+      "key": "jadwal_penelitian",
+      "label": "Jadwal Penelitian"
+     }
+    ]
+   },
+   {
+    "bab": "bab4",
+    "nomor": 4,
+    "nama": "Bab IV Hasil dan Pembahasan",
+    "sub": [
+     {
+      "key": "gambaran_umum",
+      "label": "Deskripsi Data & Objek Uji"
+     },
+     {
+      "key": "implementasi_sistem",
+      "label": "Implementasi / Pelaksanaan Eksperimen"
+     },
+     {
+      "key": "interpretasi_hasil",
+      "label": "Hasil Pengujian"
+     },
+     {
+      "key": "pembahasan",
+      "label": "Pembahasan"
+     },
+     {
+      "key": "implikasi_penelitian",
+      "label": "Implikasi & Keterbatasan"
+     }
+    ]
+   },
+   {
+    "bab": "bab5",
+    "nomor": 5,
+    "nama": "Bab V Penutup",
+    "sub": [
+     {
+      "key": "simpulan",
+      "label": "Simpulan"
+     },
+     {
+      "key": "saran",
+      "label": "Saran"
+     }
+    ]
+   },
+   {
+    "bab": "lampiran",
+    "nomor": 6,
+    "nama": "Lampiran",
+    "sub": [
+     {
+      "key": "kisi_kisi",
+      "label": "Kisi-Kisi Instrumen"
+     },
+     {
+      "key": "lembar_pengamatan",
+      "label": "Lembar Pengamatan & Prosedur Uji"
+     }
+    ]
+   }
+  ]
+ },
+ "f": [
+  {
+   "bab": "bab1",
+   "key": "kebaruan_penelitian",
+   "label": "Kebaruan Penelitian",
+   "before": [
+    "sistematika_penulisan"
+   ]
+  },
+  {
+   "bab": "bab3",
+   "key": "etika_penelitian",
+   "label": "Etika Penelitian",
+   "before": [
+    "jadwal_penelitian"
+   ]
+  },
+  {
+   "bab": "bab4",
+   "key": "temuan_penelitian",
+   "label": "Temuan Penelitian",
+   "before": [
+    "pembahasan"
+   ],
+   "skipKualitatif": false
+  },
+  {
+   "bab": "bab4",
+   "key": "implikasi_teoretis",
+   "label": "Implikasi Teoretis",
+   "after": [
+    "pembahasan"
+   ],
+   "before": [
+    "keterbatasan_penelitian"
+   ],
+   "skipKualitatif": false
+  },
+  {
+   "bab": "bab5",
+   "key": "agenda_penelitian",
+   "label": "Agenda Penelitian Lanjutan",
+   "after": [
+    "saran"
+   ]
+  }
+ ],
+ "y": [
+  {
+   "bab": "bab1",
+   "key": "state_of_the_art",
+   "label": "State of the Art",
+   "before": [
+    "kebaruan_penelitian"
+   ]
+  },
+  {
+   "bab": "bab1",
+   "key": "research_gap",
+   "label": "Research Gap",
+   "after": [
+    "state_of_the_art"
+   ],
+   "before": [
+    "kebaruan_penelitian"
+   ]
+  },
+  {
+   "bab": "bab2",
+   "key": "kerangka_teori_besar",
+   "label": "Kerangka Teori Besar",
+   "after": [
+    "landasan_teori"
+   ]
+  },
+  {
+   "bab": "bab2",
+   "key": "critical_review",
+   "label": "Critical Review",
+   "after": [
+    "penelitian_terdahulu_naratif",
+    "penelitian_terdahulu"
+   ]
+  },
+  {
+   "bab": "bab2",
+   "key": "proposisi_penelitian",
+   "label": "Proposisi Penelitian",
+   "after": [
+    "kerangka_berpikir"
+   ],
+   "onlyKualitatif": false
+  },
+  {
+   "bab": "bab3",
+   "key": "landasan_filosofis",
+   "label": "Landasan Filosofis (Ontologi, Epistemologi, Aksiologi)",
+   "after": [
+    "jenis_desain_penelitian"
+   ]
+  },
+  {
+   "bab": "bab5",
+   "key": "kontribusi_keilmuan",
+   "label": "Kontribusi terhadap Ilmu",
+   "after": [
+    "agenda_penelitian",
+    "saran"
+   ]
+  }
+ ],
+ "overlayMethods": [
+  "skripsi_kuantitatif",
+  "skripsi_kualitatif",
+  "skripsi_ptk",
+  "skripsi_pustaka",
+  "mixed",
+  "hukum_normatif",
+  "hukum_empiris"
+ ]
+}

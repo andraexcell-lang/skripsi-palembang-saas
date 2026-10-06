@@ -16,14 +16,191 @@ const BAB_LIST = ['bab1', 'bab2', 'bab3', 'bab4', 'bab5', 'lampiran'];
 export const biayaBab = (p: any, bab?: string) =>
   bab === 'lampiran' ? 0 : p?.jenis === 'tesis' ? 8 : FEATURE_COSTS.bab;
 
-export const OUTLINE: Record<string, { bab: string; subs: string[] }> = {
-  bab1: { bab: 'Bab I Pendahuluan', subs: ['1.1 Latar Belakang', '1.2 Identifikasi Masalah', '1.3 Rumusan Masalah', '1.4 Tujuan Penelitian', '1.5 Manfaat Penelitian', '1.6 Batasan Masalah', '1.7 Kebaruan Penelitian', '1.8 Sistematika Penulisan'] },
-  bab2: { bab: 'Bab II Tinjauan Pustaka', subs: ['2.1 Landasan Teori', '2.2 Kerangka Teori', '2.3 Hubungan Antar Variabel', '2.4 Penelitian Terdahulu', '2.5 Kerangka Berpikir', '2.6 Hipotesis'] },
-  bab3: { bab: 'Bab III Metodologi', subs: ['3.1 Jenis & Desain Penelitian', '3.2 Populasi & Sampel', '3.3 Definisi Operasional', '3.4 Teknik Pengumpulan Data', '3.5 Teknik Analisis Data', '3.6 Etika Penelitian', '3.7 Jadwal Penelitian'] },
-  bab4: { bab: 'Bab IV Hasil Penelitian dan Pembahasan', subs: ['4.1 Gambaran Umum Objek Penelitian', '4.2 Hasil Penelitian', '4.3 Pembahasan', '4.4 Implikasi'] },
-  bab5: { bab: 'Bab V Penutup', subs: ['5.1 Simpulan', '5.2 Saran'] },
-  lampiran: { bab: 'Lampiran', subs: ['6.1 Kisi-Kisi Penelitian', '6.2 Pernyataan Kuesioner'] },
+/* ===== Struktur bab baku per metode (paritas mantrariset) =====
+   Data varian diekstrak dari chunk 5702-d00db968a5b82f86.js (kamus `d` +
+   overlay `f`/`y`/`_`) — lihat hasil-analisis-mantrariset/varian-struktur-mantrariset.json */
+type SubDef = { key: string; label: string };
+type BabDef = { judul: string; subs: SubDef[] };
+type Varian = Record<string, BabDef>;
+type OverlayDef = { bab: string; key: string; label: string; before?: string[]; after?: string[]; skipKualitatif?: boolean; onlyKualitatif?: boolean };
+const S = (key: string, label: string): SubDef => ({ key, label });
+
+const V_KUANTITATIF: Varian = {
+  bab1: { judul: 'Bab I Pendahuluan', subs: [S('latar_belakang', 'Latar Belakang'), S('identifikasi_masalah', 'Identifikasi Masalah'), S('rumusan_masalah', 'Rumusan Masalah'), S('tujuan_penelitian', 'Tujuan Penelitian'), S('manfaat_penelitian', 'Manfaat Penelitian'), S('batasan_masalah', 'Batasan Masalah'), S('sistematika_penulisan', 'Sistematika Penulisan')] },
+  bab2: { judul: 'Bab II Tinjauan Pustaka', subs: [S('landasan_teori', 'Landasan Teori'), S('kerangka_teori', 'Kerangka Teori'), S('hubungan_variabel', 'Hubungan Antar Variabel'), S('penelitian_terdahulu_naratif', 'Penelitian Terdahulu'), S('kerangka_berpikir', 'Kerangka Berpikir'), S('hipotesis', 'Hipotesis')] },
+  bab3: { judul: 'Bab III Metodologi', subs: [S('jenis_desain_penelitian', 'Jenis & Desain Penelitian'), S('populasi_sampel', 'Populasi & Sampel'), S('definisi_operasional', 'Definisi Operasional'), S('teknik_pengumpulan', 'Teknik Pengumpulan Data'), S('analisis_spss', 'Teknik Analisis Data'), S('jadwal_penelitian', 'Jadwal Penelitian')] },
+  bab4: { judul: 'Bab IV Hasil Penelitian dan Pembahasan', subs: [S('gambaran_umum', 'Gambaran Umum Objek Penelitian'), S('interpretasi_hasil', 'Hasil Penelitian'), S('pembahasan', 'Pembahasan'), S('implikasi_penelitian', 'Implikasi')] },
+  bab5: { judul: 'Bab V Penutup', subs: [S('simpulan', 'Simpulan'), S('saran', 'Saran')] },
+  lampiran: { judul: 'Lampiran', subs: [S('kisi_kisi', 'Kisi-Kisi Penelitian'), S('kuisioner', 'Pernyataan Kuisioner')] },
 };
+
+const V_KUALITATIF: Varian = {
+  bab1: { judul: 'Bab I Pendahuluan', subs: [S('latar_belakang_umum_khusus', 'Latar Belakang'), S('identifikasi_masalah', 'Identifikasi Masalah'), S('rumusan_masalah', 'Rumusan Masalah'), S('tujuan_penelitian', 'Tujuan Penelitian'), S('manfaat_penelitian', 'Manfaat Penelitian'), S('batasan_masalah', 'Batasan Masalah'), S('sistematika_penulisan', 'Sistematika Penulisan')] },
+  bab2: { judul: 'Bab II Kajian Pustaka', subs: [S('landasan_teori', 'Landasan Teori'), S('kerangka_teori', 'Kerangka Teori'), S('penelitian_terdahulu', 'Penelitian Terdahulu'), S('kerangka_berpikir', 'Kerangka Berpikir')] },
+  bab3: { judul: 'Bab III Metodologi', subs: [S('jenis_desain_penelitian', 'Jenis & Pendekatan'), S('subjek_informan', 'Subjek & Informan'), S('teknik_pengumpulan', 'Teknik Pengumpulan Data'), S('teknik_analisis', 'Teknik Analisis Data'), S('keabsahan_data', 'Uji Keabsahan Data'), S('jadwal_penelitian', 'Jadwal Penelitian')] },
+  bab4: { judul: 'Bab IV Hasil Penelitian dan Pembahasan', subs: [S('gambaran_umum', 'Gambaran Umum Lokasi Penelitian'), S('deskripsi_informan', 'Deskripsi Informan Penelitian'), S('penyajian_data', 'Penyajian Data Hasil Penelitian'), S('triangulasi_data', 'Triangulasi dan Keabsahan Temuan'), S('temuan_penelitian', 'Temuan Penelitian'), S('pembahasan', 'Pembahasan'), S('implikasi_penelitian', 'Implikasi')] },
+  bab5: { judul: 'Bab V Penutup', subs: [S('simpulan', 'Simpulan'), S('saran', 'Saran')] },
+  lampiran: { judul: 'Lampiran', subs: [S('kisi_kisi', 'Kisi-Kisi Penelitian'), S('pedoman_wawancara', 'Pedoman Wawancara')] },
+};
+
+const V_PTK: Varian = {
+  bab1: { judul: 'Bab I Pendahuluan', subs: [S('latar_belakang', 'Latar Belakang'), S('identifikasi_masalah', 'Identifikasi Masalah'), S('rumusan_masalah', 'Rumusan Masalah'), S('tujuan_penelitian', 'Tujuan Penelitian'), S('manfaat_penelitian', 'Manfaat Penelitian'), S('sistematika_penulisan', 'Sistematika Penulisan')] },
+  bab2: { judul: 'Bab II Kajian Pustaka', subs: [S('landasan_teori', 'Landasan Teori'), S('penelitian_terdahulu', 'Penelitian Terdahulu'), S('kerangka_berpikir', 'Kerangka Berpikir'), S('hipotesis_tindakan', 'Hipotesis Tindakan')] },
+  bab3: { judul: 'Bab III Metode Penelitian', subs: [S('jenis_desain_penelitian', 'Jenis & Desain Penelitian'), S('setting_subjek_penelitian', 'Setting & Subjek Penelitian'), S('prosedur_siklus', 'Prosedur Penelitian (Siklus)'), S('teknik_pengumpulan', 'Teknik Pengumpulan Data'), S('instrumen_penelitian', 'Instrumen Penelitian'), S('teknik_analisis', 'Teknik Analisis Data'), S('indikator_keberhasilan', 'Indikator Keberhasilan')] },
+  bab4: { judul: 'Bab IV Hasil Penelitian dan Pembahasan', subs: [S('deskripsi_prasiklus', 'Deskripsi Kondisi Awal (Pra-Siklus)'), S('deskripsi_siklus_1', 'Deskripsi Hasil Siklus I'), S('deskripsi_siklus_2', 'Deskripsi Hasil Siklus II'), S('perbandingan_siklus', 'Perbandingan Antar-Siklus'), S('pembahasan', 'Pembahasan')] },
+  bab5: { judul: 'Bab V Penutup', subs: [S('simpulan', 'Simpulan'), S('saran', 'Saran')] },
+  lampiran: { judul: 'Lampiran', subs: [S('kisi_kisi', 'Kisi-Kisi Instrumen'), S('lembar_observasi', 'Lembar Observasi Aktivitas')] },
+};
+
+const V_PUSTAKA: Varian = {
+  bab1: { judul: 'Bab I Pendahuluan', subs: [S('latar_belakang', 'Latar Belakang'), S('rumusan_masalah', 'Rumusan Masalah'), S('tujuan_penelitian', 'Tujuan Penelitian'), S('manfaat_penelitian', 'Manfaat Penelitian'), S('batasan_masalah', 'Batasan Masalah / Penegasan Istilah'), S('sistematika_penulisan', 'Sistematika Penulisan')] },
+  bab2: { judul: 'Bab II Kajian Pustaka', subs: [S('landasan_teori', 'Landasan Teori'), S('penelitian_terdahulu', 'Penelitian Terdahulu'), S('kerangka_berpikir', 'Kerangka Berpikir')] },
+  bab3: { judul: 'Bab III Metode Penelitian', subs: [S('jenis_desain_penelitian', 'Jenis & Pendekatan Penelitian'), S('sumber_data_pustaka', 'Sumber Data (Primer & Sekunder)'), S('teknik_pengumpulan', 'Teknik Pengumpulan Data'), S('teknik_analisis', 'Teknik Analisis Data'), S('keabsahan_data', 'Uji Keabsahan Data')] },
+  bab4: { judul: 'Bab IV Hasil Penelitian dan Pembahasan', subs: [S('penyajian_data', 'Penyajian Data'), S('analisis_data_pustaka', 'Analisis Data'), S('pembahasan', 'Pembahasan')] },
+  bab5: { judul: 'Bab V Penutup', subs: [S('simpulan', 'Simpulan'), S('saran', 'Saran')] },
+};
+
+const V_RND: Varian = {
+  bab1: { judul: 'Bab I Pendahuluan', subs: [S('latar_belakang', 'Latar Belakang'), S('rumusan_masalah', 'Rumusan Masalah'), S('tujuan_penelitian', 'Tujuan Penelitian'), S('spesifikasi_produk_bab1', 'Spesifikasi Produk')] },
+  bab2: { judul: 'Bab II Landasan Teori', subs: [S('landasan_teori', 'Landasan Teori'), S('penelitian_terdahulu_naratif', 'Penelitian Terdahulu')] },
+  bab3: { judul: 'Bab III Metodologi', subs: [S('jenis_desain_penelitian', 'Jenis Penelitian R&D'), S('model_pengembangan', 'Model Pengembangan'), S('validasi_produk', 'Validasi Produk')] },
+  bab4: { judul: 'Bab IV Hasil', subs: [S('pembahasan', 'Pembahasan')] },
+  bab5: { judul: 'Bab V Penutup', subs: [S('simpulan', 'Kesimpulan'), S('saran', 'Saran')] },
+  lampiran: { judul: 'Lampiran', subs: [S('kisi_kisi', 'Kisi-Kisi Instrumen'), S('lembar_validasi', 'Lembar Validasi Ahli')] },
+};
+
+const V_MIXED: Varian = {
+  bab1: { judul: 'Bab I Pendahuluan', subs: [S('latar_belakang', 'Latar Belakang'), S('identifikasi_masalah', 'Identifikasi Masalah'), S('rumusan_masalah', 'Rumusan Masalah'), S('tujuan_penelitian', 'Tujuan Penelitian'), S('manfaat_penelitian', 'Manfaat Penelitian'), S('batasan_masalah', 'Batasan Masalah'), S('sistematika_penulisan', 'Sistematika Penulisan')] },
+  bab2: { judul: 'Bab II Tinjauan Pustaka', subs: [S('landasan_teori', 'Landasan Teori'), S('kerangka_teori', 'Kerangka Teori'), S('hubungan_variabel', 'Hubungan Antar Variabel'), S('penelitian_terdahulu_naratif', 'Penelitian Terdahulu'), S('kerangka_berpikir', 'Kerangka Berpikir'), S('hipotesis', 'Hipotesis')] },
+  bab3: { judul: 'Bab III Metodologi', subs: [S('jenis_desain_penelitian', 'Jenis & Desain Penelitian'), S('populasi_sampel', 'Populasi & Sampel'), S('definisi_operasional', 'Definisi Operasional'), S('teknik_pengumpulan', 'Teknik Pengumpulan Data'), S('analisis_spss', 'Teknik Analisis Data'), S('jadwal_penelitian', 'Jadwal Penelitian')] },
+  bab4: { judul: 'Bab IV Hasil Penelitian dan Pembahasan', subs: [S('gambaran_umum', 'Gambaran Umum Objek Penelitian'), S('interpretasi_hasil', 'Hasil Penelitian'), S('pembahasan', 'Pembahasan'), S('implikasi_penelitian', 'Implikasi')] },
+  bab5: { judul: 'Bab V Penutup', subs: [S('simpulan', 'Simpulan'), S('saran', 'Saran')] },
+  lampiran: { judul: 'Lampiran', subs: [S('kisi_kisi', 'Kisi-Kisi Penelitian'), S('kuisioner', 'Pernyataan Kuisioner'), S('pedoman_wawancara', 'Pedoman Wawancara')] },
+};
+
+const V_HUKUM_NORMATIF: Varian = {
+  bab1: { judul: 'Bab I Pendahuluan', subs: [S('latar_belakang', 'Latar Belakang Masalah'), S('identifikasi_masalah', 'Identifikasi Masalah'), S('batasan_masalah', 'Batasan Masalah'), S('rumusan_masalah', 'Rumusan Masalah'), S('tujuan_penelitian', 'Tujuan Penelitian'), S('manfaat_penelitian', 'Manfaat Penelitian'), S('keaslian_penelitian', 'Keaslian Penelitian'), S('kerangka_konseptual', 'Kerangka Konseptual'), S('sistematika_penulisan', 'Sistematika Penulisan')] },
+  bab2: { judul: 'Bab II Tinjauan Pustaka dan Kerangka Teori', subs: [S('tinjauan_konsep_utama', 'Tinjauan Umum Konsep Utama'), S('tinjauan_konsep_kedua', 'Tinjauan Umum Konsep Kedua'), S('tinjauan_konsep_pendukung', 'Tinjauan Umum Konsep Pendukung'), S('landasan_teori', 'Landasan Teori'), S('asas_hukum', 'Asas-Asas Hukum yang Relevan'), S('kerangka_berpikir', 'Kerangka Berpikir')] },
+  bab3: { judul: 'Bab III Metode Penelitian', subs: [S('jenis_penelitian_hukum', 'Jenis dan Sifat Penelitian'), S('pendekatan_penelitian_hukum', 'Pendekatan Penelitian'), S('bahan_hukum', 'Jenis dan Sumber Bahan Hukum'), S('teknik_pengumpulan_bahan_hukum', 'Teknik Pengumpulan Bahan Hukum'), S('teknik_analisis_bahan_hukum', 'Teknik Analisis Bahan Hukum'), S('teknik_penarikan_kesimpulan', 'Teknik Penarikan Kesimpulan')] },
+  bab4: { judul: 'Bab IV Hasil Penelitian dan Pembahasan', subs: [S('pengaturan_hukum', 'Pengaturan Hukum terhadap Masalah Penelitian'), S('analisis_hukum_pertama', 'Analisis Permasalahan Hukum Pertama'), S('analisis_hukum_kedua', 'Analisis Permasalahan Hukum Kedua'), S('kelemahan_pengaturan', 'Kelemahan Pengaturan Hukum'), S('konsep_pembaruan_hukum', 'Konsep Pembaruan Hukum')] },
+  bab5: { judul: 'Bab V Penutup', subs: [S('simpulan', 'Kesimpulan'), S('saran', 'Saran')] },
+};
+
+const V_HUKUM_EMPIRIS: Varian = {
+  bab1: { judul: 'Bab I Pendahuluan', subs: [S('latar_belakang', 'Latar Belakang Masalah'), S('identifikasi_masalah', 'Identifikasi Masalah'), S('batasan_masalah', 'Batasan Masalah'), S('rumusan_masalah', 'Rumusan Masalah'), S('tujuan_penelitian', 'Tujuan Penelitian'), S('manfaat_penelitian', 'Manfaat Penelitian'), S('keaslian_penelitian', 'Keaslian Penelitian'), S('definisi_konseptual_operasional', 'Definisi Konseptual dan Operasional'), S('sistematika_penulisan', 'Sistematika Penulisan')] },
+  bab2: { judul: 'Bab II Tinjauan Pustaka dan Kerangka Teori', subs: [S('tinjauan_peraturan', 'Tinjauan Umum Peraturan yang Diteliti'), S('tinjauan_objek_penelitian', 'Tinjauan Umum Objek Penelitian'), S('landasan_teori', 'Teori Utama'), S('teori_pendukung', 'Teori Pendukung'), S('penelitian_terdahulu', 'Penelitian Terdahulu'), S('kerangka_berpikir', 'Kerangka Berpikir')] },
+  bab3: { judul: 'Bab III Metode Penelitian', subs: [S('jenis_penelitian_hukum', 'Jenis dan Sifat Penelitian'), S('pendekatan_penelitian_hukum', 'Pendekatan Penelitian'), S('lokasi_waktu_penelitian', 'Lokasi dan Waktu Penelitian'), S('populasi_sampel_informan', 'Populasi, Sampel, dan Informan'), S('jenis_sumber_data', 'Jenis dan Sumber Data'), S('teknik_pengumpulan', 'Teknik Pengumpulan Data'), S('instrumen_penelitian', 'Instrumen Penelitian'), S('keabsahan_data', 'Teknik Keabsahan Data'), S('teknik_analisis', 'Teknik Pengolahan dan Analisis Data'), S('etika_penelitian', 'Etika Penelitian'), S('jadwal_penelitian', 'Jadwal Penelitian')] },
+  bab4: { judul: 'Bab IV Hasil Penelitian dan Pembahasan', subs: [S('gambaran_umum', 'Gambaran Umum Lokasi Penelitian'), S('deskripsi_informan', 'Gambaran Subjek Penelitian'), S('pelaksanaan_hukum', 'Pelaksanaan Hukum di Lokasi Penelitian'), S('analisis_hukum_pertama', 'Analisis Rumusan Masalah Pertama'), S('faktor_penghambat', 'Faktor Pendukung dan Penghambat'), S('upaya_penyelesaian', 'Upaya Penyelesaian dan Strategi Perbaikan'), S('efektivitas_hukum', 'Pembahasan Efektivitas Hukum'), S('temuan_penelitian', 'Temuan Penelitian')] },
+  bab5: { judul: 'Bab V Penutup', subs: [S('simpulan', 'Kesimpulan'), S('saran', 'Saran')] },
+  lampiran: { judul: 'Lampiran', subs: [S('kisi_kisi', 'Kisi-Kisi Penelitian'), S('pedoman_wawancara', 'Pedoman Wawancara')] },
+};
+
+const V_EKSAKTA: Varian = {
+  bab1: { judul: 'Bab I Pendahuluan', subs: [S('latar_belakang', 'Latar Belakang'), S('identifikasi_masalah', 'Identifikasi Masalah'), S('rumusan_masalah', 'Rumusan Masalah'), S('tujuan_penelitian', 'Tujuan Penelitian'), S('manfaat_penelitian', 'Manfaat Penelitian'), S('batasan_masalah', 'Batasan Masalah'), S('sistematika_penulisan', 'Sistematika Penulisan')] },
+  bab2: { judul: 'Bab II Tinjauan Pustaka', subs: [S('landasan_teori', 'Landasan Teori'), S('kerangka_teori', 'Teori & Konsep Pendukung'), S('penelitian_terdahulu_naratif', 'Penelitian Terdahulu'), S('kerangka_berpikir', 'Kerangka Berpikir')] },
+  bab3: { judul: 'Bab III Metodologi Penelitian', subs: [S('jenis_desain_penelitian', 'Jenis & Tahapan Penelitian'), S('alat_bahan', 'Alat & Bahan / Spesifikasi Sistem'), S('sumber_data_eksakta', 'Sumber Data / Dataset'), S('perancangan_sistem', 'Perancangan Sistem / Prosedur Eksperimen'), S('teknik_analisis_eksakta', 'Metrik & Teknik Pengujian'), S('jadwal_penelitian', 'Jadwal Penelitian')] },
+  bab4: { judul: 'Bab IV Hasil dan Pembahasan', subs: [S('gambaran_umum', 'Deskripsi Data & Objek Uji'), S('implementasi_sistem', 'Implementasi / Pelaksanaan Eksperimen'), S('interpretasi_hasil', 'Hasil Pengujian'), S('pembahasan', 'Pembahasan'), S('implikasi_penelitian', 'Implikasi & Keterbatasan')] },
+  bab5: { judul: 'Bab V Penutup', subs: [S('simpulan', 'Simpulan'), S('saran', 'Saran')] },
+  lampiran: { judul: 'Lampiran', subs: [S('kisi_kisi', 'Kisi-Kisi Instrumen'), S('lembar_pengamatan', 'Lembar Pengamatan & Prosedur Uji')] },
+};
+
+const VARIAN: Record<string, Varian> = {
+  kuantitatif: V_KUANTITATIF, kualitatif: V_KUALITATIF, ptk: V_PTK, pustaka: V_PUSTAKA,
+  rnd: V_RND, mixed: V_MIXED, hukum_normatif: V_HUKUM_NORMATIF, hukum_empiris: V_HUKUM_EMPIRIS, eksakta: V_EKSAKTA,
+};
+
+// Overlay tesis (Kebaruan, Etika, Temuan, Implikasi Teoretis, Agenda) — paritas fungsi P referensi
+const OVERLAY_TESIS: OverlayDef[] = [
+  { bab: 'bab1', key: 'kebaruan_penelitian', label: 'Kebaruan Penelitian', before: ['sistematika_penulisan'] },
+  { bab: 'bab3', key: 'etika_penelitian', label: 'Etika Penelitian', before: ['jadwal_penelitian'] },
+  { bab: 'bab4', key: 'temuan_penelitian', label: 'Temuan Penelitian', before: ['pembahasan'] },
+  { bab: 'bab4', key: 'implikasi_teoretis', label: 'Implikasi Teoretis', before: ['keterbatasan_penelitian'], after: ['pembahasan'] },
+  { bab: 'bab5', key: 'agenda_penelitian', label: 'Agenda Penelitian Lanjutan', after: ['saran'] },
+];
+
+// Overlay disertasi (di atas overlay tesis)
+const OVERLAY_DISERTASI: OverlayDef[] = [
+  { bab: 'bab1', key: 'state_of_the_art', label: 'State of the Art', before: ['kebaruan_penelitian'] },
+  { bab: 'bab1', key: 'research_gap', label: 'Research Gap', before: ['kebaruan_penelitian'], after: ['state_of_the_art'] },
+  { bab: 'bab2', key: 'kerangka_teori_besar', label: 'Kerangka Teori Besar', after: ['landasan_teori'] },
+  { bab: 'bab2', key: 'critical_review', label: 'Critical Review', after: ['penelitian_terdahulu_naratif', 'penelitian_terdahulu'] },
+  { bab: 'bab2', key: 'proposisi_penelitian', label: 'Proposisi Penelitian', after: ['kerangka_berpikir'] },
+  { bab: 'bab3', key: 'landasan_filosofis', label: 'Landasan Filosofis (Ontologi, Epistemologi, Aksiologi)', after: ['jenis_desain_penelitian'] },
+  { bab: 'bab5', key: 'kontribusi_keilmuan', label: 'Kontribusi terhadap Ilmu', after: ['agenda_penelitian', 'saran'] },
+];
+
+// Varian yang menerima overlay tesis/disertasi (array `_` referensi)
+const METODE_OVERLAY = new Set(['kuantitatif', 'kualitatif', 'ptk', 'pustaka', 'mixed', 'hukum_normatif', 'hukum_empiris']);
+
+const NOMOR_BAB: Record<string, number> = { bab1: 1, bab2: 2, bab3: 3, bab4: 4, bab5: 5, lampiran: 6 };
+
+// Nilai kolom metode form kita -> kunci varian
+const PETA_METODE: Record<string, string> = {
+  'Kualitatif': 'kualitatif',
+  'Kuantitatif': 'kuantitatif',
+  'Kuantitatif — Data Sekunder': 'kuantitatif',
+  'Studi Pustaka': 'pustaka',
+  'PTK': 'ptk',
+  'R&D': 'rnd',
+  'Mixed Method': 'mixed',
+  'Hukum Normatif': 'hukum_normatif',
+  'Hukum Empiris': 'hukum_empiris',
+  'Eksperimen / Rekayasa': 'eksakta',
+};
+
+function varianMetode(metode?: string): string {
+  const m = String(metode || '').trim();
+  if (PETA_METODE[m]) return PETA_METODE[m];
+  const l = m.toLowerCase();
+  if (l.includes('kualitatif')) return 'kualitatif';
+  if (l.includes('normatif')) return 'hukum_normatif';
+  if (l.includes('hukum')) return 'hukum_empiris';
+  if (l.includes('tindakan kelas') || /\bptk\b/.test(l)) return 'ptk';
+  if (l.includes('pustaka') || l.includes('library')) return 'pustaka';
+  if (l.includes('mixed') || l.includes('campuran') || l.includes('kombinasi')) return 'mixed';
+  if (l.includes('r&d') || l.includes('pengembangan') || l.includes('development')) return 'rnd';
+  if (l.includes('eksperimen') || l.includes('rekayasa') || l.includes('eksakta')) return 'eksakta';
+  return 'kuantitatif';
+}
+
+function terapkanOverlay(v: Varian, overlays: OverlayDef[]): Varian {
+  const hasil: Varian = {};
+  for (const [id, b] of Object.entries(v)) hasil[id] = { judul: b.judul, subs: [...b.subs] };
+  for (const o of overlays) {
+    const b = hasil[o.bab];
+    if (!b || b.subs.some((s) => s.key === o.key)) continue;
+    let pos = b.subs.length;
+    if (o.before) { const n = b.subs.findIndex((s) => o.before!.includes(s.key)); if (n >= 0) pos = n; }
+    if (o.after) { let n = -1; for (let i = 0; i < b.subs.length; i++) if (o.after!.includes(b.subs[i].key)) n = i; if (n >= 0) pos = n + 1; }
+    b.subs.splice(pos, 0, { key: o.key, label: o.label });
+  }
+  return hasil;
+}
+
+// Varian final proyek: metode -> varian, lalu overlay tesis/disertasi (jenis)
+export function varianFor(p?: { metode?: string; jenis?: string } | null): Varian {
+  const key = varianMetode(p?.metode);
+  const base = VARIAN[key] || V_KUANTITATIF;
+  const jenis = p?.jenis;
+  if ((jenis === 'tesis' || jenis === 'disertasi') && METODE_OVERLAY.has(key)) {
+    return terapkanOverlay(base, jenis === 'disertasi' ? [...OVERLAY_TESIS, ...OVERLAY_DISERTASI] : OVERLAY_TESIS);
+  }
+  return base;
+}
+
+// Bentuk lama { bab: { bab, subs: ['1.1 Label', ...] } } — konsumen /meta/outline, studio, taskpane
+export function outlineFor(p?: { metode?: string; jenis?: string } | null): Record<string, { bab: string; subs: string[] }> {
+  const v = varianFor(p);
+  const out: Record<string, { bab: string; subs: string[] }> = {};
+  for (const [id, b] of Object.entries(v)) {
+    const n = NOMOR_BAB[id] || 6;
+    out[id] = { bab: b.judul, subs: b.subs.map((s, i) => `${n}.${i + 1} ${s.label}`) };
+  }
+  return out;
+}
+
+// Kompatibilitas: outline baku kuantitatif tanpa overlay (konsumen lama tanpa konteks proyek)
+export const OUTLINE = outlineFor(null);
 
 // OpenAlex gratis (tanpa key): abstrak + bahasa + venue. Dipakai /referensi.
 export async function openalexTop(query: string, rows = 10, since?: number | null, lang?: string | null, page = 1): Promise<{ items: { doi: string; title: string; authors: string; year: string; url: string; venue: string; abstract: string }[]; total: number }> {
@@ -83,7 +260,7 @@ const SITASI = `Aturan format: teks bersih — TANPA **bold**, tanpa ---, tanpa 
 // Pilihan interaktif studio (paritas referensi): bagan Bab II + input metodologi Bab III
 type Ekstra = { bagan?: string; baganTeks?: string; populasi?: string; takDiketahui?: boolean; desain?: string; software?: string };
 
-function babPrompt(bab: string, p: any, refs: { doi: string; title: string; authors: string; year: string; url: string }[], ekstra: Ekstra = {}) {
+export function babPrompt(bab: string, p: any, refs: { doi: string; title: string; authors: string; year: string; url: string }[], ekstra: Ekstra = {}) {
   const style = p.citation_style || 'APA 7th';
   const lang = p.language || 'Indonesia';
   const base = `Judul: ${p.judul}\nJenis: ${p.jenis}\nMetode: ${p.metode}\nBahasa penulisan: ${lang}\nGaya sitasi: ${style}\n${p.initial_data ? `Data awal penelitian: ${String(p.initial_data).slice(0, 1000)}\n` : ''}`;
@@ -94,29 +271,116 @@ function babPrompt(bab: string, p: any, refs: { doi: string; title: string; auth
     ? `Sertakan tabel fenomena di latar belakang (angka/fakta + sumber + tahun). Bila topik sangat lokal tanpa data daring, tulis apa adanya tanpa mengarang.\n` : '';
   const wajib = Array.isArray(p.custom_sources) && p.custom_sources.length
     ? `SUMBER WAJIB (arahan pembimbing — harus disitasi bila relevan, masuk Daftar Pustaka):\n${p.custom_sources.map((s: any, i: number) => `${i + 1}. ${s.name}: ${String(s.text || '').slice(0, 800)}`).join('\n')}\n` : '';
-  // --- Struktur & tabel persis pola referensi ---
-  const struktur1 = `Susun BAB I dengan TEPAT 8 sub-bagian berurutan: 1.1 Latar Belakang (15–25 paragraf, tiap paragraf punya bodynote bila memakai angka/temuan), 1.2 Identifikasi Masalah (daftar bernomor), 1.3 Rumusan Masalah, 1.4 Tujuan Penelitian, 1.5 Manfaat Penelitian, 1.6 Batasan Masalah, 1.7 Kebaruan Penelitian (jelaskan gap/kebaruan dibanding penelitian terdahulu — teks + boleh tabel ringkas), 1.8 Sistematika Penulisan (daftar per bab).\n`;
-  const struktur2 = `Struktur wajib BAB II: 2.1 Landasan Teori — untuk SETIAP konstruk/variabel penelitian buat sub-sub BERTINGKAT 5 tingkat dengan pola: "2.1.1.1 Teori yang Mendasari <variabel>", "2.1.1.2 Pengertian <variabel>", "2.1.1.3 Dimensi <variabel>", "2.1.1.4 Indikator <variabel>", "2.1.1.5 Faktor-Faktor yang Memengaruhi <variabel>" (sub-sub berikutnya lanjut 2.1.2, 2.1.3, dst.); 2.2 Kerangka Teori; 2.3 Hubungan Antar Variabel (satu sub tiap pasangan hubungan termasuk mediasi); 2.4 Penelitian Terdahulu; 2.5 Kerangka Berpikir; 2.6 Hipotesis.\nWAJIB: sub 2.4 Penelitian Terdahulu berupa TABEL markdown persis kolom "No | Nama (Tahun) | Judul | Hasil | Gap" berisi 10 penelitian terdahulu nyata dari referensi yang relevan (1 paragraf penjelasan pendahulu tabel juga boleh).\n`;
-  const baganNote = ekstra.bagan === 'kirim' && ekstra.baganTeks
-    ? `2.5 Kerangka Berpikir: ikuti DESKRIPSI bagan dari penulis berikut, jadikan urutan kotak/panahnya (sajikan sebagai blok teks terstruktur pakai karakter → dan baris per kotak):\n${String(ekstra.baganTeks).slice(0, 800)}\n`
-    : `2.5 Kerangka Berpikir: akhiri sub-bagian ini dengan BAGAN TEKS terstruktur (baris per kotak, hubungkan dengan →, sebutkan X1, X2, Z, Y sesuai variabel judul) setelah paragraf penjelasan, lalu kalimat "Kerangka berpikir tersebut disajikan pada gambar berikut." sebelum blok bagan.\n`;
+  // --- Struktur baku per metode + overlay jenis (paritas mantrariset) ---
+  const v = varianFor(p);
+  const vk = varianMetode(p?.metode);
+  const kuant = vk === 'kuantitatif' || vk === 'mixed'; // varian bergaya kuantitatif (mixed = kuant + pedoman)
+  const tahun = new Date().getFullYear();
+  const subsNum = (b: string) => (v[b] ? v[b].subs.map((s, i) => `${NOMOR_BAB[b] || 6}.${i + 1} ${s.label}`) : []);
+  const nomorSub = (b: string, key: string) => {
+    const i = v[b] ? v[b].subs.findIndex((s) => s.key === key) : -1;
+    return i >= 0 ? `${NOMOR_BAB[b] || 6}.${i + 1}` : '';
+  };
+
+  // CATATAN per varian — arahan isi per sub (ditulis khusus per metode)
+  const nota1: Record<string, string> = {
+    latar_belakang: '15–25 paragraf, tiap paragraf punya bodynote bila memakai angka/temuan',
+    latar_belakang_umum_khusus: '15–25 paragraf dengan alur umum lalu khusus, tiap paragraf punya bodynote bila memakai angka/temuan',
+    identifikasi_masalah: 'daftar bernomor',
+    kebaruan_penelitian: 'jelaskan gap/kebaruan dibanding penelitian terdahulu — teks + boleh tabel ringkas',
+    sistematika_penulisan: 'daftar per bab',
+    spesifikasi_produk_bab1: 'ringkas spesifikasi/solusi produk yang dituju pengembangan',
+    kerangka_konseptual: 'sajikan kerangka konseptual sebagai tabel/bagan konsep–indikator',
+    definisi_konseptual_operasional: 'tabel definisi konseptual & operasional tiap istilah kunci',
+  };
+  const s1 = v.bab1 ? v.bab1.subs : [];
+  const struktur1 = `Susun BAB I dengan TEPAT ${s1.length} sub-bagian berurutan: ${s1.map((s, i) => {
+    const n = `1.${i + 1} ${s.label}`;
+    return nota1[s.key] ? `${n} (${nota1[s.key]})` : n;
+  }).join(', ')}.\n`;
+
+  const catatan2: Record<string, string> = {
+    kualitatif: `Uraikan teori utama tiap konsep kunci penelitian (sub-sub bertingkat bila perlu); TANPA hipotesis. WAJIB: sub Penelitian Terdahulu berupa TABEL markdown persis kolom "No | Nama (Tahun) | Judul | Hasil | Gap" berisi minimal 6 penelitian terdahulu nyata dari referensi yang relevan.\n`,
+    ptk: `Landasan Teori memuat teori pembelajaran/manajemen kelas + teori tindakan; sub Hipotesis Tindakan berisi dugaan perbaikan setelah tindakan. WAJIB: sub Penelitian Terdahulu berupa TABEL markdown persis kolom "No | Nama (Tahun) | Judul | Hasil | Gap" berisi minimal 6 penelitian terdahulu nyata dari referensi yang relevan.\n`,
+    pustaka: `Fokus teori & telaah literatur: jelaskan konsep utama, bandingkan hasil studi terdahulu. WAJIB: sub Penelitian Terdahulu berupa TABEL markdown persis kolom "No | Nama (Tahun) | Judul | Hasil | Gap" berisi minimal 6 literatur nyata dari referensi yang relevan.\n`,
+    hukum_normatif: `Tinjauan umum konsep & asas hukum yang relevan; sertakan kutipan peraturan/peradilan seperlunya. WAJIB: sub Penelitian Terdahulu berupa TABEL markdown persis kolom "No | Nama (Tahun) | Judul | Hasil | Gap" berisi minimal 6 literatur nyata dari referensi.\n`,
+    hukum_empiris: `Tinjauan umum peraturan & objek penelitian, teori utama + pendukung. WAJIB: sub Penelitian Terdahulu berupa TABEL markdown persis kolom "No | Nama (Tahun) | Judul | Hasil | Gap" berisi minimal 6 literatur nyata dari referensi.\n`,
+    rnd: `Landasan teori pengembangan produk (kebutuhan, spesifikasi, teori pendukung domain). WAJIB: sub Penelitian Terdahulu berupa TABEL markdown persis kolom "No | Nama (Tahun) | Judul | Hasil | Gap" berisi minimal 6 literatur nyata dari referensi.\n`,
+    eksakta: `Landasan teori sistem/rekayasa & konsep pendukung. WAJIB: sub Penelitian Terdahulu berupa TABEL markdown persis kolom "No | Nama (Tahun) | Judul | Hasil | Gap" berisi minimal 6 literatur nyata dari referensi.\n`,
+  };
+  const struktur2 = kuant
+    ? `Struktur wajib BAB II: 2.1 Landasan Teori — untuk SETIAP konstruk/variabel penelitian buat sub-sub BERTINGKAT 5 tingkat dengan pola: "2.1.1.1 Teori yang Mendasari <variabel>", "2.1.1.2 Pengertian <variabel>", "2.1.1.3 Dimensi <variabel>", "2.1.1.4 Indikator <variabel>", "2.1.1.5 Faktor-Faktor yang Memengaruhi <variabel>" (sub-sub berikutnya lanjut 2.1.2, 2.1.3, dst.); 2.2 Kerangka Teori; 2.3 Hubungan Antar Variabel (satu sub tiap pasangan hubungan termasuk mediasi); 2.4 Penelitian Terdahulu; 2.5 Kerangka Berpikir; 2.6 Hipotesis.\nWAJIB: sub 2.4 Penelitian Terdahulu berupa TABEL markdown persis kolom "No | Nama (Tahun) | Judul | Hasil | Gap" berisi 10 penelitian terdahulu nyata dari referensi yang relevan (1 paragraf penjelasan pendahulu tabel juga boleh).\n`
+    : `Struktur wajib ${((v.bab2 && v.bab2.judul.toUpperCase()) || 'BAB II')}: ${subsNum('bab2').join(', ')}.\n${catatan2[vk] || ''}`;
+  const nBagan = nomorSub('bab2', 'kerangka_berpikir');
+  const baganNote = nBagan
+    ? (ekstra.bagan === 'kirim' && ekstra.baganTeks
+      ? `${nBagan} Kerangka Berpikir: ikuti DESKRIPSI bagan dari penulis berikut, jadikan urutan kotak/panahnya (sajikan sebagai blok teks terstruktur pakai karakter → dan baris per kotak):\n${String(ekstra.baganTeks).slice(0, 800)}\n`
+      : `${nBagan} Kerangka Berpikir: akhiri sub-bagian ini dengan BAGAN TEKS terstruktur (baris per kotak, hubungkan dengan →, sebutkan X1, X2, Z, Y sesuai variabel judul) setelah paragraf penjelasan, lalu kalimat "Kerangka berpikir tersebut disajikan pada gambar berikut." sebelum blok bagan.\n`)
+    : '';
   const populasiNote = (() => {
+    if (!kuant) return ''; // rumus Slovin/Lemeshow khas survei kuantitatif
     if (ekstra.takDiketahui) return `Populasi: TOTAL populasi tidak diketahui — gunakan rumus Lemeshow untuk menentukan besar sampel.\n`;
     if (ekstra.populasi) return `Populasi: ${ekstra.populasi} (besaran sesuai satuan objek pada judul) — hitung besar sampel dengan rumus Slovin, tingkat kesalahan (e) 5%.\n`;
     return '';
   })();
-  const desainNote = ekstra.desain ? `Jenis/desain penelitian: ${ekstra.desain} — sebutkan dan kembangkan alasannya di 3.1.\n` : '';
-  const softwareNote = ekstra.software ? `Software analisis: ${ekstra.software} — sebutkan pada 3.5 Teknik Analisis Data.\n` : '';
-  const struktur3 = `Struktur wajib BAB III: 3.1 Jenis & Desain Penelitian, 3.2 Populasi & Sampel, 3.3 Definisi Operasional, 3.4 Teknik Pengumpulan Data (sub 3.4.1 Kuesioner dengan sub per variabel), 3.5 Teknik Analisis Data (3.5.1 Uji Validitas, 3.5.2 Uji Reliabilitas, 3.5.3 Uji Asumsi Klasik — 3.5.3.1 Normalitas, 3.5.3.2 Multikolinearitas, 3.5.3.3 Heteroskedastisitas, 3.5.4 Analisis Regresi Linear Berganda — 3.5.4.1 Uji t, 3.5.4.2 Uji F, 3.5.4.3 Koefisien Determinasi R², 3.5.5 Uji Mediasi (Path Analysis)), 3.6 Etika Penelitian, 3.7 Jadwal Penelitian.\nWAJIB TABEL: (a) sub 3.3 Definisi Operasional berupa TABEL markdown persis 7 kolom "Variabel | Definisi Konseptual | Definisi Operasional | Dimensi | Indikator | Skala Pengukuran | Sumber" (satu baris per variabel); (b) sub 3.7 Jadwal Penelitian berupa TABEL GANTT bulanan — kolom "No | Kegiatan | Januari 2026 | Februari 2026 | Maret 2026 | April 2026 | Mei 2026 | Juni 2026" dengan tanda X pada bulan berjalan (sesuaikan tahun dengan tahun sekarang).\n`;
+  const desainNote = ekstra.desain ? `Jenis/desain penelitian: ${ekstra.desain} — sebutkan dan kembangkan alasannya di ${(v.bab3 && nomorSub('bab3', 'jenis_desain_penelitian')) || '3.1'}.\n` : '';
+  const softwareNote = ekstra.software ? `Software analisis: ${ekstra.software} — sebutkan pada ${(v.bab3 && nomorSub('bab3', 'analisis_spss')) || (v.bab3 && nomorSub('bab3', 'teknik_analisis')) || '3.5'} Teknik Analisis Data.\n` : '';
+
+  const catatan3: Record<string, string> = {
+    kualitatif: `Pada Subjek & Informan: teknik sampling (purposive/snowball) + besaran & karakteristik. Pada Teknik Pengumpulan Data: observasi, wawancara mendalam, dokumentasi. Pada Teknik Analisis Data: alur Miles & Huberman (reduksi data → penyajian data → penarikan kesimpulan). Pada Uji Keabsahan Data: credibility (triangulasi, member checking, audit trail), transferability, dependability, confirmability.\n`,
+    ptk: `Uraikan model PTK (mis. Kemmis & McTaggart): siklus perencanaan → tindakan → observasi → refleksi, minimal 2 siklus; instrumen: lembar observasi & rubrik penilaian; analisis: kualitatif deskriptif + kuantitatif sederhana (rata-rata, persentase); sertakan indikator keberhasilan.\n`,
+    pustaka: `Sumber data primer & sekunder; teknik pengumpulan: telaah dokumen/kepustakaan (katalog, indeks, basis data daring); analisis: klasifikasi, reduksi, penyajian, penarikan kesimpulan; keabsahan: kelengkapan, konsistensi, objektivitas.\n`,
+    hukum_normatif: `Metode yuridis normatif deskriptif-analitis: bahan hukum primer (peraturan, putusan), sekunder (buku, jurnal), tersier (kamus, ensiklopedia); teknik: studi pustaka & penafsiran hukum; penarikan kesimpulan deduktif.\n`,
+    hukum_empiris: `Metode yuridis empiris (sosiolegal): lokasi & waktu penelitian, populasi/sampel/informan, wawancara mendalam & observasi, keabsahan triangulasi + member checking, etika penelitian (persetujuan responden, kerahasiaan data).\n`,
+    rnd: `Model pengembangan (4D/5D: define → design → develop → desploy/disseminate) dengan uraian tiap tahap; validasi ahli (face & content validity); uji coba skala kecil lalu luas; instrumen berupa lembar validasi ahli.\n`,
+    eksakta: `Perancangan pengujian: alat & bahan/dataset, prosedur eksperimen, variabel & metrik evaluasi (akurasi, presisi, MSE, dll. sesuai topik), analisis data dengan tabel/grafik hasil uji.\n`,
+  };
+  const nDef = nomorSub('bab3', 'definisi_operasional');
+  const nKumpul = nomorSub('bab3', 'teknik_pengumpulan');
+  const nAna = nomorSub('bab3', 'analisis_spss') || nomorSub('bab3', 'teknik_analisis');
+  const nJad = nomorSub('bab3', 'jadwal_penelitian');
+  const ganttKal = nJad
+    ? `sub ${nJad} Jadwal Penelitian berupa TABEL GANTT bulanan — kolom "No | Kegiatan | Januari ${tahun} | Februari ${tahun} | Maret ${tahun} | April ${tahun} | Mei ${tahun} | Juni ${tahun}" dengan tanda X pada bulan berjalan.`
+    : '';
+  const struktur3 = kuant
+    ? `Struktur wajib BAB III: ${(v.bab3 ? v.bab3.subs : []).map((s, i) => {
+        const n = `3.${i + 1} ${s.label}`;
+        if (s.key === 'teknik_pengumpulan') return `${n} (sub ${nKumpul}.1 Kuesioner dengan sub per variabel)`;
+        if (s.key === 'analisis_spss') return `${n} (${nAna}.1 Uji Validitas, ${nAna}.2 Uji Reliabilitas, ${nAna}.3 Uji Asumsi Klasik — ${nAna}.3.1 Normalitas, ${nAna}.3.2 Multikolinearitas, ${nAna}.3.3 Heteroskedastisitas, ${nAna}.4 Analisis Regresi Linear Berganda — ${nAna}.4.1 Uji t, ${nAna}.4.2 Uji F, ${nAna}.4.3 Koefisien Determinasi R², ${nAna}.5 Uji Mediasi (Path Analysis))`;
+        return n;
+      }).join(', ')}.\nWAJIB TABEL: (a) sub ${nDef} Definisi Operasional berupa TABEL markdown persis 7 kolom "Variabel | Definisi Konseptual | Definisi Operasional | Dimensi | Indikator | Skala Pengukuran | Sumber" (satu baris per variabel);${ganttKal ? ` (b) ${ganttKal}` : ''}\n`
+    : `Struktur wajib ${((v.bab3 && v.bab3.judul.toUpperCase()) || 'BAB III')}: ${subsNum('bab3').join(', ')}.\n${catatan3[vk] || ''}${ganttKal ? `WAJIB TABEL: ${ganttKal}\n` : ''}`;
+
+  const catatan4: Record<string, string> = {
+    kualitatif: `Sajikan data per tema hasil wawancara/observasi (boleh kutipan informan), Triangulasi & Keabsahan Temuan memuat triangulasi teknik/sumber/waktu + member checking, Pembahasan mengaitkan temuan dengan teori Bab II.`,
+    ptk: `Deskripsi kondisi awal & hasil tiap siklus (nilai rata-rata, ketuntasan, indikator), Perbandingan Antar-Siklus, lalu Pembahasan mengapa tindakan berhasil/perlu diperbaiki.`,
+    pustaka: `Penyajian data kajian per topik, Analisis Data berupa sintesis sistematis, Pembahasan mengaitkan dengan landasan teori Bab II.`,
+    hukum_normatif: `Analisis per pasal & putusan: pengaturan hukum, permasalahan, kelemahan, lalu konsep pembaruan hukum yang diajukan.`,
+    hukum_empiris: `Gambaran lokasi & subjek, pelaksanaan hukum di lapangan, analisis tiap rumusan masalah, faktor pendukung/penghambat, upaya penyelesaian, efektivitas hukum, temuan penelitian.`,
+    rnd: `Pembahasan hasil pengembangan: produk/jurus pengembangan, hasil validasi ahli, hasil uji coba — kaitkan dengan kebutuhan & teori Bab II.`,
+    eksakta: `Deskripsi data uji, implementasi/eksperimen, Hasil Pengujian dalam tabel/grafik, Pembahasan dibandingkan tolok ukur & literatur.`,
+  };
+  const adaAgenda = v.bab5 && v.bab5.subs.some((s) => s.key === 'agenda_penelitian');
+  const struktur4 = kuant
+    ? `Susun BAB IV HASIL DAN PEMBAHASAN (deskripsi data, hasil analisis, pembahasan dikaitkan teori Bab II). Sub-bagian urut sesuai struktur: ${subsNum('bab4').join(', ')}.\n`
+    : `Susun ${((v.bab4 && v.bab4.judul.toUpperCase()) || 'BAB IV')} dengan sub-bagian urut TEPAT: ${subsNum('bab4').join(', ')} — ${catatan4[vk] || 'sajikan hasil per sub-bagian lalu pembahasan dikaitkan teori Bab II.'}\n`;
+  const struktur5 = kuant
+    ? `Susun BAB V PENUTUP (kesimpulan menjawab rumusan masalah + saran praktis/metodologis). Sub-bagian urut: ${subsNum('bab5').join(', ')}${adaAgenda ? ' — Agenda Penelitian Lanjutan berisi arah penelitian berikutnya berbasis keterbatasan penelitian' : ''}.\n`
+    : `Susun ${((v.bab5 && v.bab5.judul.toUpperCase()) || 'BAB V')} dengan sub-bagian urut: ${subsNum('bab5').join(', ')} — Simpulan menjawab rumusan masalah satu per satu; Saran praktis/teknis/akademis${adaAgenda ? '; Agenda Penelitian Lanjutan berisi arah penelitian berikutnya berbasis keterbatasan penelitian' : ''}.\n`;
+  const s6 = subsNum('lampiran');
+  const strukturL = !kuant && s6.length
+    ? `Sub-bagian urut: ${s6.join(', ')} — tiap sub diisi instrumen penelitian NYATA sesuai labelnya (kisi-kisi, pedoman/lembar observasi-keahlian, pernyataan responden, lembar validasi) yang diturunkan dari kajian pustaka dan metode artikelmu, gunakan tabel Markdown bila membantu.\n`
+    : '';
+
   const map: Record<string, string> = {
     bab1: `${struktur1}Judul: karya berikut.\n${base}${ref}\n${wajib}${fenomena}Tulis akademik formal Indonesia, siap tempel ke Word.\n${scopeNote}${outlineNote}${SITASI}`,
     bab2: `${struktur2}${baganNote}Judul: karya berikut.\n${base}${ref}\n${scopeNote}${outlineNote}${SITASI}`,
     bab3: `${struktur3}${populasiNote}${desainNote}${softwareNote}Judul: karya berikut.\n${base}${ref}\nIkuti kaidah metodologi standar Indonesia.\n${scopeNote}${outlineNote}${SITASI}`,
-    bab4: `Susun BAB IV HASIL DAN PEMBAHASAN (deskripsi data, hasil analisis, pembahasan dikaitkan teori Bab II).\n${base}${ref}\nGunakan tabel Markdown bila perlu.\n${scopeNote}${outlineNote}${SITASI}`,
-    bab5: `Susun BAB V PENUTUP (kesimpulan menjawab rumusan masalah + saran praktis/metodologis).\n${base}${ref}\nRingkas dan tegas.\n${scopeNote}${outlineNote}${SITASI}`,
-    lampiran: `Susun LAMPIRAN skripsi (bab penunjang setelah Bab V) berisi instrumen penelitian.\n${base}${ref}\nIsinya diturunkan dari kajian pustaka dan metode artikelmu: ${p.metode === 'Kualitatif'
+    bab4: `${struktur4}${base}${ref}\nGunakan tabel Markdown bila perlu.\n${scopeNote}${outlineNote}${SITASI}`,
+    bab5: `${struktur5}${base}${ref}\nRingkas dan tegas.\n${scopeNote}${outlineNote}${SITASI}`,
+    lampiran: `Susun LAMPIRAN skripsi (bab penunjang setelah Bab V) berisi instrumen penelitian.\n${base}${ref}\n${strukturL}${strukturL ? '' : `Isinya diturunkan dari kajian pustaka dan metode artikelmu: ${p.metode === 'Kualitatif'
       ? 'kisi-kisi wawancara/pedoman wawancara, daftar informan, contoh transkrip, lembar observasi'
-      : 'kisi-kisi kuisioner, daftar pernyataan per indikator skala Likert, contoh lembar jawaban responden'} serta Lembar Pernyataan/Afirasi. Susun per bagian bernomor 6.1, 6.2, dst. gunakan tabel Markdown bila membantu.\n${scopeNote}${outlineNote}${SITASI}`,
+      : 'kisi-kisi kuisioner, daftar pernyataan per indikator skala Likert, contoh lembar jawaban responden'} serta Lembar Pernyataan/Afirasi. Susun per bagian bernomor 6.1, 6.2, dst. gunakan tabel Markdown bila membantu.\n`}${scopeNote}${outlineNote}${SITASI}`,
   };
   return map[bab] || map.bab1;
 }
@@ -263,7 +527,10 @@ router.post('/:id/generate-artikel', requireAuthOrKey, async (req: AuthRequest, 
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/meta/outline', async (_req, res) => res.json({ outline: OUTLINE }));
+router.get('/meta/outline', async (req, res) => {
+  const { metode, jenis } = req.query as { metode?: string; jenis?: string };
+  res.json({ outline: outlineFor({ metode, jenis }) });
+});
 
 // Referensi proyek (untuk Unduh RIS + tab Pustaka): unggahan user dahulu, lalu Crossref by judul — tanpa AI, tanpa kredit
 router.get('/:id/references', requireAuthOrKey, async (req: AuthRequest, res) => {
@@ -425,7 +692,7 @@ router.post('/:id/generate-subbab', requireAuthOrKey, async (req: AuthRequest, r
   try {
     const id = String(req.params.id);
     const { bab, sub, force } = req.body || {};
-    if (!OUTLINE[bab]) return res.status(400).json({ error: 'bab tidak dikenal' });
+    if (!BAB_LIST.includes(bab)) return res.status(400).json({ error: 'bab tidak dikenal' });
     if (!sub || String(sub).trim().length < 2) return res.status(400).json({ error: 'sub wajib diisi' });
     const { data: p, error } = await db().from('projects').select('*').eq('id', id).eq('user_id', req.userId!).single();
     if (error || !p) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
@@ -445,7 +712,7 @@ router.post('/:id/generate-subbab', requireAuthOrKey, async (req: AuthRequest, r
     }
     const refs = await crossrefTop(`${p.judul} ${sub}`, 5, p.min_year);
     const text = await generateContent(
-      `Susun sub-bab "${sub}" dari ${(OUTLINE[bab] || {}).bab || bab} untuk karya berikut. Judul: ${p.judul}. Metode: ${p.metode}. Bahasa: ${p.language || 'Indonesia'}. Gaya sitasi: ${p.citation_style || 'APA 7th'}.\n${refBlock(refs)}\nTulis 300-600 kata akademik dengan bodynote bila memakai teori. Jangan mengarang DOI.`
+      `Susun sub-bab "${sub}" dari ${(outlineFor(p)[bab] || {}).bab || bab} untuk karya berikut. Judul: ${p.judul}. Metode: ${p.metode}. Bahasa: ${p.language || 'Indonesia'}. Gaya sitasi: ${p.citation_style || 'APA 7th'}.\n${refBlock(refs)}\nTulis 300-600 kata akademik dengan bodynote bila memakai teori. Jangan mengarang DOI.`
     );
     const content = { ...(p.content || {}), [key]: text };
     await d.from('projects').update({ content, updated_at: new Date().toISOString() }).eq('id', id);
@@ -457,7 +724,7 @@ router.post('/:id/generate-subbab', requireAuthOrKey, async (req: AuthRequest, r
 router.post('/:id/generate-subbab-stream', requireAuthOrKey, async (req: AuthRequest, res) => {  try {
     const id = String(req.params.id);
     const { bab, sub } = req.body || {};
-    if (!OUTLINE[bab]) return res.status(400).json({ error: 'bab tidak dikenal' });
+    if (!BAB_LIST.includes(bab)) return res.status(400).json({ error: 'bab tidak dikenal' });
     if (!sub || String(sub).trim().length < 2) return res.status(400).json({ error: 'sub wajib diisi' });
     const { data: p, error } = await db().from('projects').select('*').eq('id', id).eq('user_id', req.userId!).single();
     if (error || !p) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
@@ -486,7 +753,7 @@ router.post('/:id/generate-subbab-stream', requireAuthOrKey, async (req: AuthReq
     }
     send('cost', { cost });
     const refs = await crossrefTop(`${p.judul} ${sub}`, 5, p.min_year);
-    const prompt = `Susun sub-bab "${sub}" dari ${(OUTLINE[bab] || {}).bab || bab} untuk karya berikut. Judul: ${p.judul}. Metode: ${p.metode}. Bahasa: ${p.language || 'Indonesia'}. Gaya sitasi: ${p.citation_style || 'APA 7th'}.\n${refBlock(refs)}\nTulis 300-600 kata akademik dengan bodynote bila memakai teori. Jangan mengarang DOI.`;
+    const prompt = `Susun sub-bab "${sub}" dari ${(outlineFor(p)[bab] || {}).bab || bab} untuk karya berikut. Judul: ${p.judul}. Metode: ${p.metode}. Bahasa: ${p.language || 'Indonesia'}. Gaya sitasi: ${p.citation_style || 'APA 7th'}.\n${refBlock(refs)}\nTulis 300-600 kata akademik dengan bodynote bila memakai teori. Jangan mengarang DOI.`;
     let full = '';
     try {
       for await (const t of generateContentStream(prompt)) {
@@ -746,6 +1013,13 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
     const mdBody = (md: string, kunci = '') => {
       const lampiran = kunci === 'lampiran';
       const pakaiCustom = !!String(pr.custom_outline || '').trim();
+      // Sub-judul H1 ("BAB II" ⏎ "Tinjauan Pustaka") mengikuti varian struktur proyek
+      // — kualitatif "Kajian Pustaka", hukum "Tinjauan Pustaka dan Kerangka Teori", dst.
+      const petaH1: Record<string, string> = {};
+      for (const [id, b] of Object.entries(outlineFor(pr))) {
+        const n = NOMOR_BAB[id] || 6;
+        if (n >= 1 && n <= 5) petaH1[['', 'I', 'II', 'III', 'IV', 'V'][n]] = b.bab.replace(/^Bab\s+[IVX]+\s+/i, '');
+      }
       // sub-bab lampiran: "6.1 …" → "Lampiran 1 …"; "6.1.1 …" → "L1.1 …" (ala referensi)
       const subJudul = (t: string, no: string) => {
         if (!lampiran) return `${no}  ${t}`;
@@ -804,8 +1078,7 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
             if (!sisa) sisa = berikut;
             i = j;
           }
-          const peta: Record<string, string> = { I: 'Pendahuluan', II: 'Tinjauan Pustaka', III: 'Metodologi', IV: 'Hasil Penelitian dan Pembahasan', V: 'Penutup' };
-          const sub = pakaiCustom && sisa ? titleCase(sisa) : (peta[romawi] || (sisa ? titleCase(sisa) : ''));
+          const sub = pakaiCustom && sisa ? titleCase(sisa) : (petaH1[romawi] || (sisa ? titleCase(sisa) : ''));
           H(1, nomor, sub || undefined);
           i++; continue;
         }

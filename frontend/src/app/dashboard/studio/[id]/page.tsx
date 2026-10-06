@@ -175,6 +175,8 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
   const [pptLoading, setPptLoading] = useState(false);
   const [nomor, setNomor] = useState('1.1');
   const [outline, setOutline] = useState<any>(null);
+  // Modal "Bukti Kutipan" saat sitasi diklik — paritas mantrariset
+  const [bukti, setBukti] = useState<any>(null);
 
   // Sesuaikan Skripsi
   const [sesLoading, setSesLoading] = useState(false);
@@ -421,10 +423,17 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
     return parts.map((seg, i) => {
       if (i % 2 === 1) {
         const ri = findRef(seg);
+        // Klik sitasi → modal "Bukti Kutipan" (paritas mantrariset); belum ketemu → tab Pustaka
         return (
-          <a key={`${prefix}${i}`} href={ri >= 0 ? `#${refId(refs[ri], ri)}` : '#dapus'} title={ri >= 0 ? 'Lihat bukti kutipan' : 'Verifikasi di Daftar Pustaka'} className="text-brand-primary underline decoration-dotted font-semibold">
+          <button
+            key={`${prefix}${i}`}
+            type="button"
+            title={ri >= 0 ? 'Lihat bukti kutipan' : 'Verifikasi di Daftar Pustaka'}
+            onClick={() => { if (ri >= 0) setBukti(refs[ri]); else setActive('pustaka'); }}
+            className="text-brand-primary underline decoration-dotted font-semibold hover:underline"
+          >
             {seg}
-          </a>
+          </button>
         );
       }
       return <span key={`${prefix}${i}`}>{seg}</span>;
@@ -446,16 +455,22 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
   }
 
   async function load() {
+    let pr: any = null;
     try {
       const r = await apiGet(`/api/projects/${id}`);
-      setProyek(r.item);
+      pr = r.item;
+      setProyek(pr);
     } catch (e: any) { setErr(e.message); }
     try {
       const r = await apiGet(`/api/projects/${id}/references`);
       setRefs(r.items || []);
     } catch { /* abaikan */ }
     try {
-      const r = await apiGet('/api/projects/meta/outline');
+      // Struktur baku per metode+jenis (paritas mantrariset — kualitatif ≠ kuantitatif)
+      const q = pr
+        ? `?metode=${encodeURIComponent(pr.metode || '')}&jenis=${encodeURIComponent(pr.jenis || '')}`
+        : '';
+      const r = await apiGet(`/api/projects/meta/outline${q}`);
       setOutline(r.outline || null);
     } catch { /* abaikan */ }
   }

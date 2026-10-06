@@ -215,7 +215,8 @@
     if (!pr) { box.innerHTML = '<p class="muted">Pilih proyek untuk melihat outline.</p>'; return; }
     if (!OUTLINE) {
       try {
-        const o = await call('/api/projects/meta/outline');
+        const q = pr.metode || pr.jenis ? '?metode=' + encodeURIComponent(pr.metode || '') + '&jenis=' + encodeURIComponent(pr.jenis || '') : '';
+      const o = await call('/api/projects/meta/outline' + q);
         OUTLINE = o.outline;
       } catch (e) { box.innerHTML = '<p class="muted">Gagal memuat outline.</p>'; return; }
     }
