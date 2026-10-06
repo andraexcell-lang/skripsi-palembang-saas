@@ -667,11 +667,14 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
 // ---------------------------------------------------------------------------
 // Helpers: ambil / ganti satu sub-bab di dalam teks sebuah bab
 // ---------------------------------------------------------------------------
-const RE_SUB = /^\d+\.\d+(?:\.\d+)?\s+\S/;
+const RE_SUB = /^\d+\.\d+(?:\.\d+)?\.?\s+\S/;
+
+// Rapikan baris judul sebelum dites: buang bold/heading markdown ("**1.1. Judul**" -> "1.1. Judul")
+const bersihBaris = (s: string) => s.replace(/[#*_`]/g, ' ').replace(/\s+/g, ' ').trim();
 
 function batasBagian(lines: string[], start: number): number {
   for (let j = start + 1; j < lines.length; j++) {
-    const t = lines[j].trim();
+    const t = bersihBaris(lines[j]);
     if (!t) continue;
     if (RE_SUB.test(t) || /^BAB\s+[IVX]+/i.test(t) || /^DAFTAR PUSTAKA/i.test(t)) return j;
   }
@@ -681,8 +684,9 @@ function batasBagian(lines: string[], start: number): number {
 // Cari judul sub-babnya: baris pendek lebih dulu (mis. "2.6 Hipotesis"),
 // biar paragraf biasa yang kebetulan menyebut kata kunci tidak dianggap judul.
 function cariJudul(lines: string[], re: RegExp): number {
-  const pendek = lines.findIndex((l) => l.trim().length <= 110 && re.test(l.trim()));
-  return pendek >= 0 ? pendek : lines.findIndex((l) => re.test(l.trim()));
+  const pendek = lines.findIndex((l) => { const t = bersihBaris(l); return t.length <= 110 && re.test(t); });
+  if (pendek >= 0) return pendek;
+  return lines.findIndex((l) => re.test(bersihBaris(l)));
 }
 
 function ambilBagian(text: string, re: RegExp): string {

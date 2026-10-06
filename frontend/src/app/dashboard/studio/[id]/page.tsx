@@ -55,7 +55,7 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
 
   function fmtHeading(line: string): string {
     if (nomor !== 'A') return line;
-    const m = line.match(/^(\d+)\.(\d+)\s+(.*)$/);
+    const m = line.match(/^(\d+)\.(\d+)\.?\s+(.*)$/);
     if (m) {
       const a = ROMAWI_HURUF[(parseInt(m[1], 10) - 1 + 26) % 26] || m[1];
       return `${a}. ${m[2]}. ${m[3]}`;
@@ -94,8 +94,8 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
       }
       if (/^(BAB [IVX]+|DAFTAR PUSTAKA|ABSTRAK|ABSTRACT|KATA PENGANTAR|DAFTAR ISI|DAFTAR TABEL|LEMBAR .*)$/i.test(cleanMd(t))) {
         target.push(<h3 key={i} className="text-center font-bold text-base mt-6 mb-3">{cleanMd(t)}</h3>);
-      } else if (/^\d+\.\d+\s+\S/.test(cleanMd(t))) {
-        // Sub-bab baru → kelompok sendiri supaya bisa dikontrol (Perkaya / Hapus sub-bab)
+      } else if (/^\d+\.\d+\.?\s+\S/.test(cleanMd(t))) {
+        // Sub-bab baru (boleh "1.1 Judul" atau "1.1. Judul") → kelompok sendiri untuk kontrol Perkaya / Hapus
         bagian.push({ raw: cleanMd(t), anak: [] });
         target = bagian[bagian.length - 1].anak;
       } else {
