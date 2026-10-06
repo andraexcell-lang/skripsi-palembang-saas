@@ -1193,7 +1193,8 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
       let noBab = 0, nTabel = 0, nGambar = 0, judulAktif = '';
       const romawiKeAngka = (r: string) => ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'].indexOf(r) + 1;
       const caption = (label: 'Tabel' | 'Gambar', n: number) => {
-        if (!noBab) return;
+        // tanpa nomor bab (pustaka) ATAU isi lampiran → tanpa caption (paritas referensi)
+        if (!noBab || lampiran) return;
         C.push(new Paragraph({
           alignment: AlignmentType.CENTER,
           spacing: { before: 120, after: 60, line: 360 },
@@ -1309,8 +1310,11 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
         // → H1 dua baris "BAB II" ⏎ "Tinjauan Pustaka" (caps via style Heading1, seperti referensi)
         // Baris berikut juga dikonsumsi bila IDENTIK dengan sub judul (mencegah duplikat
         // "Tinjauan Pustaka" paragraf kembar setelah H1) atau bila huruf besar semua.
-        const mbab = line.match(/^(BAB\s+[IVX]+)(?:\s+(.*))?$/i);
-        if (mbab && line.length < 140) {
+        // Saat H1 bab BELUM terbit (noBab 0), judul bab yang dibold AI ("**BAB II …**") juga
+        // dikenali; entri sistematika "**BAB I PENDAHULUAN**" selalu datang SETELAH H1 → tetap paragraf.
+        const kandidatBab = noBab === 0 ? dt : line;
+        const mbab = kandidatBab.match(/^(BAB\s+[IVX]+)(?:\s+(.*))?$/i);
+        if (mbab && kandidatBab.length < 140) {
           const romawi = mbab[1].replace(/^BAB\s+/i, '').toUpperCase();
           const nomor = `BAB ${romawi}`;
           let sisa = (mbab[2] || '').replace(/\*\*/g, '').trim();
