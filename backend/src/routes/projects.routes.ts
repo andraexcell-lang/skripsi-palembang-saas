@@ -659,22 +659,52 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
 
     const C: any[] = []; // penampung sementara per bagian
     const TNR = 'Times New Roman';
-    const center = (text: string, opts: any = {}) =>
-      new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text, font: TNR, size: 24, ...opts })] });
+    const center = (text: string, opts: any = {}) => {
+      const { before = 0, ...runOpts } = opts;
+      return new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { before, after: 0, line: 360 },
+        children: [new TextRun({ text, font: TNR, size: 24, ...runOpts })],
+      });
+    };
 
     const HEADING_LV: any = { 1: HeadingLevel.HEADING_1, 2: HeadingLevel.HEADING_2, 3: HeadingLevel.HEADING_3, 4: HeadingLevel.HEADING_4 };
-    const H = (level: number, text: string) => {
+    // Judul Title Case (kata hubung tetap kecil) — judul bab ala referensi
+    const titleCase = (s: string) => {
+      const kecil = new Set(['dan', 'di', 'ke', 'dari', 'untuk', 'dengan', 'yang', 'pada', 'dalam', 'atau', 'adalah', 'antara']);
+      return s.toLowerCase().split(/\s+/)
+        .map((w, k) => (k > 0 && kecil.has(w)) ? w : w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
+    };
+
+    const H = (level: number, text: string, baris2?: string) => {
       const lvl = Math.min(Math.max(level, 1), 4);
+      // sub-bab "1.1 Latar Belakang" → "1.1  Latar Belakang" (dua spasi, persis referensi)
+      const teks = String(text).replace(/^(\d+(?:\.\d+)+)\.?\s+/, '$1  ');
+      const gaya = { font: TNR, bold: true, size: lvl === 1 ? 28 : 24, color: '000000' };
+      const runs = baris2
+        ? [...runsTeks(teks, gaya), new TextRun({ break: 1, text: baris2, ...gaya })]
+        : runsTeks(teks, gaya);
       C.push(new Paragraph({
         heading: HEADING_LV[lvl],
         pageBreakBefore: lvl === 1,
         alignment: lvl === 1 ? AlignmentType.CENTER : AlignmentType.LEFT,
-        children: [new TextRun({
-          text, font: TNR, bold: true,
-          size: lvl === 1 ? 32 : lvl === 2 ? 26 : 24,
-          color: lvl === 3 ? '1F4D78' : '2E74B5',
-        })],
+        children: runs,
       }));
+    };
+
+    // Teks markdown → runs: "**teks**" jadi teks biasa, "*teks*"/"_teks_" jadi italic sungguhan
+    const runsTeks = (teks: string, opts: any = {}): any[] => {
+      const out: any[] = [];
+      const segs = String(teks).replace(/\*\*/g, '').split(/(\*[^*\n]{1,160}\*|_[^_\n]{1,160}_)/g);
+      for (const s of segs) {
+        if (!s) continue;
+        const dalam = (s.length > 2 && s[0] === '*' && s[s.length - 1] === '*') ? s.slice(1, -1)
+          : (s.length > 2 && s[0] === '_' && s[s.length - 1] === '_') ? s.slice(1, -1) : '';
+        if (dalam) out.push(new TextRun({ text: dalam, font: TNR, size: 24, italics: true, ...opts }));
+        else out.push(new TextRun({ text: s, font: TNR, size: 24, ...opts }));
+      }
+      return out;
     };
 
     // Paragraf biasa (rata kanan-kiri, spasi 1.5, indent 1 cm) + hyperlink URL/DOI
@@ -687,7 +717,7 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
           const link = /^https?:\/\//.test(seg) ? seg : `https://${seg}`;
           runs.push(new ExternalHyperlink({ children: [new TextRun({ text: seg, style: 'Hyperlink', font: TNR, size: 24 })], link }));
         } else {
-          runs.push(new TextRun({ text: seg.replace(/\*\*/g, ''), font: TNR, size: 24 }));
+          runs.push(...runsTeks(seg));
         }
       }
       C.push(new Paragraph({
@@ -701,7 +731,7 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
     const cell = (text: string, header = false) =>
       new TableCell({
         margins: { top: 40, bottom: 40, left: 80, right: 80 },
-        children: [new Paragraph({ children: [new TextRun({ text: String(text || ''), font: TNR, size: 22, bold: header })] })],
+        children: [new Paragraph({ spacing: { line: 240 }, children: runsTeks(String(text || ''), { size: 22, bold: header }) })],
       });
     const tblBorders = {
       top: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
@@ -713,7 +743,15 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
     };
 
     // Parser markdown: heading (BAB / 1.1 / 1.1.1 / #), tabel, daftar, paragraf
-    const mdBody = (md: string) => {
+    const mdBody = (md: string, kunci = '') => {
+      const lampiran = kunci === 'lampiran';
+      const pakaiCustom = !!String(pr.custom_outline || '').trim();
+      // sub-bab lampiran: "6.1 …" → "Lampiran 1 …"; "6.1.1 …" → "L1.1 …" (ala referensi)
+      const subJudul = (t: string, no: string) => {
+        if (!lampiran) return `${no}  ${t}`;
+        const b = no.split('.');
+        return b.length >= 3 ? `L${b.slice(1).join('.')}  ${t}` : `Lampiran ${b[1] || ''}  ${t}`;
+      };
       const lines = String(md || '').split('\n');
       let i = 0;
       while (i < lines.length) {
@@ -741,22 +779,48 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
           continue;
         }
 
-        // Heading markdown "#"
+        // Heading markdown "#" — level mengikuti nomor sub-bab bila ada (hierarki paritas referensi)
         const mh = line.match(/^(#{1,6})\s+(.*)$/);
-        if (mh) { H(mh[1].length, mh[2].replace(/\*\*/g, '').trim()); i++; continue; }
-
-        // Judul bab / front-back matter
-        if (/^(BAB\s+[IVX]+|DAFTAR PUSTAKA|LAMPIRAN)\b/i.test(line) && line.length < 120) {
-          H(1, line.replace(/\*\*/g, ''));
+        if (mh) {
+          const judul = mh[2].replace(/\*\*/g, '').trim();
+          const mno = judul.match(/^(\d+(?:\.\d+)+)\.?\s+(\S.*)$/);
+          if (mno) H(Math.min(mno[1].split('.').length, 4), subJudul(mno[2], mno[1]));
+          else H(mh[1].length, judul);
           i++; continue;
         }
-        if (/^daftar pustaka/i.test(line) && line.length < 80) { H(3, line); i++; continue; }
 
-        // Sub-bab bernomor: 1.1 → H2, 1.1.1 → H3, 1.1.1.1 → H4
+        // Judul bab: "BAB II TINJAUAN PUSTAKA" / "BAB I" + sub-judul baris berikut ("PENDAHULUAN")
+        // → H1 dua baris "BAB II" ⏎ "Tinjauan Pustaka" (caps via style Heading1, seperti referensi)
+        const mbab = line.match(/^(BAB\s+[IVX]+)(?:\s+(.*))?$/i);
+        if (mbab && line.length < 140) {
+          const romawi = mbab[1].replace(/^BAB\s+/i, '').toUpperCase();
+          const nomor = `BAB ${romawi}`;
+          let sisa = (mbab[2] || '').replace(/\*\*/g, '').trim();
+          let j = i + 1;
+          while (j < lines.length && !lines[j].trim()) j++;
+          const berikut = (lines[j] || '').replace(/[#*`]/g, '').trim();
+          if (berikut && berikut.length < 60 && berikut === berikut.toUpperCase() && /[A-Z]/.test(berikut)
+            && !/^(BAB\s+[IVX]+\b|DAFTAR\s+PUSTAKA\b|LAMPIRAN\b|\d+(?:\.\d+)+\.?\s|\||#)/.test(berikut)) {
+            if (!sisa) sisa = berikut;
+            i = j;
+          }
+          const peta: Record<string, string> = { I: 'Pendahuluan', II: 'Tinjauan Pustaka', III: 'Metodologi', IV: 'Hasil Penelitian dan Pembahasan', V: 'Penutup' };
+          const sub = pakaiCustom && sisa ? titleCase(sisa) : (peta[romawi] || (sisa ? titleCase(sisa) : ''));
+          H(1, nomor, sub || undefined);
+          i++; continue;
+        }
+
+        // Daftar pustaka global / lampiran
+        if (/^(DAFTAR PUSTAKA|LAMPIRAN)\b/i.test(line) && line.length < 120) {
+          H(1, lampiran && /^LAMPIRAN/i.test(line) ? 'LAMPIRAN' : line.replace(/\*\*/g, ''));
+          i++; continue;
+        }
+
+        // Sub-bab bernomor: 1.1 → H2 (ikut TOC 1-2), 1.1.1 → H3, 1.1.1.1 → H4 — persis hierarki referensi
         const mn = line.match(/^(\d+(?:\.\d+)+)\.?\s+(\S.*)$/);
         if (mn && line.length < 130) {
-          const level = Math.min(mn[1].split('.').length + 1, 4);
-          H(level, line.replace(/\*\*/g, ''));
+          const level = Math.min(mn[1].split('.').length, 4);
+          H(level, subJudul(mn[2].replace(/\*\*/g, ''), mn[1]));
           i++; continue;
         }
 
@@ -767,7 +831,17 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
             numbering: { reference: num ? 'daftar-num' : 'daftar-bullet', level: 0 },
             alignment: AlignmentType.JUSTIFIED,
             spacing: { line: 360 },
-            children: [new TextRun({ text: line.replace(/^([-*•]|\d+\.)\s+/, '').replace(/\*\*/g, ''), font: TNR, size: 24 })],
+            children: runsTeks(line.replace(/^([-*•]|\d+\.)\s+/, '')),
+          }));
+          i++; continue;
+        }
+
+        // Rumus pendek → ditengahkan spasi tunggal (referensi menampilkan rumus sebagai gambar)
+        if (line.length < 70 && /^[A-Za-z][A-Za-z0-9²³]{0,3}\s*=\s*\S/.test(line)) {
+          C.push(new Paragraph({
+            alignment: AlignmentType.CENTER,
+            spacing: { line: 240 },
+            children: [new TextRun({ text: line.replace(/\*\*/g, ''), font: TNR, size: 24 })],
           }));
           i++; continue;
         }
@@ -781,17 +855,17 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
 
     /* ---------------- 1. Sampul ---------------- */
     const cover: any[] = [
-      center(jenisSelected.toUpperCase(), { bold: true, size: 28 }),
+      center(jenisSelected.toUpperCase(), { bold: true, size: 28, before: 600 }),
       center(''),
-      center(judul.toUpperCase(), { bold: true, size: 28 }),
+      center(judul.toUpperCase(), { bold: true, size: 28, before: 240 }),
       center(''),
-      center('Diajukan untuk memenuhi salah satu syarat memperoleh gelar akademik'),
+      center('Diajukan untuk memenuhi salah satu syarat memperoleh gelar akademik', { before: 240 }),
       center(''),
-      center('Disusun oleh:'),
+      center('Disusun oleh:', { before: 480 }),
       center(nama, { bold: true }),
       center(nim ? `NIM. ${nim}` : ''),
       center(''),
-      center(jurusan.toUpperCase(), { bold: true }),
+      center(jurusan.toUpperCase(), { bold: true, before: 480 }),
       center(fakultas.toUpperCase(), { bold: true }),
       center(kampus.toUpperCase(), { bold: true }),
       center(String(tahun), { bold: true }),
@@ -867,14 +941,21 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
     /* ---------------- 3. Isi: BAB → Daftar Pustaka → Lampiran ---------------- */
     C.length = 0;
     const isiBab = (kunci: string) => {
-      const utama = String(pr.content?.[kunci] || '');
+      // Blok "Daftar Pustaka Bab Ini" + entri per-bab selalu di akhir konten bab dan
+      // tidak ada pada dokumen referensi → dibuang total (DAFTAR PUSTAKA global sudah ada)
+      const buangPustaka = (s: string) => {
+        const baris = String(s || '').split('\n');
+        const idx = baris.findIndex((l) => /^daftar pustaka bab ini$/i.test(l.replace(/[#*_`]/g, '').trim()));
+        return (idx >= 0 ? baris.slice(0, idx) : baris).join('\n');
+      };
+      const utama = buangPustaka(pr.content?.[kunci] || '');
       const subs = Object.entries(pr.content || {})
         .filter(([k]) => k.startsWith(`${kunci}:`))
         .sort(([a], [b]) => a.localeCompare(b))
-        .map(([, v]) => String(v))
+        .map(([, v]) => buangPustaka(String(v)))
         .filter((v) => v && !utama.includes(v.slice(0, 120)));
       const gabung = [utama, ...subs].filter(Boolean).join('\n\n');
-      if (gabung.trim()) mdBody(gabung);
+      if (gabung.trim()) mdBody(gabung, kunci);
     };
     for (const b of ['bab1', 'bab2', 'bab3', 'bab4', 'bab5']) isiBab(b);
 
@@ -911,20 +992,29 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
       title: judul,
       description: `${jenisSelected} — ${judul}`,
       styles: {
-        default: { document: { run: { font: TNR, size: 24 } } },
+        default: {
+          document: {
+            run: { font: TNR, size: 24 },
+            // docDefaults referensi: spasi 1.5, before/after 0 — membuat TOC & paragraf tanpa
+            // spacing eksplisit ikut 1.5 (TOC jadi renggang seperti referensi)
+            paragraph: { spacing: { before: 0, after: 0, line: 360 } },
+          },
+        },
         paragraphStyles: [
+          // Persis gaya efektif referensi (set kedua): hitam bold, H1 14pt center + caps,
+          // H2/3/4 12pt left, semua line 360
           { id: 'Heading1', name: 'Heading 1', basedOn: 'Normal', next: 'Normal', quickFormat: true,
-            run: { font: TNR, bold: true, size: 32, color: '2E74B5' },
-            paragraph: { alignment: AlignmentType.CENTER, spacing: { before: 240, after: 120 } } },
+            run: { font: TNR, bold: true, size: 28, color: '000000', allCaps: true },
+            paragraph: { alignment: AlignmentType.CENTER, spacing: { before: 240, after: 240, line: 360 } } },
           { id: 'Heading2', name: 'Heading 2', basedOn: 'Normal', next: 'Normal', quickFormat: true,
-            run: { font: TNR, bold: true, size: 26, color: '2E74B5' },
-            paragraph: { alignment: AlignmentType.LEFT, spacing: { before: 120, after: 60 } } },
+            run: { font: TNR, bold: true, size: 24, color: '000000' },
+            paragraph: { alignment: AlignmentType.LEFT, spacing: { before: 120, after: 60, line: 360 } } },
           { id: 'Heading3', name: 'Heading 3', basedOn: 'Normal', next: 'Normal', quickFormat: true,
-            run: { font: TNR, bold: true, size: 24, color: '1F4D78' },
-            paragraph: { alignment: AlignmentType.LEFT, spacing: { before: 120, after: 60 } } },
+            run: { font: TNR, bold: true, size: 24, color: '000000' },
+            paragraph: { alignment: AlignmentType.LEFT, spacing: { before: 60, after: 60, line: 360 } } },
           { id: 'Heading4', name: 'Heading 4', basedOn: 'Normal', next: 'Normal', quickFormat: true,
-            run: { font: TNR, bold: true, size: 24, color: '2E74B5' },
-            paragraph: { alignment: AlignmentType.LEFT, spacing: { before: 60, after: 60 } } },
+            run: { font: TNR, bold: true, size: 24, color: '000000' },
+            paragraph: { alignment: AlignmentType.LEFT, spacing: { before: 60, after: 60, line: 360 } } },
         ],
       },
       numbering: {
