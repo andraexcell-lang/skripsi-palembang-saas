@@ -107,3 +107,76 @@ Struktur teramati = base `skripsi_kuantitatif` + overlay `f` **persis**: Bab I 8
 | 6 | Prompt sistem | kita sudah punya prompt sendiri (server-side) | Tidak ada tindakan — referensi juga tidak mengekspos |
 
 **Tidak ada yang bisa/boleh disalin dari prompt mereka** (tidak terekspos). Struktur bab baku mereka justru sudah 90% kita tiru — selisih nyata hanya varian per metode + overlay bab IV/V tesis.
+
+**UPDATE 6 Okt 2026:** selisih **#1, #2, #3 di bawah sudah SELESAI** — detail implementasi & hasil uji di bagian 5.
+
+## 5. STATUS IMPLEMENTASI (6 Okt 2026, commit `09cd676` + `1c9523d`)
+
+Selisih #1 (varian per metode), #2 (overlay tesis bab4/5), #3 (overlay disertasi) **SELESAI** di commit `09cd676` (backend + taskpane + artefak) dan diselesaikan penuh di `1c9523d` (frontend studio).
+
+### 5a. Sumber data varian
+
+Seluruh kamus varian diekstrak **PENUH** dari chunk `5702-d00db968a5b82f86.js` (kamus `d` + overlay `f`/`y`/`_`) dan disimpan sebagai artefak di repo:
+
+- `hasil-analisis-mantrariset/varian-struktur-mantrariset.json` — JSON mentah hasil ekstrak (27 KB, 9 varian + overlay + metode overlay)
+- `hasil-analisis-mantrariset/varian-blok.ts` — blok TypeScript hasil generate otomatis dari JSON (data + type)
+- `backend/tes-prompt.cjs` — skrip uji prompt
+
+Proses ekstrak: fetch chunk → deteksi deklarasi variabel (`r`@493, `m`@2188, `d`@3250, `f`@16361, `y`@16885, `_`@17665) → literal JS → JSON via scanner string-aware (CSP `eval` diblokir → scanner ditulis manual) → download blob → `files.get` → simpan lokal.
+
+### 5b. Implementasi di `backend/src/routes/projects.routes.ts` (commit `09cd676`)
+
+- **`V_KUANTITATIF` `V_KUALITATIF` `V_PTK` `V_PUSTAKA` `V_RND` `V_MIXED` `V_HUKUM_NORMATIF` `V_HUKUM_EMPIRIS` `V_EKSAKTA`** — 9 varian lengkap (judul bab + sub `{key, label}`)
+- **`OVERLAY_TESIS`** (5 item: kebaruan_penelitian, etika_penelitian, temuan_penelitian, implikasi_teoretis, agenda_penelitian) + **`OVERLAY_DISERTASI`** (7 item) + **`METODE_OVERLAY`** (7 metode; R&D/eksakta dikecualikan — paritas fungsi `P` referensi)
+- **`varianMetode(metode)`** — peta `PETA_METODE` (10 nilai form kita → kunci varian) + fallback regex
+- **`terapkanOverlay(v, overlays)`** — insert default akhir → `before` override → `after` override `before` (urutan prioritas sama persis referensi); skip bila key sudah ada di base
+- **`varianFor(p)`** — metode → varian + overlay bila `jenis ∈ {tesis, disertasi}` dan metode di `METODE_OVERLAY`
+- **`outlineFor(p)`** — bentuk lama `Record<bab, {bab, subs: string[]}>` bernomor per varian (konsumen `/meta/outline`, studio, taskpane)
+- **`OUTLINE`** — dipertahankan sebagai kompatibilitas export = `outlineFor(null)` (kuantitatif skripsi)
+- **`/meta/outline`** — terima query `?metode=&jenis=` → `outlineFor({metode, jenis})`
+- **Route sub-bab** — `!BAB_LIST.includes(bab)`; judul bab dari `outlineFor(p)`
+- **`babPrompt`** — diekspor (`export function`); struktur1–5 + lampiran **dinamis per varian**:
+  - kuantitatif/mixed: teks terbukti dipertahankan, hanya nomor yang dinamis (skripsi tanpa Kebaruan/Etika → GANTT di 3.6; tesis dengan Kebaruan/Etika → di 3.7)
+  - kualitatif/ptk/pustaka/hukum/rnd/mixed/eksakta: **catatan per varian baru** (mis. kualitatif: Miles & Huberman, credibility/transferability/dependability/confirmability; hukum: yuridis normatif/empiris; rnd: 4D/5D + validasi ahli; eksakta: metrik uji)
+  - tabel penelitian terdahulu bila sub `penelitian_terdahulu*` ada; 5-tingkat konstruk + SPSS + tabel 7 kolom **hanya varian kuantitatif/mixed**
+- **DOCX `peta` H1** — dinamis dari `outlineFor(pr)` (kualitatif → "Kajian Pustaka", bukan hardcode "Tinjauan Pustaka")
+
+### 5c. Implementasi di frontend studio `page.tsx` (commit `1c9523d`)
+
+- `load()` fetch `/meta/outline?metode=&jenis=` (setelah proyek dimuat)
+- Label bab dari varian: `labelBab(bid)` = `outline[bid]?.bab` || fallback `BABS` — dipakai di desktop chips, pesan generate, pesan "selesai ditulis ulang"
+- **Kartu "Referensi Terverifikasi" DIHAPUS** — kartu itu milik kita (commit `6e145b7`), **TIDAK ADA** di mantrariset (dicek DOM). Alasan "terus muncul": blok dirender di setiap tab bab selama `refs.length > 0 && !isPustaka`, di ATAS naskah, dan `load()` refetch referensi setiap bab selesai
+- **Sitasi → modal "Bukti Kutipan"** (paritas mantrariset): klik sitasi → `setBukti(refs[ri])` → modal `fixed inset-0 z-50 bg-black/50` card `max-w-lg`: header "Bukti Kutipan" + tombol "Tutup", `Penulis (Tahun)`, `Judul. *Jurnal*`, amber-note bila tanpa DOI/tautan + link Google Scholar, tombol "Buka di tab Pustaka" (scroll ke entri `ref-i`). `ri<0` → `setActive('pustaka')`
+- Peringatan hipotesis Bab II → variant-aware: `outline.bab2.subs` cek `/hipotesis/i` (bukan `metode === 'Kuantitatif'` — varian tanpa sub Hipotesis tidak ikut kena)
+- Mobile chips tetap format `BAB N` (keputusan paritas), label judul hanya desktop
+
+### 5d. Taskpane (`word/taskpane.html`, commit `09cd676`)
+
+- Fetch outline ditambah `?metode=&jenis=` dari proyek yang dipilih
+
+### 5e. Hasil uji (server lokal port 5000)
+
+`curl` `GET /api/projects/meta/outline?metode=…&jenis=…` untuk **12 kombinasi** — semua persis paritas:
+
+| Kombinasi | Hasil kunci |
+|---|---|
+| Kuantitatif + skripsi | Bab I 7 sub (tanpa Kebaruan), Bab III 6 (tanpa Etika) |
+| Kuantitatif + tesis | Bab I 8 (+Kebaruan sebelum Sistematika), Bab III 7 (+Etika sebelum Jadwal), Bab IV 6 (+Temuan sebelum Pembahasan, +Implikasi Teoretis setelah Pembahasan), Bab V 3 (+Agenda setelah Saran) |
+| Kuantitatif + disertasi | f+y overlay: State of the Art & Research Gap (bab1), Kerangka Teori Besar & Critical Review & Proposisi (bab2), Landasan Filosofis (bab3), Kontribusi (bab5) |
+| Kualitatif + tesis | Bab II "Kajian Pustaka" (4 sub, tanpa Hipotesis), Bab IV 8 sub (Temuan sudah di base → overlay skip; +Implikasi Teoretis), Lampiran Pedoman Wawancara |
+| PTK + skripsi | 6 bab1, Bab II 4 sub (Hipotesis Tindakan), Bab III 7 (Siklus, Instrumen, Indikator), Bab IV 5 (Pra-Siklus/Siklus I/II/Perbandingan) |
+| Studi Pustaka + skripsi | **Tanpa Lampiran** (paritas — varian pustaka tidak punya lampiran di kamus referensi) |
+| Hukum Normatif | 9 bab1 (Keaslian, Kerangka Konseptual), Asas Hukum, Bahan Hukum; **tanpa Lampiran** |
+| R&D + tesis | **Tanpa overlay** (rnd dikecualikan dari `METODE_OVERLAY` — paritas fungsi `P`) |
+| Mixed + tesis | kuantitatif + Lampiran 3 sub (+Pedoman Wawancara) |
+| Default (tanpa param) | kuantitatif skripsi (kompatibilitas) |
+
+Prompt `babPrompt` diuji via `node tes-prompt.cjs` → struktur per varian output sesuai desain (mis. kualitatif bab3: catatan Miles & Huberman + keabsahan; kuantitatif bab3 skripsi: GANTT di 3.6; pustaka bab2: tabel terdahulu tanpa hipotesis). Frontend: `npx tsc --noEmit` + `npm run build` (Next 16, 32 halaman) lolos.
+
+### 5f. Deviasi yang diputuskan
+
+- **Pustaka & hukum_normatif TIDAK punya `lampiran`** di kamus referensi → keputusan: tetap menampilkan BAB 6 chip sebagai fallback (outline `lampiran` bawaan kuantitatif) — **deviasi kecil yang terdokumentasi** (bukan bug, tapi ekstra)
+- Overlay `f`/`y` **tidak punya flag `skipKualitatif`/`onlyKualitatif` di teks chunk** — efek serupa tercapai otomatis via cek `e.sub.some(s => s.key === a.key)` (sub sudah ada di base → di-skip). Paritas perilaku identik.
+- Prompt referensi tetap 100% server-side mereka — **tidak bisa & tidak perlu disalin** (prompt kita sudah dibuat sendiri, kini terstruktur per varian).
+
+**Kesimpulan implementasi:** selisih struktur baku #1–#3 **SELESAI** dengan data yang diekstrak penuh dari chunk referensi (bukan estimasi). Tinggal QUICK asisten (#5) + custom outline terstruktur (#4, prioritas rendah).
