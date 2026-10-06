@@ -17,6 +17,7 @@
   "license": "ISC",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@napi-rs/canvas": "^1.0.10",
     "@supabase/supabase-js": "^2.117.2",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",

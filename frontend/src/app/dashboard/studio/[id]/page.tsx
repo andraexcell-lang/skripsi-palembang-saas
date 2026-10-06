@@ -271,21 +271,29 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
     const bagian: { raw: string; anak: any[] }[] = [];
     let target: any[] = awal;
     let i = 0;
+    // Tabel markdown: pipe eksternal opsional + sel kosong dipertahankan —
+    // parser identik dengan ekspor DOCX (proyek "No | Nama (Tahun) | …" tampil sebagai tabel juga)
+    const sel = (s: string) => s.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim());
+    const pemisah = (s: string) => {
+      const p = sel(s);
+      return p.length >= 2 && p.every((c) => /^:?-+:?$/.test(c));
+    };
     while (i < lines.length) {
       const t = lines[i].trim();
       if (!t || /^---+$/.test(t)) { i++; continue; }
-      if (/^\|.+\|$/.test(t) && i + 1 < lines.length && /^\|[\s:\-|]+\|$/.test(lines[i + 1].trim())) {
-        const head = t.split('|').map((c) => c.trim()).filter(Boolean);
+      if (t.includes('|') && i + 1 < lines.length && pemisah(lines[i + 1].trim())) {
+        const head = sel(t).map(cleanMd);
         const rows: string[][] = [];
         i += 2;
-        while (i < lines.length && /^\|.+\|$/.test(lines[i].trim())) {
-          rows.push(lines[i].trim().split('|').map((c) => c.trim()).filter(Boolean));
+        while (i < lines.length && lines[i].trim() && lines[i].includes('|')
+          && !/^(#{1,6}\s|BAB\s+[IVX]|DAFTAR |LAMPIRAN\b)/i.test(lines[i].trim())) {
+          rows.push(sel(lines[i]).map(cleanMd));
           i++;
         }
         target.push(
           <table key={`tbl-${i}`} className="w-full text-xs border-collapse my-4">
             <thead><tr>{head.map((h, k) => <th key={k} className="border border-border-strong px-2 py-1 text-left">{h}</th>)}</tr></thead>
-            <tbody>{rows.map((r, k) => <tr key={k}>{r.map((c, j) => <td key={j} className="border border-border-strong px-2 py-1">{c}</td>)}</tr>)}</tbody>
+            <tbody>{rows.map((r, k) => <tr key={k}>{head.map((_, j) => <td key={j} className="border border-border-strong px-2 py-1">{r[j] || ''}</td>)}</tr>)}</tbody>
           </table>
         );
         continue;

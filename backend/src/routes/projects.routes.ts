@@ -255,7 +255,11 @@ function refBlock(refs: { doi: string; title: string; authors: string; year: str
     refs.map((r, i) => `${i + 1}. ${r.authors} (${r.year}). ${r.title}. https://doi.org/${r.doi}`).join('\n');
 }
 
-const SITASI = `Aturan format: teks bersih — TANPA **bold**, tanpa ---, tanpa preamble seperti "Berikut adalah...". Satu-satunya markdown yang boleh adalah TABEL (baris | kolom | dengan baris pemisah |---|). Langsung mulai dari judul bab. Wajib: (1) tulis dalam bahasa yang diminta, (2) bodynote sesuai gaya sitasi yang diminta di setiap sub-bab yang memakai teori/temuan, (3) akhiri dengan sub-bagian "Daftar Pustaka Bab Ini" berisi referensi di atas dalam format gaya sitasi yang diminta lengkap dengan link DOI yang bisa diklik. Jangan mengarang DOI/judul di luar daftar. Jangan tulis kata "Ilustratif": tabel fenomena hanya boleh berisi data nyata bersumber, bila tidak ada maka hapus tabelnya.`;
+const SITASI = `Aturan format: teks bersih — TANPA **bold**, tanpa ---, tanpa preamble seperti "Berikut adalah...". Markdown yang boleh hanya: (1) judul sub-bab bernomor pola "N.M Judul" (mis. "2.4 Penelitian Terdahulu") tanpa ** dan tanpa #; (2) TABEL markdown format standar — WAJIB pipe di awal dan di akhir SETIAP baris, termasuk baris pemisah, contoh:
+| No | Nama (Tahun) | Judul | Hasil | Gap |
+|---|---|---|---|---|
+| 1 | ... | ... | ... | ... |
+(3) daftar bernomor "1." "2." "3." untuk identifikasi/rumusan/saran. JANGAN tulis caption "Tabel x.y" atau "Gambar x.y" — penomoran tabel & gambar dibuat otomatis oleh sistem. Tulis isi teks dengan huruf normal — JANGAN semua huruf kapital; judul artikel referensi ditulis dengan huruf normal (bukan HURUF BESAR semua). Bagan: satu kotak per baris, panah "↓" atau "→" di baris tersendiri. Langsung mulai dari judul bab. Wajib: (1) tulis dalam bahasa yang diminta, (2) bodynote sesuai gaya sitasi yang diminta di setiap sub-bab yang memakai teori/temuan, (3) akhiri dengan sub-bagian "Daftar Pustaka Bab Ini" berisi referensi di atas dalam format gaya sitasi yang diminta lengkap dengan link DOI yang bisa diklik. Jangan mengarang DOI/judul di luar daftar. Jangan tulis kata "Ilustratif": tabel fenomena hanya boleh berisi data nyata bersumber, bila tidak ada maka hapus tabelnya.`;
 
 // Pilihan interaktif studio (paritas referensi): bagan Bab II + input metodologi Bab III
 type Ekstra = { bagan?: string; baganTeks?: string; populasi?: string; takDiketahui?: boolean; desain?: string; software?: string };
@@ -287,6 +291,7 @@ export function babPrompt(bab: string, p: any, refs: { doi: string; title: strin
     latar_belakang: '15–25 paragraf, tiap paragraf punya bodynote bila memakai angka/temuan',
     latar_belakang_umum_khusus: '15–25 paragraf dengan alur umum lalu khusus, tiap paragraf punya bodynote bila memakai angka/temuan',
     identifikasi_masalah: 'daftar bernomor',
+    rumusan_masalah: 'daftar bernomor — tiap pertanyaan satu nomor urut "1.", "2.", dst.',
     kebaruan_penelitian: 'jelaskan gap/kebaruan dibanding penelitian terdahulu — teks + boleh tabel ringkas',
     sistematika_penulisan: 'daftar per bab',
     spesifikasi_produk_bab1: 'ringkas spesifikasi/solusi produk yang dituju pengembangan',
@@ -908,7 +913,7 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
     const docx: any = await import('docx');
     const {
       Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, PageNumber,
-      Footer, TableOfContents, ExternalHyperlink, Table, TableRow, TableCell,
+      Footer, TableOfContents, ExternalHyperlink, ImageRun, SimpleField, Table, TableRow, TableCell,
       WidthType, BorderStyle, LevelFormat, NumberFormat, SectionType,
     } = docx;
 
@@ -942,6 +947,26 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
       return s.toLowerCase().split(/\s+/)
         .map((w, k) => (k > 0 && kecil.has(w)) ? w : w.charAt(0).toUpperCase() + w.slice(1))
         .join(' ');
+    };
+    // Judul artikel ALL-CAPS (data Crossref) → normal — paritas referensi (0 judul caps)
+    const rapikanJudul = (s: string): string => {
+      const teks = String(s || '').replace(/\s+/g, ' ').trim();
+      const huruf = teks.match(/[A-Za-z]/g) || [];
+      if (huruf.length < 20) return teks;
+      const besar = huruf.filter((c) => c >= 'A' && c <= 'Z').length;
+      if (besar / huruf.length < 0.62) return teks;
+      const kecil = new Set(['dan', 'di', 'ke', 'dari', 'untuk', 'dengan', 'yang', 'pada', 'dalam', 'atau',
+        'adalah', 'antara', 'terhadap', 'melalui', 'secara', 'serta', 'bagi', 'oleh', 'kepada', 'tentang',
+        'hingga', 'sebagai', 'akan', 'tidak', 'dapat', 'ini', 'itu']);
+      const akronim = new Set(['spss', 'pt', 'rri', 'sdm', 'asn', 'umkm', 'bps', 'dst', 'dpr', 'dprd', 'bumn',
+        'bumd', 'kkn', 'kti', 'ui', 'ugm', 'itb', 'ipb', 'univ', 'vol', 'doi']);
+      return teks.split(' ').map((w) => {
+        const tanda = (w.match(/[.,;:]+$/) || [''])[0];
+        const wl = w.toLowerCase().slice(0, w.length - tanda.length);
+        if (kecil.has(wl)) return wl + tanda;
+        if (akronim.has(wl)) return wl.toUpperCase() + tanda;
+        return wl.charAt(0).toUpperCase() + wl.slice(1) + tanda;
+      }).join(' ');
     };
 
     const H = (level: number, text: string, baris2?: string) => {
@@ -1009,8 +1034,145 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
       insideVertical: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
     };
 
+    // Blok daftar bernomor → reference unik per blok, supaya nomor RESTART antar-bagian
+    // (paritas referensi: identifikasi 1-5, manfaat 1-2, batasan 1-4 — tidak nyambung)
+    let blokNum = 0;
+    const refDaftarNum = new Set<string>();
+
+    // Bagan (kerangka berpikir dll.) → PNG kotak + panah via canvas —
+    // paritas referensi yang menyisipkan 54 PNG; teks diambil dari blok markdown berpanah
+    const gambarDiagram = async (items: string[]): Promise<{ buf: Uint8Array; w: number; h: number } | null> => {
+      try {
+        const { createCanvas } = await import('@napi-rs/canvas');
+        const isPanah = (t: string) => /^(↓|↑|→|←|⇒|➜|⟶|-->|->)$/.test(t.trim());
+        const pecah = (teks: string): { k: 'n' | 'p'; t: string }[] => {
+          const t = teks.trim();
+          if (isPanah(t)) return [{ k: 'p', t }];
+          const m = t.match(/^(.+?)\s*(↓|↑|→|←|⇒|➜|⟶|-->|->)\s*(.+)$/);
+          if (!m) return [{ k: 'n', t }];
+          return [...pecah(m[1]), { k: 'p', t: m[2] }, ...pecah(m[3])];
+        };
+        const seq: { k: 'n' | 'p'; t: string }[] = [];
+        for (const raw of items) seq.push(...pecah(String(raw)));
+        if (seq.filter((s) => s.k === 'n').length < 2 || !seq.some((s) => s.k === 'p')) return null;
+        // rapikan: buang panah/node identik berurutan
+        const rapi: { k: 'n' | 'p'; t: string }[] = [];
+        for (const s of seq) {
+          const akhir = rapi[rapi.length - 1];
+          if (akhir && akhir.k === s.k && akhir.t === s.t) continue;
+          if (s.k === 'p' && akhir && akhir.k === 'p') continue;
+          rapi.push(s);
+        }
+        const skala = 2;
+        const pxTeks = 15;
+        const font = `${pxTeks}px "Times New Roman", "Liberation Serif", "Nimbus Roman", serif`;
+        const probe = createCanvas(8, 8).getContext('2d');
+        probe.font = font;
+        const maksTeks = 400;
+        const bungkus = (t: string): string[] => {
+          if (probe.measureText(t).width <= maksTeks) return [t];
+          const kata = t.split(' ');
+          const baris: string[] = [];
+          let kini = '';
+          for (const k of kata) {
+            const uji = kini ? `${kini} ${k}` : k;
+            if (probe.measureText(uji).width <= maksTeks) kini = uji;
+            else { if (kini) baris.push(kini); kini = k; }
+          }
+          if (kini) baris.push(kini);
+          return baris.slice(0, 4);
+        };
+        const nodes = rapi.filter((s) => s.k === 'n').map((s) => ({ baris: bungkus(s.t) }));
+        const lebarTeks = Math.max(...nodes.map((n) => Math.max(...n.baris.map((b) => probe.measureText(b).width))));
+        const nodeW = Math.ceil(lebarTeks) + 36;
+        const nBaris = Math.max(...nodes.map((n) => n.baris.length));
+        const boxH = nBaris * 20 + 24;
+        const panahLen = 34;
+        const pad = 18;
+        let vertikal = rapi.some((s) => s.k === 'p' && s.t !== '→' && s.t !== '←');
+        let W: number, H: number;
+        if (vertikal) {
+          H = pad * 2;
+          for (const s of rapi) H += s.k === 'n' ? boxH : panahLen + 12;
+          W = nodeW + pad * 2;
+        } else {
+          H = boxH + pad * 2;
+          W = pad * 2;
+          for (const s of rapi) W += s.k === 'n' ? nodeW + 14 : 52;
+          if (W > 540) { // terlalu lebar → tumpuk vertikal
+            vertikal = true;
+            H = pad * 2;
+            for (const s of rapi) H += s.k === 'n' ? boxH : panahLen + 12;
+            W = nodeW + pad * 2;
+          }
+        }
+        const cv = createCanvas(Math.ceil(W * skala), Math.ceil(H * skala));
+        const ctx = cv.getContext('2d');
+        ctx.scale(skala, skala);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, W, H);
+        ctx.font = font;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const gambarBox = (x: number, y: number, brs: string[]) => {
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(x, y, nodeW, boxH);
+          ctx.strokeStyle = '#000000';
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(x + 0.75, y + 0.75, nodeW - 1.5, boxH - 1.5);
+          ctx.fillStyle = '#000000';
+          const cy = y + boxH / 2 - ((brs.length - 1) * 20) / 2;
+          brs.forEach((b, k) => ctx.fillText(b, x + nodeW / 2, cy + k * 20));
+        };
+        const gambarPanah = (x1: number, y1: number, x2: number, y2: number) => {
+          ctx.strokeStyle = '#000000';
+          ctx.fillStyle = '#000000';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
+          const ang = Math.atan2(y2 - y1, x2 - x1);
+          const p = 8;
+          ctx.beginPath();
+          ctx.moveTo(x2, y2);
+          ctx.lineTo(x2 - p * Math.cos(ang - 0.42), y2 - p * Math.sin(ang - 0.42));
+          ctx.lineTo(x2 - p * Math.cos(ang + 0.42), y2 - p * Math.sin(ang + 0.42));
+          ctx.closePath();
+          ctx.fill();
+        };
+        let ni = 0;
+        if (vertikal) {
+          let y = pad;
+          const cx = W / 2;
+          for (const s of rapi) {
+            if (s.k === 'n') { gambarBox(pad, y, nodes[ni].baris); ni++; y += boxH; }
+            else {
+              const keBawah = s.t !== '↑';
+              gambarPanah(cx, keBawah ? y + 6 : y + panahLen + 6, cx, keBawah ? y + panahLen + 6 : y + 6);
+              y += panahLen + 12;
+            }
+          }
+        } else {
+          let x = pad;
+          const cy = H / 2;
+          for (const s of rapi) {
+            if (s.k === 'n') { gambarBox(x, pad, nodes[ni].baris); ni++; x += nodeW + 14; }
+            else {
+              const keKanan = s.t !== '←';
+              gambarPanah(keKanan ? x + 4 : x + 44, cy, keKanan ? x + 44 : x + 4, cy);
+              x += 52;
+            }
+          }
+        }
+        return { buf: cv.toBuffer('image/png'), w: Math.round(W), h: Math.round(H) };
+      } catch {
+        return null;
+      }
+    };
+
     // Parser markdown: heading (BAB / 1.1 / 1.1.1 / #), tabel, daftar, paragraf
-    const mdBody = (md: string, kunci = '') => {
+    const mdBody = async (md: string, kunci = '') => {
       const lampiran = kunci === 'lampiran';
       const pakaiCustom = !!String(pr.custom_outline || '').trim();
       // Sub-judul H1 ("BAB II" ⏎ "Tinjauan Pustaka") mengikuti varian struktur proyek
@@ -1026,45 +1188,127 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
         const b = no.split('.');
         return b.length >= 3 ? `L${b.slice(1).join('.')}  ${t}` : `Lampiran ${b[1] || ''}  ${t}`;
       };
+      // Caption tabel/gambar per bab: "Tabel 2.1 Penelitian Terdahulu" — center, bold,
+      // di ATAS objek + field SEQ (paritas referensi; menghidupkan Daftar Tabel/Gambar)
+      let noBab = 0, nTabel = 0, nGambar = 0, judulAktif = '';
+      const romawiKeAngka = (r: string) => ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'].indexOf(r) + 1;
+      const caption = (label: 'Tabel' | 'Gambar', n: number) => {
+        if (!noBab) return;
+        C.push(new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 120, after: 60, line: 360 },
+          children: [
+            new TextRun({ text: `${label} ${noBab}.`, font: TNR, size: 24, bold: true }),
+            new SimpleField(`SEQ ${label} \\s 1`, String(n)),
+            new TextRun({ text: judulAktif ? ` ${judulAktif}` : '', font: TNR, size: 24, bold: true }),
+          ],
+        }));
+      };
+      // Sel tabel: pipe eksternal OPSIONAL ("a | b" atau "| a | b |") — sel kosong dipertahankan
+      const selTabel = (s: string) => {
+        const t = String(s || '').trim().replace(/^\|/, '').replace(/\|$/, '');
+        return t.split('|').map((c) => c.trim());
+      };
+      const barisPemisah = (s: string) => {
+        const p = selTabel(s);
+        // AI kadang menulis ":--" (2 strip) — ikuti kelonggaran parser lama: minimal 1 strip
+        return p.length >= 2 && p.every((c) => /^:?-+:?$/.test(c));
+      };
+      // Baris pendek kandidat blok bagan (untuk deteksi ↓/→)
+      const pendek = (idx: number) => {
+        const l = (lines[idx] || '').trim();
+        return !!l && l.length <= 72
+          && !/^(#{1,6}\s|BAB\s+[IVX]|\d+\.\d+\s|DAFTAR |LAMPIRAN\b|\|)/i.test(l.replace(/\*\*/g, ''));
+      };
+      let prevList = false; // baris sebelumnya bagian daftar → blok sama (nomor tidak restart)
+      const pushNum = (teks: string, lvl: number) => {
+        if (!prevList) { blokNum++; refDaftarNum.add(`daftar-num-${blokNum}`); }
+        C.push(new Paragraph({
+          numbering: { reference: `daftar-num-${blokNum}`, level: lvl },
+          alignment: AlignmentType.JUSTIFIED,
+          spacing: { line: 360 },
+          children: runsTeks(teks),
+        }));
+        prevList = true;
+      };
       const lines = String(md || '').split('\n');
       let i = 0;
       while (i < lines.length) {
-        const line = lines[i].trim();
+        const raw = lines[i];
+        const line = raw.trim();
         if (!line || /^-{3,}$/.test(line)) { i++; continue; }
+        // deteksi pola tanpa ** — judul sub-bab yang AI tulis bold tetap jadi heading
+        const dt = line.replace(/\*\*/g, '');
 
-        // Tabel markdown
-        if (/^\|.+\|$/.test(line) && i + 1 < lines.length && /^\|[\s:\-|]+\|$/.test(lines[i + 1].trim())) {
-          const cols = line.split('|').map((c) => c.trim()).filter(Boolean);
+        // Bagan (kerangka berpikir): run baris pendek berisi panah → PNG + caption
+        if (pendek(i) && pendek(i + 1)) {
+          let j = i;
+          const run: string[] = [];
+          while (j < lines.length && pendek(j) && run.length < 14) { run.push(lines[j].trim()); j++; }
+          const kandidat = [...run];
+          while (kandidat.length > 1 && /[.!?]$/.test(kandidat[0])) kandidat.shift();
+          while (kandidat.length > 1 && /[.!?]$/.test(kandidat[kandidat.length - 1])) kandidat.pop();
+          const adaPanah = kandidat.some((t) => /(↓|↑|→|←|⇒|➜|⟶|-->|->)/.test(t));
+          const kotak = kandidat.filter((t) => !/^(↓|↑|→|←|⇒|➜|⟶|-->|->)$/.test(t));
+          if (adaPanah && kotak.length >= 2) {
+            const gbr = await gambarDiagram(kandidat);
+            if (gbr) {
+              nGambar++;
+              caption('Gambar', nGambar);
+              C.push(new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { before: 60, after: 120 },
+                children: [new ImageRun({ type: 'png', data: gbr.buf, transformation: { width: gbr.w, height: gbr.h } })],
+              }));
+              i = j; prevList = false; continue;
+            }
+          }
+        }
+
+        // Tabel markdown — pipe eksternal opsional: "No | Nama | …" + "---|---|…"
+        if (dt.includes('|') && i + 1 < lines.length && barisPemisah(lines[i + 1])) {
+          const cols = selTabel(dt);
           const rows: string[][] = [];
           i += 2;
-          while (i < lines.length && /^\|.+\|$/.test(lines[i].trim())) {
-            rows.push(lines[i].trim().split('|').map((c) => c.trim()).filter(Boolean));
+          while (i < lines.length && lines[i].trim() && lines[i].includes('|')
+            && !/^(#{1,6}\s|BAB\s+[IVX]|DAFTAR |LAMPIRAN\b)/i.test(lines[i].trim())) {
+            rows.push(selTabel(lines[i].replace(/\*\*/g, '')));
             i++;
           }
+          const jJudul = cols.findIndex((c) => /judul/i.test(c));
+          nTabel++;
+          caption('Tabel', nTabel);
           C.push(new Table({
             width: { size: 100, type: WidthType.PERCENTAGE },
             borders: tblBorders,
             rows: [
               new TableRow({ tableHeader: true, children: cols.map((c) => cell(c, true)) }),
-              ...rows.map((r) => new TableRow({ children: cols.map((_, k) => cell(r[k] || '')) })),
+              ...rows.map((r) => new TableRow({
+                children: cols.map((_, k) => cell(jJudul >= 0 && r[k] ? rapikanJudul(r[k]) : (r[k] || ''))),
+              })),
             ],
           }));
           C.push(new Paragraph({ spacing: { after: 60 }, children: [] }));
+          prevList = false;
           continue;
         }
 
         // Heading markdown "#" — level mengikuti nomor sub-bab bila ada (hierarki paritas referensi)
-        const mh = line.match(/^(#{1,6})\s+(.*)$/);
+        const mh = dt.match(/^(#{1,6})\s+(.*)$/);
         if (mh) {
-          const judul = mh[2].replace(/\*\*/g, '').trim();
+          const judul = mh[2].trim();
           const mno = judul.match(/^(\d+(?:\.\d+)+)\.?\s+(\S.*)$/);
-          if (mno) H(Math.min(mno[1].split('.').length, 4), subJudul(mno[2], mno[1]));
-          else H(mh[1].length, judul);
-          i++; continue;
+          if (mno) {
+            if (mno[1].split('.').length <= 2) judulAktif = mno[2].trim();
+            H(Math.min(mno[1].split('.').length, 4), subJudul(mno[2], mno[1]));
+          } else H(mh[1].length, judul);
+          i++; prevList = false; continue;
         }
 
         // Judul bab: "BAB II TINJAUAN PUSTAKA" / "BAB I" + sub-judul baris berikut ("PENDAHULUAN")
         // → H1 dua baris "BAB II" ⏎ "Tinjauan Pustaka" (caps via style Heading1, seperti referensi)
+        // Baris berikut juga dikonsumsi bila IDENTIK dengan sub judul (mencegah duplikat
+        // "Tinjauan Pustaka" paragraf kembar setelah H1) atau bila huruf besar semua.
         const mbab = line.match(/^(BAB\s+[IVX]+)(?:\s+(.*))?$/i);
         if (mbab && line.length < 140) {
           const romawi = mbab[1].replace(/^BAB\s+/i, '').toUpperCase();
@@ -1073,39 +1317,55 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
           let j = i + 1;
           while (j < lines.length && !lines[j].trim()) j++;
           const berikut = (lines[j] || '').replace(/[#*`]/g, '').trim();
-          if (berikut && berikut.length < 60 && berikut === berikut.toUpperCase() && /[A-Z]/.test(berikut)
-            && !/^(BAB\s+[IVX]+\b|DAFTAR\s+PUSTAKA\b|LAMPIRAN\b|\d+(?:\.\d+)+\.?\s|\||#)/.test(berikut)) {
+          const subAwal = pakaiCustom && sisa ? titleCase(sisa) : (petaH1[romawi] || (sisa ? titleCase(sisa) : ''));
+          const kecuali = /^(BAB\s+[IVX]+\b|DAFTAR\s+PUSTAKA\b|LAMPIRAN\b|\d+(?:\.\d+)+\.?\s|\||#)/;
+          const layak = !!berikut && berikut.length < 60 && !kecuali.test(berikut);
+          const judulSama = layak && !!subAwal && berikut.toLowerCase() === subAwal.toLowerCase();
+          const hurufBesar = layak && berikut === berikut.toUpperCase() && /[A-Z]/.test(berikut);
+          if (judulSama || hurufBesar) {
             if (!sisa) sisa = berikut;
             i = j;
           }
           const sub = pakaiCustom && sisa ? titleCase(sisa) : (petaH1[romawi] || (sisa ? titleCase(sisa) : ''));
           H(1, nomor, sub || undefined);
-          i++; continue;
+          noBab = romawiKeAngka(romawi); nTabel = 0; nGambar = 0; judulAktif = '';
+          i++; prevList = false; continue;
         }
 
         // Daftar pustaka global / lampiran
-        if (/^(DAFTAR PUSTAKA|LAMPIRAN)\b/i.test(line) && line.length < 120) {
-          H(1, lampiran && /^LAMPIRAN/i.test(line) ? 'LAMPIRAN' : line.replace(/\*\*/g, ''));
-          i++; continue;
+        if (/^(DAFTAR PUSTAKA|LAMPIRAN)\b/i.test(dt) && dt.length < 120) {
+          H(1, lampiran && /^LAMPIRAN/i.test(dt) ? 'LAMPIRAN' : dt);
+          noBab = 0; nTabel = 0; nGambar = 0; judulAktif = '';
+          i++; prevList = false; continue;
         }
 
         // Sub-bab bernomor: 1.1 → H2 (ikut TOC 1-2), 1.1.1 → H3, 1.1.1.1 → H4 — persis hierarki referensi
-        const mn = line.match(/^(\d+(?:\.\d+)+)\.?\s+(\S.*)$/);
-        if (mn && line.length < 130) {
+        // dt: nomor sub-bab yang dibold AI ("**6.1. Judul**") tetap terdeteksi — perbaikan penomoran
+        const mn = dt.match(/^(\d+(?:\.\d+)+)\.?\s+(\S.*)$/);
+        if (mn && dt.length < 130) {
           const level = Math.min(mn[1].split('.').length, 4);
-          H(level, subJudul(mn[2].replace(/\*\*/g, ''), mn[1]));
-          i++; continue;
+          if (level <= 2) judulAktif = mn[2].trim();
+          H(level, subJudul(mn[2], mn[1]));
+          i++; prevList = false; continue;
         }
 
-        // Daftar bullet / bernomor → ListParagraph
+        // Daftar bullet / bernomor → ListParagraph — indentasi markdown jadi level nesting;
+        // tiap blok bernomor memakai reference unik supaya nomor restart antar-bagian
         if (/^[-*•]\s+/.test(line) || /^\d+\.\s+/.test(line)) {
           const num = /^\d+\.\s+/.test(line);
-          C.push(new Paragraph({
-            numbering: { reference: num ? 'daftar-num' : 'daftar-bullet', level: 0 },
-            alignment: AlignmentType.JUSTIFIED,
-            spacing: { line: 360 },
-            children: runsTeks(line.replace(/^([-*•]|\d+\.)\s+/, '')),
-          }));
+          const ind = (raw.match(/^[ \t]*/) || [''])[0].length;
+          const lvl = ind >= 2 ? 1 : 0;
+          const isi = line.replace(/^([-*•]|\d+\.)\s+/, '');
+          if (num) pushNum(isi, lvl);
+          else {
+            C.push(new Paragraph({
+              numbering: { reference: 'daftar-bullet', level: lvl },
+              alignment: AlignmentType.JUSTIFIED,
+              spacing: { line: 360 },
+              children: runsTeks(isi),
+            }));
+            prevList = true;
+          }
           i++; continue;
         }
 
@@ -1116,10 +1376,24 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
             spacing: { line: 240 },
             children: [new TextRun({ text: line.replace(/\*\*/g, ''), font: TNR, size: 24 })],
           }));
+          i++; prevList = false; continue;
+        }
+
+        // Caption buatan AI ("Tabel 2.1 …") dibuang — sistem membuat penomoran sendiri
+        if (/^(Tabel|Gambar)\s+\d+(\.\d+)*\.?\s+[A-Z][^.?!]{2,90}$/.test(dt)) {
+          i++; prevList = false; continue;
+        }
+
+        // Rumusan masalah: paragraf pertanyaan → daftar bernomor (paritas referensi)
+        if (/\brumusan masalah\b/i.test(judulAktif)
+          && /^(Bagaimana|Apakah|Siapa|Kapan|Dimana|Di mana|Mengapa|Berapa|Seberapa)\b/.test(line)
+          && /\?\s*$/.test(line) && line.length < 600) {
+          pushNum(dt, 0);
           i++; continue;
         }
 
         P(line);
+        prevList = false;
         i++;
       }
     };
@@ -1213,7 +1487,7 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
 
     /* ---------------- 3. Isi: BAB → Daftar Pustaka → Lampiran ---------------- */
     C.length = 0;
-    const isiBab = (kunci: string) => {
+    const isiBab = async (kunci: string) => {
       // Blok "Daftar Pustaka Bab Ini" + entri per-bab selalu di akhir konten bab dan
       // tidak ada pada dokumen referensi → dibuang total (DAFTAR PUSTAKA global sudah ada)
       const buangPustaka = (s: string) => {
@@ -1228,9 +1502,9 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
         .map(([, v]) => buangPustaka(String(v)))
         .filter((v) => v && !utama.includes(v.slice(0, 120)));
       const gabung = [utama, ...subs].filter(Boolean).join('\n\n');
-      if (gabung.trim()) mdBody(gabung, kunci);
+      if (gabung.trim()) await mdBody(gabung, kunci);
     };
-    for (const b of ['bab1', 'bab2', 'bab3', 'bab4', 'bab5']) isiBab(b);
+    for (const b of ['bab1', 'bab2', 'bab3', 'bab4', 'bab5']) await isiBab(b);
 
     // Daftar Pustaka: unggahan user dulu, lalu Crossref by judul
     const custom: any[] = Array.isArray(ident.refs) ? ident.refs : [];
@@ -1239,14 +1513,14 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
     if (refs.length) {
       H(1, 'DAFTAR PUSTAKA');
       for (const r of refs) {
-        const kepala = `${r.authors || ''} (${r.year || 't.t.'}). ${r.title || ''}.`.replace(/\s+/g, ' ').trim();
+        const kepala = `${r.authors || ''} (${r.year || 't.t.'}). ${rapikanJudul(r.title || '')}.`.replace(/\s+/g, ' ').trim();
         const sisa = [r.jurnal, r.doi ? '' : r.url].filter(Boolean).join('. ');
         P(`${kepala}${sisa ? ` ${sisa}.` : ''}`.trim(), { hang: true });
         if (r.doi) P(`https://doi.org/${r.doi}`, { hang: true });
       }
     }
 
-    if (pr.content?.lampiran) isiBab('lampiran');
+    if (pr.content?.lampiran) await isiBab('lampiran');
     const isi: any[] = [...C.splice(0, C.length)];
 
     /* ---------------- Footer: PAGE + disclaimer AI (italik abu 6pt) ---------------- */
@@ -1292,9 +1566,19 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
       },
       numbering: {
         config: [
-          { reference: 'daftar-bullet', levels: [{ level: 0, format: LevelFormat.BULLET, text: '•', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 720, hanging: 360 } } } }] },
-          { reference: 'daftar-num', levels: [{ level: 0, format: LevelFormat.DECIMAL, text: '%1.', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 720, hanging: 360 } } } }] },
-        ],
+          { reference: 'daftar-bullet', levels: [
+            { level: 0, format: LevelFormat.BULLET, text: '•', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 720, hanging: 360 } } } },
+            { level: 1, format: LevelFormat.BULLET, text: '•', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 1440, hanging: 360 } } } },
+          ] },
+          // Satu reference per blok daftar bernomor → tiap blok mulai dari 1 (restart)
+          ...[...refDaftarNum].map((reference) => ({
+            reference,
+            levels: [
+              { level: 0, format: LevelFormat.DECIMAL, text: '%1.', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 720, hanging: 360 } } } },
+              { level: 1, format: LevelFormat.DECIMAL, text: '%2.', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 1440, hanging: 360 } } } },
+            ],
+          })),
+        ] as any,
       },
       sections: [
         // Sampul — tanpa nomor halaman
