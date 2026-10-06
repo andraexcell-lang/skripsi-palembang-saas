@@ -43,6 +43,7 @@ Terakhir diperbarui: 6 Okt 2026. Acuan fitur: https://mantrariset.com (akun uji:
 - **Paritas Studio**: tab `Bab VI: Lampiran` + panel sub-bab + tombol **Generate Lampiran**, tab `Pustaka (N)` (daftar + Unduh RIS), **Unggah Artikel Sendiri** (PDF/DOCX → DOI Crossref → `identitas.refs`, maks 10), **Sesuaikan Skripsi** (timpa Tujuan/Hipotesis/Kerangka + catatan Bab III), **Tinjau Hasil** (kelebihan/kekurangan/pertanyaan penguji), **Cek Sitasi** (GRATIS: total/nyata/yatim + verifikasi Crossref per sitasi yatim), rail PPT + Cek Plagiasi + tab Revisi, badge GRATIS & teks tooltip sesuai referensi
 - Parser `pdf-parse` v2 (kelas `PDFParse`) — sebelumnya cabang PDF di `/from-file` & analisis berkas error `fn is not a function`
 - Export `.docx` ikut menyertakan BAB VI Lampiran
+- **Paritas kontrol sub-bab & rail studio** (lihat "Status verifikasi kontrol sub-bab" di bawah): rail desktop (header judul + badge SKRIPSI + progres "N dari 5 Bab / NN% selesai" + daftar bab/panel utilitas persis referensi), chip rail horizontal mobile `BAB N ✓ / Pustaka (N) / Revisi`, toolbar sticky dua grup, tombol hover **Perkaya** & **Hapus sub-bab** per sub-bab, footer **Generate Ulang Bab Ini** dengan `window.prompt` arahan → `window.confirm`, disclaimer teks persis + toggle **Lihat/Tutup**
 
 ## Status verifikasi studio (6 Okt 2026)
 
@@ -57,9 +58,31 @@ Terakhir diperbarui: 6 Okt 2026. Acuan fitur: https://mantrariset.com (akun uji:
 
 Dua klik UI terakhir benar-benar terdebit di ledger (`-5` @ 20:55:16 dan `-5` @ 20:56:30, saldo 37 → 27) — bukan uji mock. Satu percobaan UI sebelumnya sempat gagal di AI dan **otomatis di-refund** (`+5` @ 20:39:09), membuktikan jalur refund jalan di produksi.
 
+## Status verifikasi kontrol sub-bab & rail (6 Okt 2026)
+
+| Item | Hasil (produksi) |
+| --- | --- |
+| `POST /:id/perkaya/cek` | ✅ `{gratis:true, biaya:1, namaBab:'Bab I', sisaKredit:27}`; panggilan kedua → `gratis:false` |
+| `POST /:id/perkaya` | ✅ gratis pertama per bab (16,6 dtk, **tanpa debit ledger**), isi lama utuh (paragraf asli tetap `Contains`), 4275 → 6298 karakter, balasan `sisaKredit:27` |
+| `POST /:id/sub-bab/hapus` | ✅ sub-bab hilang permanen (4275 → 3907), gratis, dicegah bila jadi sub-bab terakhir |
+| UI **Perkaya** (klik nyata) | ✅ konfirmasi **persis teks referensi** ("Perdalam \"2.1 Disiplin Kerja\"? Isi yang sudah ada TIDAK diubah — hanya ditambah … GRATIS — ini pemakaian pertama untuk Bab II. Berikutnya 1 kredit. Lanjutkan?") → pesan sukses `Sub-bab "2.1 Disiplin Kerja" diperdalam — GRATIS. Sisa kredit 27.` |
+| UI **Hapus sub-bab** | ✅ `window.confirm` → 2.4 Kerangka Berpikir hilang dari DOM + pesan `Sub-bab "2.4 Kerangka Berpikir" dihapus.` (naskah di-restore via `PATCH /:id/content`) |
+| UI **Generate Ulang Bab Ini** | ✅ `window.prompt` arahan (teks 100% sama dengan referensi) → `window.confirm` (sama, minus butir riwayat) → stream: 4273 → 7969 karakter, arahan "statistik" terbukti dihasilkan, `Bab I Pendahuluan selesai ditulis ulang.`, debit `-10` @ 05:29:56 (saldo 27 → **17**) |
+| Rail chip mobile | ✅ `BAB 1 ✓ BAB 2 ✓ BAB 3 BAB 4 BAB 5 BAB 6 ✓ Pustaka (21) Revisi`, sticky `lg:hidden`, klik ganti bab jalan |
+| Rail desktop (aside) | ✅ judul + badge SKRIPSI + `2 dari 5 Bab / 40% selesai` + bar progres; item `Bab I Pendahuluan … Lampiran ✓ / Daftar Pustaka (N) / Lab Revisi / Tambah Sitasi GRATIS / Unggah Artikel Sendiri (+deskripsi) / Prediksi Soal Sidang (+deskripsi) / Tinjau Hasil / Abstrak ID+EN` — tersembunyi di <1024px seperti referensi |
+| Toolbar sticky | ✅ grup mobile `Unggah Artikel · Prediksi Soal · Tinjau · PPT · Cek Sitasi` (lg:hidden) + grup grid `Unduh Word · RIS · Cek Plagiasi · select Nomor · Abstrak ID+EN · Sesuaikan Skripsi` + judul proyek (`xl:block`) |
+| Disclaimer | ✅ teks lengkap referensi (`⚠️ Disclaimer: Hasil ini adalah DRAFT AWAL … Permendiknas No. 17 Tahun 2010 … Selengkapnya`) + tombol `Lihat/Tutup` (`aria-expanded`/`aria-controls="disclaimer-studio"`, `sm:hidden`) |
+| Hover sub-bab | ✅ `opacity:0` → `0.95→1` saat hover (perangkat `hover:hover`), tombol `Perkaya` + ikon `Hapus sub-bab` |
+
+### Penyempurnaan yang ikut terbukti/butuh diketahui
+
+- Deteksi sub-bab kini menerima dua format penomoran: `1.1 Judul` **dan** `1.1. Judul` (+ normalisasi markdown `**…**` di `cariJudul`/`batasBagian`) — format lama proyek uji memakai `**1.1. Judul**` sehingga kontrol baru sempat tak muncul (commit `7edfc5f`)
+- Regenerate bab lama butuh ±10 menit di produksi (rantai fallback menunggu jeda model yang diblokir) tetapi tetap selesai; `perkaya` jalan ±16 detik
+- **Selisih sadar** (dibuat, bukan terlewat): (a) konfirmasi tulis-ulang **tanpa** butir "riwayat/Urungkan" karena kita belum punya fitur riwayat — janji palsu lebih buruk daripada teks beda; (b) **biaya tulis-ulang 10 kredit** (harga bab milik owner) sementara referensi menilai 1 — menunggu keputusan owner; (c) link `Selengkapnya` menunjuk `/dashboard/tutorial` sebab tidak ada halaman `/syarat`; (d) `Abstrak ID+EN` tetap ada di grup toolbar (fitur kita tak ada di referensi)
+
 ## Biaya kredit
 
-bab 10 (termasuk Lampiran) · sesuaikan 5 · tinjau 5 · parafrase 1 · ppt 8 · plagiasi 15 · artikel 15 · sidang 15/25 · spss 3 · smartpls 5 · kualitatif/dokumen/transkripsi 1 · brainstorming/kelayakan/novelty/cari/cek-sitasi/unggah-artikel/referensi gratis
+bab 10 (termasuk Lampiran) · sesuaikan 5 · tinjau 5 · **perkaya 1 (GRATIS sekali per bab, disimpan di `identitas.perkaya`)** · parafrase 1 · ppt 8 · plagiasi 15 · artikel 15 · sidang 15/25 · spss 3 · smartpls 5 · kualitatif/dokumen/transkripsi 1 · brainstorming/kelayakan/novelty/cari/cek-sitasi/unggah-artikel/referensi/hapus-sub-bab gratis
 
 ## Tunda (butuh owner)
 
@@ -71,5 +94,5 @@ bab 10 (termasuk Lampiran) · sesuaikan 5 · tinjau 5 · parafrase 1 · ppt 8 ·
 
 ## Akun uji (password minta ke owner)
 
-- tester.palembang@gmail.com (saldo 27, ada proyek contoh)
+- tester.palembang@gmail.com (saldo **17**, ada proyek contoh; jatah GRATIS perkaya bab1 & bab2 sudah terpakai waktu uji)
 - andraexcell@gmail.com (admin, bypass kredit)
