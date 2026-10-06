@@ -152,6 +152,36 @@ Perbandingan menyeluruh DOCX ekspor kita vs unduhan referensi (proyek paritas ya
 
 **Selisih sadar tersisa (konten, bukan format):** (a) referensi menyisipkan 52 gambar PNG rumus uji (3.5.x) — kita tulis rumus sebagai teks terpusat; (b) kedalaman sub-bab konten berbeda (referensi H3=27/H4=28 vs kita 18/26 — AI mereka membuat sub-sub lebih dalam); (c) referensi 2 lampiran vs kita 4 (konten). Struktur & gaya dokumen = paritas.
 
+## Status verifikasi struktur bab baku per varian metode & modal "Bukti Kutipan" (6 Okt 2026, commit `09cd676`)
+
+**Konteks**: kartu "Referensi Terverifikasi" yang selama ini muncul di studio **bukan milik mantrariset** — hasil `git log -S` menunjukkan berasal dari commit kita `6e145b7 feat: sitasi lompat ke entri terverifikasi`. Referensi justru punya perilaku berbeda: klik sitasi di naskah → **modal "Bukti Kutipan"** (paritas chunk 7997), bukan kartu daftar permanen. Kami hapus kartu + pasang modal paritas.
+
+| Item | Hasil |
+| --- | --- |
+| `/meta/outline?metode=&jenis=` | ✅ 12 kombinasi diuji via `curl` localhost:5000 — semua persis paritas referensi (lihat tabel di `ANALISIS-PROMPT-DAN-STRUKTUR-BAB.md` bagian 5e) |
+| Kuantitatif + skripsi | ✅ Bab I 7 sub (tanpa Kebaruan), Bab III 6 (tanpa Etika) — cocok base varian |
+| Kuantitatif + tesis | ✅ Bab I 8 (+Kebaruan sebelum Sistematika), Bab III 7 (+Etika sebelum Jadwal), Bab IV 6 (+Temuan sebelum Pembahasan, +Implikasi Teoretis setelah Pembahasan), Bab V 3 (+Agenda setelah Saran) — overlay `f` persis |
+| Kuantitatif + disertasi | ✅ overlay `f+y`: State of the Art & Research Gap (bab1), Kerangka Teori Besar & Critical Review & Proposisi (bab2), Landasan Filosofis (bab3), Kontribusi (bab5) |
+| Kualitatif + tesis | ✅ Bab II "Kajian Pustaka" (4 sub, tanpa Hipotesis), Bab IV 8 sub (Temuan sudah di base → overlay skip; +Implikasi Teoretis), Lampiran Pedoman Wawancara |
+| PTK + skripsi | ✅ 6 bab1, Bab II 4 sub (Hipotesis Tindakan), Bab III 7 (Siklus, Instrumen, Indikator), Bab IV 5 (Pra-Siklus/Siklus I/II/Perbandingan) |
+| Studi Pustaka + skripsi | ✅ **tanpa Lampiran** (paritas — varian pustaka tidak punya lampiran di kamus referensi) |
+| Hukum Normatif | ✅ 9 bab1 (Keaslian, Kerangka Konseptual), Asas Hukum, Bahan Hukum; **tanpa Lampiran** |
+| R&D + tesis | ✅ **tanpa overlay** (rnd dikecualikan dari `METODE_OVERLAY` — paritas fungsi `P` referensi) |
+| Mixed + tesis | ✅ kuantitatif + Lampiran 3 sub (+Pedoman Wawancara) |
+| Default (tanpa param) | ✅ kuantitatif skripsi — kompatibilitas konsumen lama |
+| `babPrompt` struktur per varian | ✅ diuji via `node tes-prompt.cjs` — kualitatif bab3: Miles & Huberman + keabsahan; kuantitatif bab3 skripsi: GANTT di 3.6; pustaka bab2: tabel terdahulu tanpa hipotesis |
+| Frontend studio `load()` | ✅ fetch `/meta/outline?metode=&jenis=` setelah proyek |
+| Label bab dari varian | ✅ `labelBab(bid)` = `outline[bid].bab` \|\| fallback `BABS` — dipakai di desktop chips, pesan generate, pesan ulang, indikator lampiran |
+| Kartu "Referensi Terverifikasi" | ✅ **DIHAPUS** dari DOM (baris 1048–1060 lama) — tidak ada di mantrariset, penyebab "terus muncul" (dirender tiap tab selama `refs.length > 0 && !isPustaka`, di atas naskah, `load()` refetch tiap bab) |
+| Modal "Bukti Kutipan" | ✅ klik sitasi → `setBukti(refs[ri])` → modal `fixed inset-0 z-50 bg-black/40` card `max-w-lg`: header "Bukti Kutipan" + "Tutup", `Penulis (Tahun)`, `Judul. *Jurnal*`, amber-note bila tanpa DOI + link Google Scholar, tombol "Buka di tab Pustaka" (scroll ke entri). `ri<0` → `setActive('pustaka')` |
+| Warning hipotesis Bab II | ✅ variant-aware: cek `outline.bab2.subs` cari `Hipotesis` (bukan `metode === 'Kuantitatif'`) |
+| Taskpane `word/taskpane.html` | ✅ fetch outline ditambah `?metode=&jenis=` dari proyek |
+| Backend `tsc` build | ✅ `npm run build` sukses, `node tes-prompt.cjs` lolos |
+
+**Deviasi terdokumentasi (keputusan, bukan bug):** (a) pustaka & hukum normatif tetap menampilkan BAB 6 chip sebagai fallback outline (kamus referensi tidak punya `lampiran` untuk kedua varian itu) — ekstra, bukan kurang; (b) overlay `f`/`y` tidak punya flag `skipKualitatif`/`onlyKualitatif` di teks chunk — efek serupa tercapai otomatis via cek `e.sub.some(s => s.key === a.key)`; (c) prompt referensi tetap 100% server-side mereka — tidak bisa & tidak perlu disalin.
+
+**Sumber data (artefak di repo):** `hasil-analisis-mantrariset/varian-struktur-mantrariset.json` (JSON hasil ekstrak penuh chunk 5702) + `hasil-analisis-mantrariset/varian-blok.ts` (blok TS hasil generate) + `backend/tes-prompt.cjs` (skrip uji prompt).
+
 ## Biaya kredit
 
 bab 10 (**tesis 8**) · **Lampiran GRATIS** (otomatis setelah Bab III) · sesuaikan 5 · tinjau 5 · **perkaya 1 (GRATIS sekali per bab, disimpan di `identitas.perkaya`)** · parafrase 1 · ppt 8 · plagiasi 15 · artikel 15 · sidang 15/25 · spss 3 · smartpls 5 · kualitatif/dokumen/transkripsi 1 · brainstorming/kelayakan/novelty/cari/cek-sitasi/unggah-artikel/referensi/hapus-sub-bab gratis

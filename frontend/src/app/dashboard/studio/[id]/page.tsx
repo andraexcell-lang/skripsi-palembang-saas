@@ -408,6 +408,11 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
     return `ref-${i}`;
   }
 
+  // Label judul bab dari varian outline (paritas mantrariset) — fallback ke BABS
+  function labelBab(bid: string): string {
+    return outline?.[bid]?.bab || BABS.find((b) => b.id === bid)?.label || 'Bab';
+  }
+
   function findRef(cite: string): number {
     const m = cite.match(/([A-Za-zÀ-Ž\-']+)[^,]*,\s?(\d{4})/);
     if (!m) return -1;
@@ -505,7 +510,7 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
         setProyek((p: any) => ({ ...p, content: { ...(p?.content || {}), [bab]: t } }));
       });
       if (r.cached) setErr('');
-      if (force && !r.cached) setPesan(`${metaBab?.label || 'Bab'} selesai ditulis ulang.`);
+      if (force && !r.cached) setPesan(`${labelBab(active)} selesai ditulis ulang.`);
       await load();
       window.dispatchEvent(new Event('sp:balance'));
       // Alur berantai (paritas referensi): Bab I → dialog Bagan (Bab II) →
@@ -573,7 +578,7 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
   /* ---------------- Generate Ulang Bab Ini (tulis ulang + arahan, alur referensi) ---------------- */
   function tulisUlang() {
     if (loading || active === 'pustaka' || !text) return;
-    const a = metaBab?.label || 'bab ini';
+    const a = labelBab(active) || 'bab ini';
     const i = window.prompt(
       `Tulis ulang ${a} — apa yang perlu diperbaiki? Contoh: "fokuskan pada UMKM kuliner di Surabaya, jangan bahas regulasi" atau "perbanyak data statistik, kurangi teori". Kosongkan bila ingin ditulis ulang biasa tanpa arahan khusus.`,
       ''
@@ -747,7 +752,6 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
   }
 
   const text = active === 'pustaka' ? '' : (proyek?.content?.[active] || '');
-  const metaBab = BABS.find((b) => b.id === active);
   const isPustaka = active === 'pustaka';
   const subsLampiran = outline?.lampiran?.subs?.length ? outline.lampiran.subs : SUB_LAMPIRAN_BAWAAN;
   // Progress rail (paritas referensi): "N dari 5 Bab · NN% selesai"
@@ -781,7 +785,7 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
               onClick={() => setActive(b.id)}
               className={`flex w-full items-center justify-between gap-2 rounded-md px-3 py-2.5 text-left text-sm font-semibold transition-colors ${active === b.id ? 'bg-brand-primary/10 text-brand-primary' : 'text-text-secondary hover:bg-bg-surface-hover'}`}
             >
-              <span className="truncate">{b.label}</span>
+              <span className="truncate">{labelBab(b.id)}</span>
               {proyek?.content?.[b.id] && <span aria-hidden>✓</span>}
             </button>
           ))}
@@ -1060,21 +1064,10 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
           </div>
         )}
 
-        {refs.length > 0 && !isPustaka && (
-          <div className="bg-bg-surface border border-border-subtle rounded-xl p-6 text-sm">
-            <h3 className="font-bold text-base mb-3 text-text-primary">Referensi Terverifikasi</h3>
-            <p className="text-xs text-text-muted mb-3">Klik sitasi biru di naskah untuk melompat ke entri ini. Buka tab <button onClick={() => setActive('pustaka')} className="text-brand-primary underline">Pustaka ({refs.length})</button> untuk daftar lengkapnya.</p>
-            {refs.slice(0, 8).map((r: any, i: number) => (
-              <div key={i} id={refId(r, i)} className="text-xs border-t border-border-subtle py-2 scroll-mt-24">
-                <span className="font-bold text-text-primary">{r.authors} ({r.year}). </span>
-                <span className="text-text-secondary">{r.title}. </span>
-                {r.doi && <a href={`https://doi.org/${r.doi}`} target="_blank" rel="noreferrer" className="text-brand-primary">DOI</a>}
-              </div>
-            ))}
-          </div>
-        )}
+        {/* Kartu "Referensi Terverifikasi" DIHAPUS — tidak ada di mantrariset.
+            Klik sitasi di naskah → modal "Bukti Kutipan" (lihat render di bawah). */}
 
-        {proyek?.metode === 'Kuantitatif' && active === 'bab2' && text && !/hipotesis/i.test(text) && (
+        {outline?.bab2?.subs?.some((s: string) => /hipotesis/i.test(s)) && active === 'bab2' && text && !/hipotesis/i.test(text) && (
           <div className="bg-amber-50 dark:bg-amber-400/10 border border-amber-300 dark:border-amber-400/40 rounded-lg p-4 text-xs text-amber-900 dark:text-amber-200">
             <strong>Penelitianmu belum punya Hipotesis.</strong> Sub-bab Hipotesis sudah ada di kerangka tetapi belum ditulis. Generate bab ini supaya lengkap — penguji hampir selalu menanyakannya pada penelitian kuantitatif.
           </div>
@@ -1130,6 +1123,63 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
               {upMsg?.ok && (
                 <p className="text-[11px] text-text-muted">Sumber baru tersimpan. Klik <b>Tambah Sitasi</b> untuk menyisipkan sitasinya ke naskah.</p>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Modal: Bukti Kutipan — paritas mantrariset (klik sitasi di naskah) */}
+        {bukti && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setBukti(null)}>
+            <div className="w-full max-w-lg rounded-xl bg-bg-surface p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="font-bold text-base text-text-primary">Bukti Kutipan</h3>
+                <button onClick={() => setBukti(null)} className="rounded p-1 text-xs font-semibold text-text-muted hover:bg-bg-surface-hover">Tutup</button>
+              </div>
+              <p className="text-sm font-bold text-text-primary">{bukti.authors} ({bukti.year})</p>
+              <p className="mt-1 text-sm text-text-secondary">
+                {bukti.title}.{' '}
+                {bukti.jurnal && <span className="italic">{bukti.jurnal}.</span>}
+              </p>
+              {bukti.sumber === 'unggahan' && (
+                <p className="mt-2 text-xs text-brand-primary font-semibold">Artikel yang kamu unggah sendiri ({bukti.file})</p>
+              )}
+              {bukti.doi && (
+                <a href={`https://doi.org/${bukti.doi}`} target="_blank" rel="noreferrer" className="mt-3 inline-block break-all text-sm text-brand-primary underline">
+                  doi.org/{bukti.doi}
+                </a>
+              )}
+              {!bukti.doi && !bukti.url && (
+                <div className="mt-3 rounded-lg border border-amber-300 dark:border-amber-400/40 bg-amber-50 dark:bg-amber-400/10 p-3 text-xs text-amber-900 dark:text-amber-200">
+                  Referensi ini belum memiliki tautan DOI. Periksa keasliannya lewat{' '}
+                  <a
+                    href={`https://scholar.google.com/scholar?q=${encodeURIComponent(`${bukti.title || ''} ${bukti.authors || ''}`)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-semibold underline"
+                  >
+                    Google Scholar
+                  </a>
+                  .
+                </div>
+              )}
+              {!bukti.doi && bukti.url && (
+                <a href={bukti.url} target="_blank" rel="noreferrer" className="mt-3 inline-block break-all text-sm text-brand-primary underline">
+                  {bukti.url}
+                </a>
+              )}
+              <div className="mt-5 flex justify-end">
+                <button
+                  onClick={() => {
+                    const i = refs.indexOf(bukti);
+                    setBukti(null);
+                    setActive('pustaka');
+                    if (i >= 0) setTimeout(() => document.getElementById(refId(bukti, i))?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
+                  }}
+                  className="rounded-lg bg-brand-primary px-4 py-2 text-sm font-bold text-white hover:opacity-90"
+                >
+                  Buka di tab Pustaka
+                </button>
+              </div>
             </div>
           </div>
         )}
