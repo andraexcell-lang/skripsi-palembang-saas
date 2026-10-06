@@ -492,6 +492,7 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
       if (r.cached) setErr('');
       if (force && !r.cached) setPesan(`${metaBab?.label || 'Bab'} selesai ditulis ulang.`);
       await load();
+      window.dispatchEvent(new Event('sp:balance'));
       // Alur berantai (paritas referensi): Bab I → dialog Bagan (Bab II) →
       // dialog metodologi (Bab III) → Lampiran otomatis GRATIS
       if (chainRef.current && !force && !r.cached) {
@@ -687,7 +688,7 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
       const blob = new Blob([ris], { type: 'application/x-research-info-systems' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = 'referensi.ris';
+      a.download = 'daftar-pustaka.ris';
       a.click();
       URL.revokeObjectURL(a.href);
     }).catch((e: any) => setErr(e.message));
@@ -701,10 +702,12 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
       const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
       const res = await fetch(`${API}/api/projects/${id}/export-docx`, { headers: t ? { Authorization: `Bearer ${t}` } : {} });
       if (!res.ok) throw new Error('Gagal ekspor Word');
+      const disp = res.headers.get('Content-Disposition') || '';
+      const nm = /filename="([^"]+)"/.exec(disp)?.[1];
       const blob = await res.blob();
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = 'skripsi.docx';
+      a.download = nm || 'skripsi.docx';
       a.click();
       URL.revokeObjectURL(a.href);
     } catch (e: any) { setErr(e.message); }

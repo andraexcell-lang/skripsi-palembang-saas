@@ -5,7 +5,13 @@ import { apiGet } from '@/lib/api';
 export default function CreditBadge() {
   const [credits, setCredits] = useState<number | null>(null);
   useEffect(() => {
-    apiGet('/api/credits/balance').then((b) => setCredits(b.credits)).catch(() => {});
+    const ambil = () => apiGet('/api/credits/balance').then((b) => setCredits(b.credits)).catch(() => {});
+    ambil();
+    // Jaga tetap akurat setelah generate/tulis ulang tanpa reload halaman
+    const id = setInterval(ambil, 30000);
+    const onUbah = () => ambil();
+    window.addEventListener('sp:balance', onUbah);
+    return () => { clearInterval(id); window.removeEventListener('sp:balance', onUbah); };
   }, []);
   return (
     <span className="text-xs font-semibold text-accent-red border border-accent-red/20 bg-accent-red/10 px-3 py-1 rounded-full flex items-center gap-1">
