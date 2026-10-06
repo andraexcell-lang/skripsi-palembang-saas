@@ -8,6 +8,9 @@ import { generateContent, generateContentStream } from '../services/ai.service';
 
 const router = Router();
 const db = () => supabaseAdmin || supabaseAnon;
+// Font TTF bagan (backend/fonts) — container Linux Railway tidak punya font sistem,
+// teks bagan tidak tergambar (PNG 144px tanpa label). Daftarkan sekali per proses.
+let fontBaganOke = false;
 
 const BAB_LIST = ['bab1', 'bab2', 'bab3', 'bab4', 'bab5', 'lampiran'];
 // Biaya generate per bab: tesis 8 kredit/bab (paritas referensi), lainnya 10
@@ -1043,7 +1046,29 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
     // paritas referensi yang menyisipkan 54 PNG; teks diambil dari blok markdown berpanah
     const gambarDiagram = async (items: string[]): Promise<{ buf: Uint8Array; w: number; h: number } | null> => {
       try {
-        const { createCanvas } = await import('@napi-rs/canvas');
+        const { createCanvas, GlobalFonts } = await import('@napi-rs/canvas');
+        if (!fontBaganOke) {
+          fontBaganOke = true;
+          try {
+            const fsp = await import('node:fs');
+            const pathp = await import('node:path');
+            const nama = 'diagram-serif.ttf';
+            const kandidat = [
+              pathp.join(process.cwd(), 'fonts', nama),
+              pathp.join(__dirname, '..', '..', 'fonts', nama),
+            ];
+            const fp = kandidat.find((p: string) => fsp.existsSync(p));
+            if (fp) {
+              for (const alias of ['Times New Roman', 'Liberation Serif', 'Nimbus Roman', 'serif']) {
+                GlobalFonts.registerFromPath(fp, alias);
+              }
+            } else {
+              console.warn('font bagan tidak ditemukan:', kandidat.join(' | '));
+            }
+          } catch (e) {
+            console.warn('gagal mendaftarkan font bagan:', e);
+          }
+        }
         const isPanah = (t: string) => /^(↓|↑|→|←|⇒|➜|⟶|-->|->)$/.test(t.trim());
         const pecah = (teks: string): { k: 'n' | 'p'; t: string }[] => {
           const t = teks.trim();
