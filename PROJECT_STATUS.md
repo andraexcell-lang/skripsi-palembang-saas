@@ -97,6 +97,22 @@ Jendela 800px = varian `lg:hidden` (chip), bukan rail bab. Semua di bawah diveri
 - Regenerate bab lama butuh ±10 menit di produksi (rantai fallback menunggu jeda model yang diblokir) tetapi tetap selesai; `perkaya` jalan ±16 detik
 - **Selisih sadar** (dibuat, bukan terlewat): (a) konfirmasi tulis-ulang **tanpa** butir "riwayat/Urungkan" karena kita belum punya fitur riwayat — janji palsu lebih buruk daripada teks beda; (b) **biaya tulis-ulang 10 kredit** (harga bab milik owner) sementara referensi menilai 1 — menunggu keputusan owner; (c) link `Selengkapnya` menunjuk `/dashboard/tutorial` sebab tidak ada halaman `/syarat`; (d) `Abstrak ID+EN` tetap ada di grup toolbar (fitur kita tak ada di referensi)
 
+## Editor inline naskah (paritas referensi) — verifikasi 6 Okt 2026, produksi
+
+Fitur lama yang dulu tak berfungsi (klik paragraf tak membuka apa pun) kini identik dengan mantrariset. Akar bug: penutup (closure) `onClick` memakai variabel loop `let i`, sehingga **semua** paragraf mengirim indeks akhir loop (`i = lines.length`) → `editIdx` tak pernah cocok dengan baris mana pun (commit `342d3c3` fitur, `8bbd4bc` perbaikan).
+
+| Item | Hasil (produksi) |
+| --- | --- |
+| Klik paragraf | ✅ paragraf mana pun (termasuk paragraf pertama & terakhir, indeks baris berbeda-beda) → `<textarea>` menggantikan paragraf itu, `autoFocus` aktif, isi = teks paragraf persis (uji indeks 1 dan terakhir, `isiSesuai:true`) |
+| Markup editor | ✅ identik referensi: `div.space-y-1` → `textarea` (`w-full resize-none overflow-hidden rounded-md border-…/40 bg-…/5 p-3 text-sm leading-relaxed focus:ring-1`, `min-height:6rem`, tinggi auto-grow 206px utk paragraf 694 char) + `<p class="text-[11px]">` petunjuk Markdown **teks sama persis** |
+| Petunjuk | ✅ "Ketik langsung seperti di Word. Klik di luar kotak untuk menyimpan. (Markdown: **tebal**, tabel \|…\|, poin, ### sub-sub-bab.)" |
+| Simpan saat blur | ✅ uji round-trip nyata: ketik ` [UJI-EDIT]` → blur → PATCH `/:id/content` → reload → marker **ada** di server → hapus → reload → naskah kembali persis (`ujungPar` sama dengan aslinya, marker hilang) |
+| Tanpa perubahan → tanpa kirim | ✅ buka & tutup editor tanpa ubahan → nilai sama → tidak ada PATCH, tak ada pesan `Gagal menyimpan` |
+| Tanpa biaya | ✅ PATCH `content` tanpa potong kredit — kredit `17` tetap sebelum & sesudah |
+| Gagal simpan | ✅ pesan `Gagal menyimpan perubahan: …` + editor dibuka kembali berisi teks lama (rollback), tak ada kehilangan ketikan |
+| Klik tautan sitasi | ✅ klik `<a>` di dalam paragraf **tidak** membuka editor (guard `closest('a')`), tetap pindah ke kutipan |
+| Reset saat pindah tab | ✅ `useEffect([active])` menutup editor — indeks baris tab lama tak berlaku di tab baru |
+
 ## Biaya kredit
 
 bab 10 (termasuk Lampiran) · sesuaikan 5 · tinjau 5 · **perkaya 1 (GRATIS sekali per bab, disimpan di `identitas.perkaya`)** · parafrase 1 · ppt 8 · plagiasi 15 · artikel 15 · sidang 15/25 · spss 3 · smartpls 5 · kualitatif/dokumen/transkripsi 1 · brainstorming/kelayakan/novelty/cari/cek-sitasi/unggah-artikel/referensi/hapus-sub-bab gratis
