@@ -1,15 +1,67 @@
+'use client';
 import Link from "next/link";
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import UserChip from "@/components/UserChip";
 import ThemeToggle from "@/components/ThemeToggle";
 import CreditBadge from "@/components/CreditBadge";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+
+  // Tutup drawer saat Escape / pindah ke lebar desktop
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const onMq = () => { if (mq.matches) setOpen(false); };
+    mq.addEventListener('change', onMq);
+    return () => mq.removeEventListener('change', onMq);
+  }, []);
+
   return (
-    <div className="flex h-screen bg-bg-base text-text-primary overflow-hidden font-sans">
-      {/* Sidebar */}
-      <aside className="w-64 bg-bg-surface border-r border-border-subtle flex flex-col justify-between h-full hidden md:flex shrink-0">
-        
+    <div className="flex h-screen bg-bg-base text-text-primary overflow-hidden font-sans flex-col lg:flex-row">
+      {/* Header sempit (mobile/tablet) — paritas referensi: logo + kredit + hamburger */}
+      <div className="flex shrink-0 items-center justify-between border-b border-border-subtle bg-bg-surface px-4 py-3 lg:hidden">
+        <Link href="/dashboard" className="flex items-center gap-2">
+          <span className="text-brand-primary">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          </span>
+          <span className="font-bold text-base tracking-wide">Skripsi<span className="text-brand-primary">Palembang</span></span>
+        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/dashboard/kredit" className="inline-flex items-center" title="Sisa kredit AI">
+            <CreditBadge />
+          </Link>
+          <button
+            type="button"
+            aria-label="Menu"
+            aria-expanded={open}
+            aria-controls="sidebar-utama"
+            onClick={() => setOpen((v) => !v)}
+            className="p-1 text-text-secondary hover:text-text-primary"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Overlay drawer (mobile) */}
+      <div
+        onClick={() => setOpen(false)}
+        aria-hidden="true"
+        className={`${open ? 'block' : 'hidden'} fixed inset-0 z-30 bg-black/40 lg:hidden`}
+      />
+
+      {/* Sidebar — off-canvas di <lg, stasioner di ≥lg (paritas referensi) */}
+      <aside
+        id="sidebar-utama"
+        onClick={() => setOpen(false)}
+        className={`${open ? 'flex translate-x-0' : 'hidden -translate-x-full'} w-64 shrink-0 bg-bg-surface border-r border-border-subtle flex-col justify-between h-full transition-transform duration-300 ease-in-out fixed inset-y-0 left-0 z-40 lg:static lg:z-auto lg:translate-x-0 lg:flex`}
+      >
+
         {/* Top Section */}
         {/* Logo */}
         <div className="h-16 flex items-center justify-between px-6 border-b border-border-subtle shrink-0">
@@ -23,7 +75,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><polyline points="15 3 15 21"></polyline><polyline points="9 9 12 12 9 15"></polyline></svg>
           </button>
         </div>
-          
+
         {/* Kredit — chip seperti referensi (di sidebar) */}
         <div className="px-4 pt-3 shrink-0">
           <Link href="/dashboard/kredit" className="flex w-full items-center justify-center">
@@ -155,7 +207,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         {/* Bottom Section */}
         <div className="p-4 border-t border-border-subtle space-y-4 shrink-0 bg-bg-surface">
           <ThemeToggle />
-          
+
           <UserChip />
         </div>
       </aside>
