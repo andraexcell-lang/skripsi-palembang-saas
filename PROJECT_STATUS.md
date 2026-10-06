@@ -132,6 +132,26 @@ Uji dengan judul paritas mantrariset: *"Pengaruh Budaya Kerja Digital dan Work O
 
 **Selisih sadar (dicatat, bukan bug):** kanvas drag bagan referensi vs textarea deskripsi kita; kartu konfirmasi kita inline (referensi pakai pola serupa); backend cold-start ±12 dtk saat tidur.
 
+## Paritas DOCX vs referensi (6 Okt 2026, commit `2d1b99f`)
+
+Perbandingan menyeluruh DOCX ekspor kita vs unduhan referensi (proyek paritas yang sama). Semua diperbaiki & terverifikasi via XML + render Word→PDF + ukuran piksel:
+
+| Aspek | Sebelum | Sesudah (terverifikasi) |
+| --- | --- | --- |
+| Hierarki heading | H1→H3→**H4** (Heading2 = 0) → TOC `\o "1-2"` hanya judul bab | H1→**H2**→H3→H4 persis referensi; TOC memuat sub-bab 1.1–1.8 |
+| Gaya heading | biru (2E74B5/1F4D78), H1 16pt | **hitam bold** H1 14pt center + **caps**, H2/3/4 12pt left, line 360 — identik gaya efektif referensi (piksel heading = rgb(72,72,72) = sama) |
+| docDefaults | `pPrDefault` kosong → paragraf tanpa spacing eksplisit = single | `spacing after=0 before=0 line=360` — **identik referensi** → TOC pitch 25,5pt = sama persis |
+| Judul bab | "BAB I" tanpa sub-judul / "BAB II TINJAUAN PUSTAKA" 1 baris | H1 dua baris "BAB II" ⏎ "Tinjauan Pustaka" (caps via style), tanpa paragraf ulangan — struktur opener = referensi |
+| "Daftar Pustaka Bab Ini" | muncul 4× sebagai H1 (entri sampah TOC) | dibuang total (referensi tidak punya; DAFTAR PUSTAKA global sudah ada) |
+| Lampiran | H1 "LAMPIRAN INSTRUMEN PENELITIAN" + H3 "6.1 …" | H1 "LAMPIRAN" + H2 "Lampiran 1 …" |
+| Tabel | tanpa spacing eksplisit | cell `line=240` (4 tabel, 378 sel — sama referensi) |
+| Rumus | teks justify berindentasi | ditengahkan spasi tunggal (referensi memakai 52 gambar PNG — selisih sadar, lihat bawah) |
+| Marker markdown | `*italic*`/`_italic_` bocor mentah (95 `*`, 58 `_`) | jadi italic sungguhan (referensi sendiri bocor `_…_` mentah — kita tidak menyalin bug itu) |
+| Sampul | tanpa spacing | before 600/240/240/480/480 + line 360 — nilai identik referensi |
+| Sub-bab | "1.1 Latar Belakang" (1 spasi) | "1.1  Latar Belakang" (2 spasi, 21 heading — sama referensi) |
+
+**Selisih sadar tersisa (konten, bukan format):** (a) referensi menyisipkan 52 gambar PNG rumus uji (3.5.x) — kita tulis rumus sebagai teks terpusat; (b) kedalaman sub-bab konten berbeda (referensi H3=27/H4=28 vs kita 18/26 — AI mereka membuat sub-sub lebih dalam); (c) referensi 2 lampiran vs kita 4 (konten). Struktur & gaya dokumen = paritas.
+
 ## Biaya kredit
 
 bab 10 (**tesis 8**) · **Lampiran GRATIS** (otomatis setelah Bab III) · sesuaikan 5 · tinjau 5 · **perkaya 1 (GRATIS sekali per bab, disimpan di `identitas.perkaya`)** · parafrase 1 · ppt 8 · plagiasi 15 · artikel 15 · sidang 15/25 · spss 3 · smartpls 5 · kualitatif/dokumen/transkripsi 1 · brainstorming/kelayakan/novelty/cari/cek-sitasi/unggah-artikel/referensi/hapus-sub-bab gratis
