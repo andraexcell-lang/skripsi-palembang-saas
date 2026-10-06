@@ -495,8 +495,8 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
       // Alur berantai (paritas referensi): Bab I → dialog Bagan (Bab II) →
       // dialog metodologi (Bab III) → Lampiran otomatis GRATIS
       if (chainRef.current && !force && !r.cached) {
-        if (bab === 'bab1') { setActive('bab2'); setDlgBagan(true); return; }
-        if (bab === 'bab2') { setActive('bab3'); setDlgMetode(true); return; }
+        if (bab === 'bab1') { setLoading(false); setActive('bab2'); setDlgBagan(true); return; }
+        if (bab === 'bab2') { setLoading(false); setActive('bab3'); setDlgMetode(true); return; }
         if (bab === 'bab3') {
           setPesan('Bab III selesai. Lampiran dibuat otomatis — GRATIS.');
           setActive('lampiran');
@@ -1232,7 +1232,7 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
               </p>
               {!baganPilihan ? (
                 <div className="space-y-3">
-                  <button onClick={() => setBaganPilihan('ai')} className="w-full rounded-lg border border-brand-primary bg-brand-primary/5 p-4 text-left transition-colors hover:bg-brand-primary/10">
+                  <button onClick={() => konfirmasiBagan('ai')} className="w-full rounded-lg border border-brand-primary bg-brand-primary/5 p-4 text-left transition-colors hover:bg-brand-primary/10">
                     <p className="text-sm font-bold text-brand-primary">Biarkan AI menyusunkan</p>
                     <p className="mt-1 text-xs text-text-secondary">Bagan dibuat otomatis dari judul &amp; variabel penelitianmu. Masih bisa diubah kapan saja lewat tombol <b>Ubah bagan</b> di Bab II.</p>
                   </button>
