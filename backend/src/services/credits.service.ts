@@ -14,6 +14,7 @@ export const FEATURE_COSTS: Record<string, number> = {
   rapihkan: 3,
   sesuaikan: 5,
   tinjau: 5,
+  perkaya: 1, // perdalam sub-bab (gratis sekali per bab — lihat routes/projects.routes.ts)
   artikel: 15,
   sidang_15: 15,
   sidang_30: 25,

@@ -4,12 +4,12 @@ import Link from 'next/link';
 import { apiGet, apiPost, apiPostStream, apiUpload, apiDownloadPptx, isInsufficientCredits } from '@/lib/api';
 
 const BABS = [
-  { id: 'bab1', label: 'Bab I: Pendahuluan', gen: 'Bab I: Pendahuluan' },
-  { id: 'bab2', label: 'Bab II: Tinjauan Pustaka', gen: 'Bab II: Tinjauan Pustaka' },
-  { id: 'bab3', label: 'Bab III: Metodologi', gen: 'Bab III: Metodologi' },
-  { id: 'bab4', label: 'Bab IV: Hasil & Pembahasan', gen: 'Bab IV: Hasil & Pembahasan' },
-  { id: 'bab5', label: 'Bab V: Penutup', gen: 'Bab V: Penutup' },
-  { id: 'lampiran', label: 'Bab VI: Lampiran', gen: 'Lampiran' },
+  { id: 'bab1', label: 'Bab I Pendahuluan', gen: 'Bab I: Pendahuluan' },
+  { id: 'bab2', label: 'Bab II Tinjauan Pustaka', gen: 'Bab II: Tinjauan Pustaka' },
+  { id: 'bab3', label: 'Bab III Metodologi', gen: 'Bab III: Metodologi' },
+  { id: 'bab4', label: 'Bab IV Hasil Penelitian dan Pembahasan', gen: 'Bab IV: Hasil & Pembahasan' },
+  { id: 'bab5', label: 'Bab V Penutup', gen: 'Bab V: Penutup' },
+  { id: 'lampiran', label: 'Lampiran', gen: 'Lampiran' },
 ];
 
 const SUB_LAMPIRAN_BAWAAN = ['6.1 Kisi-Kisi Instrumen Penelitian', '6.2 Pernyataan Responden'];
@@ -36,6 +36,11 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
   // Tinjau Hasil
   const [tinjauLoading, setTinjauLoading] = useState(false);
   const [tinjau, setTinjau] = useState<any>(null);
+  // Perkaya sub-bab + pesan sukses
+  const [perkayaLoading, setPerkayaLoading] = useState(false);
+  const [pesan, setPesan] = useState('');
+  // Disclaimer mobile: Lihat / Tutup
+  const [discOpen, setDiscOpen] = useState(false);
   // Cek Sitasi
   const [sitasiLoading, setSitasiLoading] = useState(false);
   const [sitasi, setSitasi] = useState<any>(null);
@@ -64,7 +69,9 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
 
   function renderDoc(body: string) {
     const lines = body.split('\n');
-    const out: any[] = [];
+    const awal: any[] = [];
+    const bagian: { raw: string; anak: any[] }[] = [];
+    let target: any[] = awal;
     let i = 0;
     while (i < lines.length) {
       const t = lines[i].trim();
@@ -77,7 +84,7 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
           rows.push(lines[i].trim().split('|').map((c) => c.trim()).filter(Boolean));
           i++;
         }
-        out.push(
+        target.push(
           <table key={`tbl-${i}`} className="w-full text-xs border-collapse my-4">
             <thead><tr>{head.map((h, k) => <th key={k} className="border border-border-strong px-2 py-1 text-left">{h}</th>)}</tr></thead>
             <tbody>{rows.map((r, k) => <tr key={k}>{r.map((c, j) => <td key={j} className="border border-border-strong px-2 py-1">{c}</td>)}</tr>)}</tbody>
@@ -86,15 +93,47 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
         continue;
       }
       if (/^(BAB [IVX]+|DAFTAR PUSTAKA|ABSTRAK|ABSTRACT|KATA PENGANTAR|DAFTAR ISI|DAFTAR TABEL|LEMBAR .*)$/i.test(cleanMd(t))) {
-        out.push(<h3 key={i} className="text-center font-bold text-base mt-6 mb-3">{cleanMd(t)}</h3>);
+        target.push(<h3 key={i} className="text-center font-bold text-base mt-6 mb-3">{cleanMd(t)}</h3>);
       } else if (/^\d+\.\d+\s+\S/.test(cleanMd(t))) {
-        out.push(<h4 key={i} className="font-bold text-sm mt-5 mb-2">{fmtHeading(cleanMd(t))}</h4>);
+        // Sub-bab baru → kelompok sendiri supaya bisa dikontrol (Perkaya / Hapus sub-bab)
+        bagian.push({ raw: cleanMd(t), anak: [] });
+        target = bagian[bagian.length - 1].anak;
       } else {
-        out.push(<p key={i} className="text-justify indent-8 mb-3 leading-relaxed">{renderSitasi(cleanMd(t), `l${i}-`)}</p>);
+        target.push(<p key={i} className="text-justify indent-8 mb-3 leading-relaxed">{renderSitasi(cleanMd(t), `l${i}-`)}</p>);
       }
       i++;
     }
-    return out;
+    return (
+      <>
+        {awal}
+        {bagian.map((b, bi) => (
+          <section key={`sec-${bi}`} className="group/sec">
+            <div className="mt-5 mb-2 flex items-start gap-2">
+              <h4 className="flex-1 font-bold text-sm">{fmtHeading(b.raw)}</h4>
+              <button
+                type="button"
+                onClick={() => perkayaSub(b.raw)}
+                disabled={perkayaLoading || loading}
+                title="Perdalam sub-bab ini — gratis sekali per bab, berikutnya 1 kredit. Isi yang sudah ada tidak diubah, hanya ditambah"
+                className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-1 font-sans text-xs font-semibold text-brand-primary transition-opacity hover:bg-brand-primary/10 focus-visible:opacity-100 group-hover/sec:opacity-100 [@media(hover:hover)]:opacity-0 disabled:opacity-50"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" /></svg>
+                {perkayaLoading ? 'Memerdalam…' : 'Perkaya'}
+              </button>
+              <button
+                type="button"
+                onClick={() => hapusSub(b.raw)}
+                title="Hapus sub-bab"
+                className="mt-0.5 shrink-0 rounded p-1 text-text-muted transition-opacity hover:text-accent-red focus-visible:opacity-100 group-hover/sec:opacity-100 [@media(hover:hover)]:opacity-0"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /></svg>
+              </button>
+            </div>
+            {b.anak}
+          </section>
+        ))}
+      </>
+    );
   }
   const [showDisc, setShowDisc] = useState(false);
 
@@ -191,20 +230,87 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
   }
   useEffect(() => { load(); }, [id]);
 
-  async function generate(force = false) {
+  async function generate(force = false, instruksi?: string) {
     if (active === 'pustaka') return;
-    setLoading(true); setErr(''); setNeedsTopup(false);
+    setLoading(true); setErr(''); setNeedsTopup(false); setPesan('');
     try {
-      const r = await apiPostStream(`/api/projects/${id}/generate-bab-stream${force ? '?ulang=1' : ''}`, { bab: active, studi: active === 'bab2' ? studi : undefined, force }, (t) => {
+      const r = await apiPostStream(`/api/projects/${id}/generate-bab-stream${force ? '?ulang=1' : ''}`, { bab: active, studi: active === 'bab2' ? studi : undefined, force, instruksi: instruksi || undefined }, (t) => {
         setProyek((p: any) => ({ ...p, content: { ...(p?.content || {}), [active]: t } }));
       });
       if (r.cached) setErr('');
+      if (force && !r.cached) setPesan(`${metaBab?.label || 'Bab'} selesai ditulis ulang.`);
       await load();
     } catch (e: any) {
       setErr(e.message);
       if (isInsufficientCredits(e)) setNeedsTopup(true);
     }
     setLoading(false);
+  }
+
+  /* ---------------- Generate Ulang Bab Ini (tulis ulang + arahan, alur referensi) ---------------- */
+  function tulisUlang() {
+    if (loading || active === 'pustaka' || !text) return;
+    const a = metaBab?.label || 'bab ini';
+    const i = window.prompt(
+      `Tulis ulang ${a} — apa yang perlu diperbaiki? Contoh: "fokuskan pada UMKM kuliner di Surabaya, jangan bahas regulasi" atau "perbanyak data statistik, kurangi teori". Kosongkan bila ingin ditulis ulang biasa tanpa arahan khusus.`,
+      ''
+    );
+    if (i === null) return;
+    const r = i.trim().slice(0, 1500);
+    const ok = window.confirm(
+      `Tulis ulang ${a}${r ? ' dengan arahanmu' : ' dari awal'}? ` +
+      (r ? `Arahanmu: "${r.slice(0, 180)}${r.length > 180 ? '…' : ''}" ` : '') +
+      `• Isi ${a} yang sekarang akan DITULIS ULANG, termasuk bagian yang sudah kamu sunting manual — suntinganmu akan hilang. ` +
+      `• Dikenakan 10 kredit. ` +
+      (r
+        ? `• Arahanmu diikuti sejauh tidak melanggar aturan penulisan (struktur, sitasi, panjang). `
+        : `• Kalau kamu mengulang karena datanya salah, perbaiki dulu data di pengaturan proyek — kalau tidak, hasilnya akan sama saja. `) +
+      ' Lanjutkan?'
+    );
+    if (!ok) return;
+    generate(true, r);
+  }
+
+  /* ---------------- Perkaya sub-bab: GRATIS sekali per bab, sesudahnya 1 kredit ---------------- */
+  async function perkayaSub(judul: string) {
+    if (perkayaLoading || active === 'pustaka') return;
+    setPerkayaLoading(true); setErr(''); setPesan(''); setNeedsTopup(false);
+    try {
+      const c = await apiPost(`/api/projects/${id}/perkaya/cek`, { bab: active });
+      const info = c.ok
+        ? c.gratis
+          ? `GRATIS — ini pemakaian pertama untuk ${c.namaBab}. Berikutnya 1 kredit.`
+          : `Biaya ${c.biaya} kredit (jatah gratis ${c.namaBab} sudah terpakai). Sisa kreditmu ${c.sisaKredit}.`
+        : 'Gratis sekali untuk tiap bab; berikutnya 1 kredit.';
+      if (c.ok && !c.gratis && c.sisaKredit < c.biaya) {
+        setErr(`Kredit kurang. Butuh ${c.biaya}, sisa ${c.sisaKredit}.`);
+        setNeedsTopup(true);
+        return;
+      }
+      const ok = window.confirm(
+        `Perdalam "${judul}"? Isi yang sudah ada TIDAK diubah — hanya ditambah (dimensi, indikator, pandangan ahli lain, contoh penerapan). Referensi baru ditarik bila diperlukan, dan yang benar-benar disitasi masuk Daftar Pustaka. ${info} Lanjutkan?`
+      );
+      if (!ok) return;
+      const rr = await apiPost(`/api/projects/${id}/perkaya`, { bab: active, judul });
+      setProyek((p: any) => ({ ...p, content: { ...(p?.content || {}), [active]: rr.content } }));
+      setPesan(`Sub-bab "${judul}" diperdalam${rr.gratis ? ' — GRATIS' : ''}. Sisa kredit ${rr.sisaKredit}.`);
+    } catch (e: any) {
+      setErr(e.message);
+      if (isInsufficientCredits(e)) setNeedsTopup(true);
+    }
+    setPerkayaLoading(false);
+  }
+
+  /* ---------------- Hapus sub-bab (gratis, konfirmasi seperti referensi) ---------------- */
+  async function hapusSub(judul: string) {
+    if (active === 'pustaka') return;
+    if (!window.confirm(`Hapus sub-bab "${judul}"? Isi bagian ini akan dihapus permanen.`)) return;
+    setErr(''); setPesan('');
+    try {
+      const r = await apiPost(`/api/projects/${id}/sub-bab/hapus`, { bab: active, judul });
+      setProyek((p: any) => ({ ...p, content: { ...(p?.content || {}), [active]: r.content } }));
+      setPesan(`Sub-bab "${judul}" dihapus.`);
+    } catch (e: any) { setErr(e.message); }
   }
 
   /* ---------------- Sesuaikan Skripsi (5 kredit) ---------------- */
@@ -319,102 +425,208 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
   const metaBab = BABS.find((b) => b.id === active);
   const isPustaka = active === 'pustaka';
   const subsLampiran = outline?.lampiran?.subs?.length ? outline.lampiran.subs : SUB_LAMPIRAN_BAWAAN;
+  // Progress rail (paritas referensi): "N dari 5 Bab · NN% selesai"
+  const nBabSelesai = BABS.filter((b) => b.id !== 'lampiran' && proyek?.content?.[b.id]).length;
+  const pctSelesai = Math.round((nBabSelesai / 5) * 100);
 
   const btnUtil = 'border border-border-strong bg-bg-surface px-5 py-2.5 rounded-lg text-sm font-bold text-text-primary hover:bg-bg-surface-hover disabled:opacity-50';
+  const btnChip = 'border border-border-strong bg-bg-surface px-3 py-1.5 rounded-lg text-xs font-semibold text-text-primary hover:bg-bg-surface-hover disabled:opacity-50';
 
   return (
     <div className="flex h-full bg-bg-base">
-      <div className="w-56 border-r border-border-subtle p-4 hidden lg:flex flex-col gap-1 overflow-y-auto">
-        {BABS.map((b) => (
-          <button key={b.id} onClick={() => setActive(b.id)} className={`text-left px-3 py-2 rounded-lg text-sm ${active === b.id ? 'bg-brand-primary/10 text-brand-primary font-semibold' : 'text-text-secondary hover:text-text-primary hover:bg-bg-surface-hover'}`}>
-            {b.label} {proyek?.content?.[b.id] ? '✓' : ''}
+      <aside className="hidden w-56 shrink-0 flex-col border-r border-border-subtle bg-bg-surface lg:flex lg:sticky lg:top-0 lg:h-full">
+        <div className="shrink-0 border-b border-border-subtle p-4">
+          <p className="line-clamp-2 text-sm font-bold text-text-primary">{proyek?.judul || 'Memuat...'}</p>
+          <span className="mt-1.5 inline-block rounded bg-brand-primary/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-primary">Skripsi</span>
+        </div>
+        <div className="shrink-0 px-3 pt-3">
+          <div className="flex items-baseline justify-between text-[11px] text-text-secondary">
+            <span>{nBabSelesai} dari 5 Bab</span>
+            <span>{pctSelesai}% selesai</span>
+          </div>
+          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-bg-surface-hover">
+            <div className="h-full rounded-full bg-brand-primary transition-all" style={{ width: `${pctSelesai}%` }} />
+          </div>
+        </div>
+        <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden p-3">
+          {BABS.map((b) => (
+            <button
+              key={b.id}
+              onClick={() => setActive(b.id)}
+              className={`flex w-full items-center justify-between gap-2 rounded-md px-3 py-2.5 text-left text-sm font-semibold transition-colors ${active === b.id ? 'bg-brand-primary/10 text-brand-primary' : 'text-text-secondary hover:bg-bg-surface-hover'}`}
+            >
+              <span className="truncate">{b.label}</span>
+              {proyek?.content?.[b.id] && <span aria-hidden>✓</span>}
+            </button>
+          ))}
+          <div className="my-2 border-t border-border-subtle" />
+          <button onClick={() => setActive('pustaka')} className={`flex w-full items-center justify-between gap-2 rounded-md px-3 py-2.5 text-left text-sm font-semibold transition-colors ${isPustaka ? 'bg-brand-primary/10 text-brand-primary' : 'text-text-secondary hover:bg-bg-surface-hover'}`}>
+            <span className="flex items-center gap-2 truncate">Daftar Pustaka</span>
+            <span>({refs.length})</span>
           </button>
-        ))}
-        <button onClick={() => setActive('pustaka')} className={`text-left px-3 py-2 rounded-lg text-sm ${isPustaka ? 'bg-brand-primary/10 text-brand-primary font-semibold' : 'text-text-secondary hover:text-text-primary hover:bg-bg-surface-hover'}`}>
-          Pustaka ({refs.length})
-        </button>
-        <Link href="/dashboard/lab-revisi" className="px-3 py-2 rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-bg-surface-hover">
-          Revisi
-        </Link>
-      </div>
+          <Link href="/dashboard/lab-revisi" className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-semibold text-text-secondary transition-colors hover:bg-bg-surface-hover">
+            Lab Revisi
+          </Link>
+          <div className="px-3 py-2">
+            <button onClick={tambahSitasi} disabled={loading || !text} className="flex w-full items-center gap-2 rounded-md py-0.5 text-left text-sm font-semibold text-text-secondary transition-colors hover:text-text-primary disabled:opacity-60">
+              Tambah Sitasi
+              <span className="rounded-full bg-brand-primary/10 px-2 py-0.5 text-[10px] font-bold text-brand-primary">GRATIS</span>
+            </button>
+          </div>
+          <button
+            onClick={() => { setShowUpload(true); }}
+            title="Tambahkan artikel PDF milikmu sendiri sebagai referensi (maksimal 10)"
+            className="flex w-full items-start gap-2 rounded-md px-3 py-2.5 text-left text-sm font-semibold text-text-secondary transition-colors hover:bg-bg-surface-hover"
+          >
+            <span>
+              Unggah Artikel Sendiri
+              <span className="mt-0.5 block text-xs font-normal text-text-muted">PDF dari pembimbing atau jurnal berlangganan — maks 10.</span>
+            </span>
+          </button>
+          <button
+            onClick={prediksiSoal}
+            disabled={soalLoading || !text}
+            className="flex w-full items-start gap-2 rounded-md px-3 py-2.5 text-left text-sm font-semibold text-text-secondary transition-colors hover:bg-bg-surface-hover disabled:opacity-60"
+          >
+            <span>
+              Prediksi Soal Sidang
+              <span className="mt-0.5 block text-xs font-normal text-text-muted">Daftar pertanyaan &amp; jawaban dalam bentuk teks. Ingin berlatih bicara dengan penguji AI? Buka menu Simulasi Sidang.</span>
+            </span>
+          </button>
+          <button
+            onClick={tinjauHasil}
+            disabled={tinjauLoading}
+            title="Catatan revisi per bab: kelebihan, kekurangan & pertanyaan penguji (5 kredit)"
+            className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-semibold text-text-secondary transition-colors hover:bg-bg-surface-hover disabled:opacity-60"
+          >
+            {tinjauLoading ? 'Meninjau…' : 'Tinjau Hasil'}
+          </button>
+          <button
+            onClick={generateAbstrak}
+            disabled={abstrakLoading}
+            title="Abstrak Indonesia + Inggris (1 kredit)"
+            className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-semibold text-text-secondary transition-colors hover:bg-bg-surface-hover disabled:opacity-60"
+          >
+            {abstrakLoading ? 'Menyusun…' : 'Abstrak ID+EN'}
+          </button>
+        </nav>
+      </aside>
 
-      <div className="flex-1 p-4 lg:p-8 overflow-y-auto max-w-3xl mx-auto w-full space-y-4">
-        <h1 className="text-xl font-bold text-text-primary">{proyek?.judul || 'Memuat...'}</h1>
-        <p className="text-xs text-text-secondary">{proyek?.jenis} · {proyek?.metode} · 10 kredit/bab</p>
-        {err && <p className="text-sm text-accent-red">{err}</p>}
+      <div className="min-w-0 flex-1 overflow-y-auto">
+        {/* Rail chip horizontal (mobile) — paritas referensi */}
+        <div className="sticky top-0 z-10 border-b border-border-subtle bg-bg-base lg:hidden">
+          <div className="flex gap-1.5 overflow-x-auto px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {BABS.map((b, i) => {
+              const ada = !!proyek?.content?.[b.id];
+              const aktif = active === b.id;
+              return (
+                <button
+                  key={b.id}
+                  onClick={() => setActive(b.id)}
+                  className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-semibold ${aktif ? 'bg-brand-primary text-white' : ada ? 'bg-brand-primary/15 text-brand-primary' : 'bg-bg-surface text-text-secondary'}`}
+                >
+                  BAB {i + 1}{ada ? ' ✓' : ''}
+                </button>
+              );
+            })}
+            <button
+              onClick={() => setActive('pustaka')}
+              className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-semibold ${isPustaka ? 'bg-brand-primary text-white' : 'bg-bg-surface text-text-secondary'}`}
+            >
+              Pustaka ({refs.length})
+            </button>
+            <Link href="/dashboard/lab-revisi" className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-semibold bg-bg-surface text-text-secondary">
+              Revisi
+            </Link>
+          </div>
+        </div>
+
+        {/* Toolbar sticky — paritas referensi: tombol cepat (mobile) + grup utama (grid) */}
+        <div className="border-b border-border-subtle bg-bg-base lg:sticky lg:top-0 lg:z-10">
+          <div className="flex flex-col gap-2.5 px-3 py-3 lg:flex-row lg:items-center">
+            <div className="flex flex-wrap gap-1.5 lg:hidden">
+              <button onClick={() => setShowUpload((v) => !v)} className={btnChip}>Unggah Artikel</button>
+              <button onClick={prediksiSoal} disabled={soalLoading || !text} className={btnChip} title="Daftar pertanyaan & jawaban dalam bentuk teks. Ingin berlatih bicara dengan penguji AI? Buka menu Simulasi Sidang.">
+                {soalLoading ? 'Menyusun...' : 'Prediksi Soal'}
+              </button>
+              <button onClick={tinjauHasil} disabled={tinjauLoading} className={btnChip} title="Catatan revisi per bab: kelebihan, kekurangan & pertanyaan penguji (5 kredit)">
+                {tinjauLoading ? 'Meninjau...' : 'Tinjau'}
+              </button>
+              <button onClick={downloadPpt} disabled={pptLoading} className={btnChip} title="Buat slide presentasi (.pptx) dari isi proyek ini">
+                {pptLoading ? 'Membuat...' : 'PPT'}
+              </button>
+              <button onClick={cekSitasi} disabled={sitasiLoading} className={btnChip} title="Deteksi sitasi palsu/yatim — GRATIS, tanpa kredit">
+                {sitasiLoading ? 'Memeriksa...' : 'Cek Sitasi'}
+              </button>
+            </div>
+            <p className="hidden truncate text-sm font-semibold text-text-secondary xl:block">{proyek?.judul}</p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:ml-auto lg:flex lg:flex-wrap lg:items-center">
+              {text && (
+                <button onClick={downloadWord} className={btnChip} title="Unduh naskah (.docx)">Unduh Word</button>
+              )}
+              <button onClick={downloadRis} className={btnChip} title="Unduh Daftar Pustaka (.ris) — siap impor ke Mendeley/Zotero">RIS</button>
+              <Link href="/dashboard/plagiasi" className={`${btnChip} inline-block`} title="Cek Plagiasi">Cek Plagiasi</Link>
+              <select value={nomor} onChange={(e) => setNomor(e.target.value)} className="rounded-lg border border-border-strong bg-bg-surface p-2 text-xs font-semibold text-text-primary" title="Format penomoran sub-bab">
+                <option value="1.1">Nomor 1.1 / 1.1.1</option>
+                <option value="A">Nomor A. / 1. / a.</option>
+              </select>
+              {!isPustaka && active === 'bab2' && (
+                <select value={studi} onChange={(e) => setStudi(e.target.value)} className="rounded-lg border border-border-strong bg-bg-surface p-2 text-xs font-semibold text-text-primary" title='Berapa studi yang dibahas di "Penelitian Terdahulu". Berlaku saat sub-bab itu ditulis ulang.'>
+                  <option value="10">Studi terdahulu: 10 (bawaan)</option>
+                  {['15', '20', '25', '30', '35', '40', '45', '50'].map((n) => <option key={n} value={n}>Studi terdahulu: {n} (1 paragraf/studi)</option>)}
+                </select>
+              )}
+              <button onClick={generateAbstrak} disabled={abstrakLoading} className={btnChip} title="Abstrak Indonesia + Inggris (1 kredit)">
+                {abstrakLoading ? '...' : 'Abstrak ID+EN'}
+              </button>
+              <button onClick={sesuaikan} disabled={sesLoading || !proyek?.content?.bab1} className={btnChip} title="Rapikan tujuan, hipotesis, kerangka konsep & Bab III agar sesuai rumusan masalah terbaru">
+                {sesLoading ? 'Menyesuaikan...' : 'Sesuaikan Skripsi'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="mx-auto w-full max-w-3xl space-y-4 p-4 lg:p-8">
+          {err && <p className="text-sm text-accent-red">{err}</p>}
+          {pesan && <p className="text-sm text-emerald-600 dark:text-emerald-400">{pesan}</p>}
         {needsTopup && (
           <div className="bg-accent-red/10 border border-accent-red/30 rounded-lg p-4 text-sm text-text-primary flex items-center justify-between gap-3">
             <span>Kredit habis. Top-up untuk lanjut generate.</span>
             <Link href="/dashboard/billing" className="bg-brand-primary text-white px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap">Pilih Paket →</Link>
           </div>
         )}
-        <div className="bg-amber-50 dark:bg-amber-400/10 border border-amber-300 dark:border-amber-400/40 rounded-lg p-3 text-[11px] text-amber-900 dark:text-amber-200">
-          ⚠️ Hasil ini adalah <strong>DRAF AWAL</strong> AI. Wajib didalami, dikritisi, diverifikasi fakta/data/referensinya, dan direvisi menyeluruh — tanggung jawab karya akhir ada pada Anda (Permendiknas No. 17/2010 tentang Pencegahan Plagiat).
+        {/* Disclaimer — teks & toggle Lihat/Tutup persis paritas referensi */}
+        <div className="mx-auto mb-0 flex max-w-3xl items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-900 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-200 sm:px-4 sm:text-xs">
+          <div
+            id="disclaimer-studio"
+            className={discOpen
+              ? 'min-w-0 flex-1 sm:flex sm:items-start sm:gap-2'
+              : 'min-w-0 flex-1 sm:flex sm:items-start sm:gap-2 truncate sm:overflow-visible sm:whitespace-normal'}
+          >
+            <span className="mr-1 font-bold sm:mr-0 sm:shrink-0">⚠️ Disclaimer:</span>
+            <span>
+              Hasil ini adalah DRAFT AWAL yang dibuat AI. Anda wajib mendalami, mengkritisi, memverifikasi fakta/data/referensi, dan merevisi secara menyeluruh. Tanggung jawab atas karya akhir sepenuhnya berada pada Anda — sejalan dengan Permendiknas No. 17 Tahun 2010 tentang Pencegahan dan Penanggulangan Plagiat di Perguruan Tinggi.{' '}
+              <Link href="/dashboard/tutorial" target="_blank" rel="noopener noreferrer" className="font-semibold underline">Selengkapnya</Link>
+            </span>
+          </div>
+          <button
+            type="button"
+            aria-expanded={discOpen}
+            aria-controls="disclaimer-studio"
+            onClick={() => setDiscOpen((v) => !v)}
+            className="-my-2 -mr-2 flex shrink-0 items-center gap-0.5 rounded px-2 py-2 font-semibold sm:hidden"
+          >
+            {discOpen ? 'Tutup' : 'Lihat'}
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`size-3.5 transition-transform motion-reduce:transition-none ${discOpen ? 'rotate-180' : ''}`} aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+          </button>
         </div>
 
-        {active === 'bab2' && (
-          <div className="flex items-center gap-2 text-sm">
-            <label className="text-text-secondary text-xs font-bold">Studi terdahulu:</label>
-            <select value={studi} onChange={(e) => setStudi(e.target.value)} className="bg-bg-surface border border-border-strong rounded-lg p-2 text-sm text-text-primary" title='Berapa studi yang dibahas di "Penelitian Terdahulu". Berlaku saat sub-bab itu ditulis ulang.'>
-              <option value="10">Studi terdahulu: 10 (bawaan)</option>
-              {['15', '20', '25', '30', '35', '40', '45', '50'].map((n) => <option key={n} value={n}>Studi terdahulu: {n} (1 paragraf/studi)</option>)}
-            </select>
+        {/* Hint sitasi — paritas referensi */}
+        {text && !isPustaka && (
+          <div className="mx-auto flex max-w-3xl items-center gap-2 rounded-md border border-brand-primary/30 bg-brand-primary/5 px-3 py-2 text-[11px] leading-relaxed text-text-secondary sm:px-4 sm:text-xs">
+            Klik sitasi (Penulis, Tahun) yang bergaris biru untuk melihat kalimat pendukung yang dikutip beserta nomor halamannya.
           </div>
         )}
-
-        <div className="flex gap-3 items-center flex-wrap">
-          <select value={nomor} onChange={(e) => setNomor(e.target.value)} className="bg-bg-surface border border-border-strong rounded-lg p-2.5 text-sm text-text-primary" title="Format penomoran sub-bab">
-            <option value="1.1">Nomor 1.1 / 1.1.1</option>
-            <option value="A">Nomor A. / 1. / a.</option>
-          </select>
-        </div>
-
-        <div className="flex gap-3 flex-wrap">
-          {!isPustaka && (
-            <button onClick={() => generate(!!text)} disabled={loading} className="bg-brand-primary text-white px-5 py-2.5 rounded-lg text-sm font-bold disabled:opacity-50">
-              {loading ? 'Menggenerate...' : text ? `Generate Ulang ${metaBab?.gen}` : `Generate ${metaBab?.gen}`}
-            </button>
-          )}
-          {text && (
-            <button onClick={downloadWord} className="border border-border-strong bg-bg-surface px-5 py-2.5 rounded-lg text-sm font-bold text-text-primary hover:bg-bg-surface-hover">
-              Unduh Word
-            </button>
-          )}
-          <button onClick={downloadRis} className={btnUtil} title="Unduh Daftar Pustaka (.ris) — siap impor ke Mendeley/Zotero">
-            Unduh RIS
-          </button>
-          <button onClick={() => { setShowUpload((v) => !v); }} className={btnUtil} title="Tambahkan artikel PDF milikmu sendiri sebagai referensi (maksimal 10)">
-            Unggah Artikel
-          </button>
-          {!isPustaka && (
-            <>
-              <button onClick={prediksiSoal} disabled={soalLoading || !text} className={btnUtil} title="Daftar pertanyaan & jawaban dalam bentuk teks. Ingin berlatih bicara dengan penguji AI? Buka menu Simulasi Sidang.">
-                {soalLoading ? 'Menyusun...' : 'Prediksi Soal'}
-              </button>
-              <button onClick={tambahSitasi} disabled={loading || !text} className={btnUtil} title="GRATIS">
-                Tambah Sitasi <span className="rounded-full bg-brand-primary/10 px-2 py-0.5 text-[10px] font-bold text-brand-primary">GRATIS</span>
-              </button>
-            </>
-          )}
-          <button onClick={generateAbstrak} disabled={abstrakLoading} className={btnUtil} title="Abstrak Indonesia + Inggris (1 kredit)">
-            {abstrakLoading ? '...' : 'Abstrak ID+EN'}
-          </button>
-          <button onClick={cekSitasi} disabled={sitasiLoading} className={btnUtil} title="Deteksi sitasi palsu/yatim — GRATIS, tanpa kredit">
-            {sitasiLoading ? 'Memeriksa...' : 'Cek Sitasi'}
-          </button>
-          <button onClick={tinjauHasil} disabled={tinjauLoading} className={btnUtil} title="Catatan revisi per bab: kelebihan, kekurangan & pertanyaan penguji (5 kredit)">
-            {tinjauLoading ? 'Meninjau...' : 'Tinjau Hasil'}
-          </button>
-          <button onClick={downloadPpt} disabled={pptLoading} className={btnUtil} title="Buat slide presentasi (.pptx) dari isi proyek ini">
-            {pptLoading ? 'Membuat...' : 'PPT'}
-          </button>
-          <Link href="/dashboard/plagiasi" className={`${btnUtil} inline-block`} title="Cek Plagiasi">
-            Cek Plagiasi
-          </Link>
-          <button onClick={sesuaikan} disabled={sesLoading || !proyek?.content?.bab1} className={btnUtil} title="Rapikan tujuan, hipotesis, kerangka konsep & Bab III agar sesuai rumusan masalah terbaru">
-            {sesLoading ? 'Menyesuaikan...' : 'Sesuaikan Skripsi'}
-          </button>
-        </div>
 
         {/* Hasil Sesuaikan Skripsi */}
         {sesHasil && (
@@ -518,9 +730,30 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
           </div>
         )}
 
-        {!isPustaka && (text
-          ? <div id="dapus" className="bg-white dark:bg-bg-surface text-slate-900 dark:text-text-primary border border-border-subtle rounded-xl p-4 lg:p-8 text-sm scroll-mt-24 shadow-sm" style={{ fontFamily: "'Times New Roman', Georgia, serif" }}>{renderDoc(text)}</div>
-          : active !== 'lampiran' && <p className="text-sm text-text-muted">Belum ada isi untuk bab ini. Klik generate (10 kredit).</p>
+        {!isPustaka && text && (
+          <div id="dapus" className="bg-white dark:bg-bg-surface text-slate-900 dark:text-text-primary border border-border-subtle rounded-md p-4 sm:p-8 text-sm scroll-mt-24 shadow-sm" style={{ fontFamily: "'Times New Roman', Georgia, serif" }}>{renderDoc(text)}</div>
+        )}
+
+        {/* Footer generate — paritas referensi: "Bab belum dibuat." + Mulai Generate, atau Generate Ulang Bab Ini */}
+        {!isPustaka && (text || active !== 'lampiran') && (
+          <div className="mt-10 flex flex-col items-center gap-2 border-t border-border-subtle pt-6 text-center">
+            {!text ? (
+              <>
+                <p className="text-sm text-text-secondary">Bab belum dibuat.</p>
+                <button onClick={() => generate()} disabled={loading} className="inline-flex items-center gap-2 rounded-lg bg-brand-primary px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-4" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" /></svg>
+                  {loading ? 'Menggenerate...' : 'Mulai Generate'}
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-xs text-text-secondary">Datanya salah atau hasilnya kurang tepat? Bab ini bisa ditulis ulang dari awal.</p>
+                <button onClick={tulisUlang} disabled={loading} className={btnUtil}>
+                  {loading ? 'Menggenerate...' : active === 'lampiran' ? 'Generate Ulang Lampiran' : 'Generate Ulang Bab Ini'}
+                </button>
+              </>
+            )}
+          </div>
         )}
 
         {/* Unggah Artikel Sendiri — panel biru di bawah naskah (seperti referensi) */}
@@ -663,6 +896,7 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );

@@ -3,7 +3,7 @@ import multer from 'multer';
 import { AuthRequest, requireAuth } from '../middleware/auth';
 import { requireAuthOrKey } from '../middleware/apiKey';
 import { supabaseAdmin, supabaseAnon } from '../config/supabase';
-import { consumeCredits } from '../services/credits.service';
+import { consumeCredits, getBalance, FEATURE_COSTS } from '../services/credits.service';
 import { generateContent, generateContentStream } from '../services/ai.service';
 
 const router = Router();
@@ -163,11 +163,13 @@ router.post('/:id/generate-bab', requireAuthOrKey, async (req: AuthRequest, res)
 router.post('/:id/generate-bab-stream', requireAuthOrKey, async (req: AuthRequest, res) => {
   try {
     const id = String(req.params.id);
-    const { bab, studi, force } = req.body || {};
+    const { bab, studi, force, instruksi } = req.body || {};
     if (!BAB_LIST.includes(bab)) return res.status(400).json({ error: `bab harus salah satu: ${BAB_LIST.join(', ')}` });
     const { data: p, error } = await db().from('projects').select('*').eq('id', id).eq('user_id', req.userId!).single();
     if (error || !p) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
     const extraStudi = bab === 'bab2' && studi ? ` Bahas ${Math.min(Math.max(parseInt(studi, 10) || 10, 5), 50)} studi terdahulu, 1 paragraf per studi.` : '';
+    // Arahan penulis untuk "Generate Ulang Bab Ini" (opsional, maks 1500 karakter)
+    const extraArahan = instruksi ? ` Arahan penulis (ikuti sejauh tidak melanggar aturan penulisan — struktur, sitasi, panjang): ${String(instruksi).slice(0, 1500)}` : '';
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
@@ -188,7 +190,7 @@ router.post('/:id/generate-bab-stream', requireAuthOrKey, async (req: AuthReques
     const refs = await crossrefTop(p.judul, 6, p.min_year);
     let full = '';
     try {
-      for await (const t of generateContentStream(babPrompt(bab, p, refs) + extraStudi)) {
+      for await (const t of generateContentStream(babPrompt(bab, p, refs) + extraStudi + extraArahan)) {
         full += t;
         send('chunk', { t });
       }
@@ -702,6 +704,21 @@ function gantiBagian(text: string, re: RegExp, body: string): string | null {
     .replace(/\n{3,}/g, '\n\n');
 }
 
+// Hapus satu sub-bab (judul + isinya) dari teks bab
+function hapusBagian(text: string, re: RegExp): string | null {
+  const lines = String(text || '').split('\n');
+  const start = cariJudul(lines, re);
+  if (start < 0) return null;
+  const end = batasBagian(lines, start);
+  return [...lines.slice(0, start), ...lines.slice(end)].join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+// Regex persis untuk judul sub-bab yang dikirim frontend ("1.1 Latar Belakang")
+function reJudulSub(judul: string): RegExp {
+  const esc = String(judul || '').trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`^\\s*${esc}\\s*$`);
+}
+
 function parseJson<T>(s: string, fallback: T): T {
   const t = String(s || '').replace(/```json/gi, '').replace(/```/g, '').trim();
   const a = t.indexOf('{'), b = t.lastIndexOf('}');
@@ -935,6 +952,119 @@ router.post('/:id/cek-sitasi', requireAuthOrKey, async (req: AuthRequest, res) =
       total: temuan.length, nyata, perluDitinjau, semuaCocok: perluDitinjau === 0,
       temuan: [...temuan.filter((t) => t.status === 'yatim'), ...temuan.filter((t) => t.status === 'nyata')],
     });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ---------------------------------------------------------------------------
+// Kontrol per-sub-bab (paritas MantraRiset): Perkaya & Hapus sub-bab
+// ---------------------------------------------------------------------------
+const NAMA_BAB: Record<string, string> = {
+  bab1: 'Bab I', bab2: 'Bab II', bab3: 'Bab III', bab4: 'Bab IV', bab5: 'Bab V', lampiran: 'Lampiran',
+};
+
+// Cek biaya Perkaya: GRATIS sekali per bab, sesudahnya 1 kredit (sama seperti referensi)
+router.post('/:id/perkaya/cek', requireAuthOrKey, async (req: AuthRequest, res) => {
+  try {
+    const id = String(req.params.id);
+    const { bab } = req.body || {};
+    if (!BAB_LIST.includes(bab)) return res.status(400).json({ error: 'bab tidak dikenal' });
+    const { data: pr, error } = await db().from('projects').select('identitas').eq('id', id).eq('user_id', req.userId!).single();
+    if (error || !pr) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
+    const ident: any = pr.identitas || {};
+    const sudahDipakai = !!ident.perkaya?.[bab];
+    const { credits, plan } = await getBalance(req.userId!);
+    const biaya = FEATURE_COSTS.perkaya ?? 1;
+    res.json({
+      ok: true,
+      gratis: !sudahDipakai || plan === 'admin',
+      biaya: plan === 'admin' ? 0 : biaya,
+      namaBab: NAMA_BAB[bab],
+      sisaKredit: credits,
+    });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// Perdalam satu sub-bab: isi lama TIDAK diubah/dihapus — hanya paragraf tambahan baru
+router.post('/:id/perkaya', requireAuthOrKey, async (req: AuthRequest, res) => {
+  try {
+    const id = String(req.params.id);
+    const { bab, judul } = req.body || {};
+    if (!BAB_LIST.includes(bab)) return res.status(400).json({ error: 'bab tidak dikenal' });
+    if (!judul || String(judul).length > 160) return res.status(400).json({ error: 'judul sub-bab tidak valid' });
+    const { data: pr, error } = await db().from('projects').select('*').eq('id', id).eq('user_id', req.userId!).single();
+    if (error || !pr) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
+    const teks = String((pr.content || {})[bab] || '');
+    if (!teks) return res.status(400).json({ error: 'Bab ini belum digenerate.' });
+    const re = reJudulSub(judul);
+    const isiLama = ambilBagian(teks, re);
+    if (!isiLama) return res.status(400).json({ error: `Sub-bab "${judul}" tidak ditemukan di naskah.` });
+
+    // Jatah GRATIS sekali per bab (disimpan di identitas.perkaya), sesudahnya 1 kredit
+    const ident: any = { ...(pr.identitas || {}) };
+    const gratis = !ident.perkaya?.[bab];
+    const { plan } = await getBalance(req.userId!);
+    if (gratis) {
+      ident.perkaya = { ...(ident.perkaya || {}), [bab]: true };
+      await db().from('projects').update({ identitas: ident, updated_at: new Date().toISOString() }).eq('id', id);
+    } else if (plan !== 'admin') {
+      try {
+        await consumeCredits(req.userId!, 'perkaya', `proyek:${id}:perkaya:${bab}`);
+      } catch (e: any) {
+        if (e.code === 'INSUFFICIENT_CREDITS') return res.status(402).json({ error: e.message, remaining: e.remaining });
+        throw e;
+      }
+    }
+
+    const refs = await crossrefTop(`${pr.judul} ${judul}`, 4, pr.min_year);
+    let tambahan = '';
+    try {
+      tambahan = await generateContent(
+        `Kamu memperdalam sub-bab "${judul}" (${NAMA_BAB[bab]}) dari skripsi berikut.\n` +
+        `Judul: ${pr.judul}\nMetode: ${pr.metode}\nBahasa: ${pr.language || 'Indonesia'}\n\n` +
+        `ISI SUB-BAB SEKARANG (yang sudah ada — jangan diulang kalimatnya):\n${isiLama}\n\n` +
+        `Tulis HANYA paragraf TAMBAHAN baru (2-4 paragraf, 180-320 kata) yang memperdalam isi di atas: ` +
+        `dimensi/indikator tambahan, pandangan ahli lain, contoh penerapan, serta data atau angka bila relevan. ` +
+        `Jangan menyalin atau menyatakan ulang kalimat yang sudah ada, jangan membuat judul/penomoran baru. ` +
+        `Gaya akademis Indonesia, paragraf rapi tanpa markdown.` +
+        (refs.length ? `\nBoleh menarik referensi dari daftar ini dan sitasi dengan format (Penulis, Tahun):\n${refBlock(refs)}` : '')
+      );
+    } catch (e: any) {
+      if (!gratis && plan !== 'admin') await addCreditsRefund(req.userId!, 'perkaya', `refund:${id}:perkaya-gagal`);
+      return res.status(502).json({ error: e.message || 'Gagal memerdalam sub-bab. Kreditmu dikembalikan.' });
+    }
+
+    const isiBersih = String(tambahan || '').trim();
+    if (!isiBersih) {
+      if (!gratis && plan !== 'admin') await addCreditsRefund(req.userId!, 'perkaya', `refund:${id}:perkaya-kosong`);
+      return res.status(502).json({ error: 'Hasil kosong. Kreditmu dikembalikan.' });
+    }
+    const baru = gantiBagian(teks, re, `${isiLama}\n\n${isiBersih}`);
+    if (!baru) {
+      if (!gratis && plan !== 'admin') await addCreditsRefund(req.userId!, 'perkaya', `refund:${id}:perkaya-gagal`);
+      return res.status(502).json({ error: 'Gagal menyisipkan tambahan. Kreditmu dikembalikan.' });
+    }
+    await db().from('projects').update({ content: { ...pr.content, [bab]: baru }, updated_at: new Date().toISOString() }).eq('id', id);
+    const { credits } = await getBalance(req.userId!);
+    res.json({ ok: true, gratis, tambahan: isiBersih, content: baru, sisaKredit: credits });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// Hapus satu sub-bab dari naskah (gratis — persis seperti referensi)
+router.post('/:id/sub-bab/hapus', requireAuthOrKey, async (req: AuthRequest, res) => {
+  try {
+    const id = String(req.params.id);
+    const { bab, judul } = req.body || {};
+    if (!BAB_LIST.includes(bab)) return res.status(400).json({ error: 'bab tidak dikenal' });
+    if (!judul || String(judul).length > 160) return res.status(400).json({ error: 'judul sub-bab tidak valid' });
+    const { data: pr, error } = await db().from('projects').select('*').eq('id', id).eq('user_id', req.userId!).single();
+    if (error || !pr) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
+    const teks = String((pr.content || {})[bab] || '');
+    if (!teks) return res.status(400).json({ error: 'Bab ini belum digenerate.' });
+    const baru = hapusBagian(teks, reJudulSub(judul));
+    if (baru === null) return res.status(404).json({ error: `Sub-bab "${judul}" tidak ditemukan di naskah.` });
+    if (!baru.trim()) return res.status(400).json({ error: 'Tidak bisa menghapus sub-bab terakhir di bab ini. Hapus seluruh babnya lewat Generate Ulang.' });
+    await db().from('projects').update({ content: { ...pr.content, [bab]: baru }, updated_at: new Date().toISOString() }).eq('id', id);
+    res.json({ ok: true, content: baru });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
