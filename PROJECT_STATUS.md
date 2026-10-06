@@ -177,6 +177,7 @@ Perbandingan menyeluruh DOCX ekspor kita vs unduhan referensi (proyek paritas ya
 | Warning hipotesis Bab II | ✅ variant-aware: cek `outline.bab2.subs` cari `Hipotesis` (bukan `metode === 'Kuantitatif'`) |
 | Taskpane `word/taskpane.html` | ✅ fetch outline ditambah `?metode=&jenis=` dari proyek |
 | Backend `tsc` build | ✅ `npm run build` sukses, `node tes-prompt.cjs` lolos |
+| **Uji produksi e2e (Vercel + Railway, 6 Okt)** | ✅ setelah login ulang (sesi sempat expired): kartu "Referensi Terverifikasi" **hilang walau refs=20** (kondisi yang dulu memunculkannya); 16 sitasi `<button title="Lihat bukti kutipan">` / **0** `<a>`; klik → **modal "Bukti Kutipan"** tampil (header + Tutup, `Arsuni (2022)`, judul lengkap, `doi.org/…`, "Buka di tab Pustaka"); klik "Buka di tab Pustaka" → modal tertutup + tab Pustaka aktif + 20 entri `ref-*` tampil dan `ref-0` ter-scroll ke viewport; `/api/projects/meta/outline?metode=&jenis=` responsif di Railway (kuantitatif 7 sub, kualitatif-tesis 8 sub, pustaka tanpa lampiran) |
 
 **Deviasi terdokumentasi (keputusan, bukan bug):** (a) pustaka & hukum normatif tetap menampilkan BAB 6 chip sebagai fallback outline (kamus referensi tidak punya `lampiran` untuk kedua varian itu) — ekstra, bukan kurang; (b) overlay `f`/`y` tidak punya flag `skipKualitatif`/`onlyKualitatif` di teks chunk — efek serupa tercapai otomatis via cek `e.sub.some(s => s.key === a.key)`; (c) prompt referensi tetap 100% server-side mereka — tidak bisa & tidak perlu disalin.
 
