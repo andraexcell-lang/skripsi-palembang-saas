@@ -188,13 +188,16 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
           </div>
         );
       } else {
+        // `idx` ditangkap per-iterasi: `i` adalah variabel loop yang nilainya berubah
+        // setelah renderDoc selesai, sehingga penutup (closure) tak boleh memakai `i` langsung.
+        const idx = i;
         target.push(
           <p
-            key={i}
-            onClick={(e) => { if ((e.target as HTMLElement).closest('a')) return; mulaiEdit(i, lines[i]); }}
+            key={idx}
+            onClick={(e) => { if ((e.target as HTMLElement).closest('a')) return; mulaiEdit(idx, lines[idx]); }}
             className="cursor-text -mx-1 mb-3 rounded-md px-1 text-justify indent-8 leading-relaxed transition-colors hover:bg-brand-primary/5"
           >
-            {renderSitasi(cleanMd(t), `l${i}-`)}
+            {renderSitasi(cleanMd(t), `l${idx}-`)}
           </p>
         );
       }
