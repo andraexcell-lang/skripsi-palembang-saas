@@ -44,6 +44,7 @@ Terakhir diperbarui: 6 Okt 2026. Acuan fitur: https://mantrariset.com (akun uji:
 - Parser `pdf-parse` v2 (kelas `PDFParse`) — sebelumnya cabang PDF di `/from-file` & analisis berkas error `fn is not a function`
 - Export `.docx` ikut menyertakan BAB VI Lampiran
 - **Paritas kontrol sub-bab & rail studio** (lihat "Status verifikasi kontrol sub-bab" di bawah): rail desktop (header judul + badge SKRIPSI + progres "N dari 5 Bab / NN% selesai" + daftar bab/panel utilitas persis referensi), chip rail horizontal mobile `BAB N ✓ / Pustaka (N) / Revisi`, toolbar sticky dua grup, tombol hover **Perkaya** & **Hapus sub-bab** per sub-bab, footer **Generate Ulang Bab Ini** dengan `window.prompt` arahan → `window.confirm`, disclaimer teks persis + toggle **Lihat/Tutup**
+- **Paritas tampilan sempit (<1024px)**: baris progres `N/5 Bab — bar — NN%` di atas chip mobile, ikon lucide (inline SVG, tanpa dependency) pada tombol cepat/chip/toolbar/rail, app shell `md:` → `lg:` dengan header hamburger + drawer off-canvas (overlay + Escape)
 
 ## Status verifikasi studio (6 Okt 2026)
 
@@ -73,6 +74,22 @@ Dua klik UI terakhir benar-benar terdebit di ledger (`-5` @ 20:55:16 dan `-5` @ 
 | Toolbar sticky | ✅ grup mobile `Unggah Artikel · Prediksi Soal · Tinjau · PPT · Cek Sitasi` (lg:hidden) + grup grid `Unduh Word · RIS · Cek Plagiasi · select Nomor · Abstrak ID+EN · Sesuaikan Skripsi` + judul proyek (`xl:block`) |
 | Disclaimer | ✅ teks lengkap referensi (`⚠️ Disclaimer: Hasil ini adalah DRAFT AWAL … Permendiknas No. 17 Tahun 2010 … Selengkapnya`) + tombol `Lihat/Tutup` (`aria-expanded`/`aria-controls="disclaimer-studio"`, `sm:hidden`) |
 | Hover sub-bab | ✅ `opacity:0` → `0.95→1` saat hover (perangkat `hover:hover`), tombol `Perkaya` + ikon `Hapus sub-bab` |
+
+## Status verifikasi tampilan sempit <1024px (6 Okt 2026, produksi)
+
+Jendela 800px = varian `lg:hidden` (chip), bukan rail bab. Semua di bawah diverifikasi via DOM + screenshot di `skripsi-palembang-saas.vercel.app` (commit `29a7688`).
+
+| Item | Hasil (produksi) |
+| --- | --- |
+| Baris progres mobile | ✅ `2/5 Bab` + bar `role="progressbar" aria-valuenow=40 aria-label="Progres penulisan 40 persen"` + `40%`, di atas chip, pembungkus sticky `lg:hidden` — struktur sama dengan referensi |
+| Ikon tombol cepat | ✅ `Unggah Artikel`(upload) · `Prediksi Soal`(circle-help) · `Tinjau`(clipboard-list) · `PPT`(presentation) · `Cek Sitasi`(shield-check) — SVG lucide inline, tiap `<button>` punya `<svg>` |
+| Ikon chip rail | ✅ `Pustaka (21)` (book-open) + `Revisi` (flask-conical) |
+| Ikon toolbar & rail desktop | ✅ `Unduh Word`/`RIS` (download), `Cek Plagiasi` (shield), `Sesuaikan Skripsi` (sparkles); rail: Lab Revisi (flask), Tambah Sitasi (quote), Unggah Artikel (upload), Prediksi Soal (help), Tinjau Hasil (clipboard) |
+| Header sempit | ✅ `lg:hidden`, berisi logo + `CreditBadge` (angka asli dari `/api/credits/balance`) + tombol `aria-label="Menu"` `aria-expanded` |
+| Drawer sidebar | ✅ `<aside id="sidebar-utama">`: `display:none` saat tertutup → `flex` + `x=0` (lebar 256) saat dibuka → overlay gelap `z-30` muncul → tutup via overlay **dan** `Escape` (`aria-expanded` ikut `false`) |
+| Sidebar desktop | ✅ urutan CSS benar: `.lg\:flex` (offset 39285) **setelah** `.hidden` (12487) dalam `@media (min-width:64rem)` → di ≥1024px tampil statis (`lg:static`, `lg:translate-x-0`, `lg:flex`) |
+| Header disembunyikan di desktop | ✅ `.lg\:hidden` ada di bundle CSS |
+| Konsolidasi | ✅ `npx tsc --noEmit` lolos, `next build` lolos (32 halaman), console produksi **0 error** |
 
 ### Penyempurnaan yang ikut terbukti/butuh diketahui
 
