@@ -113,9 +113,28 @@ Fitur lama yang dulu tak berfungsi (klik paragraf tak membuka apa pun) kini iden
 | Klik tautan sitasi | ✅ klik `<a>` di dalam paragraf **tidak** membuka editor (guard `closest('a')`), tetap pindah ke kutipan |
 | Reset saat pindah tab | ✅ `useEffect([active])` menutup editor — indeks baris tab lama tak berlaku di tab baru |
 
+## Verifikasi E2E alur generate (6 Okt 2026, produksi)
+
+Uji dengan judul paritas mantrariset: *"Pengaruh Budaya Kerja Digital dan Work Overload terhadap Prestasi Kerja ASN melalui Motivasi Kerja di Sekretariat Daerah Kabupaten PALI"* — Tesis, Kuantitatif, Proposal, Dedi Busro/2541070212 (proyek `200b68f5-0d1d-4249-a3f1-b84309ed9b08`).
+
+| Tahap | Hasil |
+| --- | --- |
+| Halaman buat + kartu "Periksa dulu sebelum generate" | ✅ ringkas Judul/Jenis/Metode/Tahap/Gaya sitasi/Bahasa/Asal+Sumber referensi/Struktur bab; "Ya, generate" → proyek terbentuk (diuji 2×; 1× gagal `Failed to fetch` karena cold-start Railway ±12 dtk, retry sukses) |
+| `?mulai=1` → Bab I auto-generate | ✅ tanpa klik, streaming langsung jalan, selesai → 8 kredit (tesis) |
+| Dialog Bagan Kerangka Berpikir (Bab II) | ✅ teks persis referensi; "Biarkan AI menyusunkan" → **langsung generate** (diperbaiki di `2f7c32c` — sebelumnya malah membuka textarea); "Gambar sendiri bagannya" → textarea deskripsi kotak/panah |
+| Dialog metodologi (Bab III) | ✅ "Jumlah Populasi" + input angka, checkbox Lemeshow + Kepercayaan/Margin/Proporsi, select desain (20 opsi kuantitatif + "✨ Sarankan AI"), select alat + "Lainnya…", tombol "Lewati" / "✦ Generate Bab III Metodologi"; isi 285 + Asosiatif → naskah memuat 285, rumus Slovin, "penelitian asosiatif", SPSS, 3.6 Etika + 3.7 Jadwal (outline 7 sub) |
+| Lampiran auto setelah Bab III | ✅ **GRATIS** (kredit 40 → 16 = 3×8 saja), isi kisi-kisi + tabel markdown |
+| Label unduh | ✅ "Unduh Proposal" saat tahap proposal, "Unduh Word" saat full |
+| Ekspor DOCX | ✅ sampul TESIS (nama/NIM/tahun) → KATA PENGANTAR/LEMBAR/DAFTAR ISI (TOC `\h \o "1-2"` + `\a Gambar` + `\a Tabel`) → isi (Heading1/3/4, 1.7 & 3.6/3.7 ada) → DAFTAR PUSTAKA (hangus/indent) → LAMPIRAN; 3 section footer: sampul tanpa nomor, isi PAGE + disclaimer AI (Permendiktas No. 17/2010) |
+| Ekspor RIS | ✅ tombol RIS menghasilkan entri `TY/PY/TI/DO/ER` |
+
+**Bug diperbaiki selama uji:** (a) `loading` macet "Menggenerate..." setelah Bab I (cabang rantai `return` melewati `setLoading(false)`) — `2f7c32c`; (b) tombol AI pada dialog bagan tidak langsung generate — `2f7c32c`; (c) nama file ekspor hardcode `skripsi.docx` → ambil `Content-Disposition` jadi `proposal-tesis-*.docx`, RIS jadi `daftar-pustaka.ris`; (d) `CreditBadge` hanya fetch saat mount → kini refresh 30 dtk + event `sp:balance` — `d202c11`.
+
+**Selisih sadar (dicatat, bukan bug):** kanvas drag bagan referensi vs textarea deskripsi kita; kartu konfirmasi kita inline (referensi pakai pola serupa); backend cold-start ±12 dtk saat tidur.
+
 ## Biaya kredit
 
-bab 10 (termasuk Lampiran) · sesuaikan 5 · tinjau 5 · **perkaya 1 (GRATIS sekali per bab, disimpan di `identitas.perkaya`)** · parafrase 1 · ppt 8 · plagiasi 15 · artikel 15 · sidang 15/25 · spss 3 · smartpls 5 · kualitatif/dokumen/transkripsi 1 · brainstorming/kelayakan/novelty/cari/cek-sitasi/unggah-artikel/referensi/hapus-sub-bab gratis
+bab 10 (**tesis 8**) · **Lampiran GRATIS** (otomatis setelah Bab III) · sesuaikan 5 · tinjau 5 · **perkaya 1 (GRATIS sekali per bab, disimpan di `identitas.perkaya`)** · parafrase 1 · ppt 8 · plagiasi 15 · artikel 15 · sidang 15/25 · spss 3 · smartpls 5 · kualitatif/dokumen/transkripsi 1 · brainstorming/kelayakan/novelty/cari/cek-sitasi/unggah-artikel/referensi/hapus-sub-bab gratis
 
 ## Tunda (butuh owner)
 
@@ -127,5 +146,5 @@ bab 10 (termasuk Lampiran) · sesuaikan 5 · tinjau 5 · **perkaya 1 (GRATIS sek
 
 ## Akun uji (password minta ke owner)
 
-- tester.palembang@gmail.com (saldo **17**, ada proyek contoh; jatah GRATIS perkaya bab1 & bab2 sudah terpakai waktu uji)
+- tester.palembang@gmail.com (saldo **16** setelah uji E2E generate; proyek paritas `200b68f5-0d1d-4249-a3f1-b84309ed9b08` + proyek contoh lama; jatah GRATIS perkaya bab1 & bab2 sudah terpakai waktu uji)
 - andraexcell@gmail.com (admin, bypass kredit)
