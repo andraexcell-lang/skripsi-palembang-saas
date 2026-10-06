@@ -1,5 +1,5 @@
 'use client';
-import { use, useEffect, useState } from 'react';
+import { use, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { apiGet, apiPost, apiPatch, apiPostStream, apiUpload, apiDownloadPptx, isInsufficientCredits } from '@/lib/api';
 
@@ -13,6 +13,114 @@ const BABS = [
 ];
 
 const SUB_LAMPIRAN_BAWAAN = ['6.1 Kisi-Kisi Instrumen Penelitian', '6.2 Pernyataan Responden'];
+
+/* Opsi dialog metodologi Bab III — paritas mantrariset (chunk 5702/7997) */
+type OpsiDesain = { label: string; fokus: string };
+const DESAIN_KUANTITATIF: OpsiDesain[] = [
+  { label: 'Penelitian Deskriptif', fokus: 'Menggambarkan kondisi suatu variabel' },
+  { label: 'Penelitian Komparatif', fokus: 'Membandingkan dua kelompok atau lebih' },
+  { label: 'Penelitian Korelasional', fokus: 'Menguji hubungan antarvariabel' },
+  { label: 'Penelitian Asosiatif', fokus: 'Menguji hubungan antara dua variabel atau lebih' },
+  { label: 'Penelitian Eksplanatori', fokus: 'Menjelaskan pengaruh/hubungan sebab-akibat' },
+  { label: 'Penelitian Kausal', fokus: 'Menguji pengaruh variabel bebas terhadap terikat' },
+  { label: 'Penelitian Survei', fokus: 'Mengumpulkan data dari sampel via kuesioner' },
+  { label: 'Penelitian Eksperimen', fokus: 'Menguji pengaruh perlakuan tertentu' },
+  { label: 'Pra-Eksperimen', fokus: 'Eksperimen dengan kontrol terbatas' },
+  { label: 'Quasi Experiment', fokus: 'Eksperimen tanpa pengacakan penuh' },
+  { label: 'True Experiment', fokus: 'Eksperimen dengan kelompok kontrol & randomisasi' },
+  { label: 'Factorial Experiment', fokus: 'Menguji dua/lebih perlakuan sekaligus' },
+  { label: 'Ex Post Facto', fokus: 'Mengkaji sebab-akibat setelah peristiwa terjadi' },
+  { label: 'Penelitian Longitudinal', fokus: 'Mengamati objek dalam beberapa periode' },
+  { label: 'Penelitian Cross-Sectional', fokus: 'Mengumpulkan data pada satu waktu' },
+  { label: 'Penelitian Panel', fokus: 'Mengamati objek yang sama beberapa periode' },
+  { label: 'Penelitian Time Series', fokus: 'Mengamati data berurutan berdasarkan waktu' },
+  { label: 'Penelitian Sensus', fokus: 'Menggunakan seluruh anggota populasi' },
+  { label: 'Penelitian Evaluatif Kuantitatif', fokus: 'Menilai efektivitas program dari data angka' },
+  { label: 'Meta-Analisis', fokus: 'Menggabungkan hasil beberapa penelitian kuantitatif' },
+];
+const DESAIN_KUALITATIF: OpsiDesain[] = [
+  { label: 'Studi Kasus', fokus: 'Mengkaji satu kasus secara mendalam' },
+  { label: 'Fenomenologi', fokus: 'Menggali pengalaman hidup partisipan' },
+  { label: 'Etnografi', fokus: 'Mengkaji budaya & pola kehidupan suatu kelompok' },
+  { label: 'Grounded Theory', fokus: 'Menyusun teori berdasarkan data lapangan' },
+  { label: 'Penelitian Naratif', fokus: 'Mengkaji cerita/perjalanan hidup seseorang' },
+  { label: 'Biografi', fokus: 'Mengkaji riwayat hidup tokoh' },
+  { label: 'Autobiografi', fokus: 'Pengalaman hidup yang ditulis subjek sendiri' },
+  { label: 'Sejarah/Historis', fokus: 'Mengkaji peristiwa masa lalu dari sumber sejarah' },
+  { label: 'Analisis Isi Kualitatif', fokus: 'Mengkaji makna isi teks, media, atau dokumen' },
+  { label: 'Analisis Wacana', fokus: 'Mengkaji bahasa, ideologi, dan kekuasaan' },
+  { label: 'Hermeneutika', fokus: 'Menafsirkan makna teks secara mendalam' },
+  { label: 'Semiotika', fokus: 'Mengkaji tanda, simbol, dan makna' },
+  { label: 'Studi Dokumen', fokus: 'Mengkaji dokumen sebagai sumber data utama' },
+  { label: 'Penelitian Tindakan (PTK)', fokus: 'Memecahkan masalah praktis sambil bertindak' },
+  { label: 'Penelitian Evaluatif Kualitatif', fokus: 'Menilai pelaksanaan program secara mendalam' },
+  { label: 'Studi Kepustakaan Kualitatif', fokus: 'Menganalisis teori & hasil penelitian dari sumber tertulis' },
+];
+const DESAIN_CAMPURAN: OpsiDesain[] = [
+  { label: 'Sequential Explanatory', fokus: 'Kuantitatif dilanjutkan kualitatif' },
+  { label: 'Sequential Exploratory', fokus: 'Kualitatif dilanjutkan kuantitatif' },
+  { label: 'Sequential Transformative', fokus: 'Data berurutan berdasarkan perspektif tertentu' },
+  { label: 'Concurrent Triangulation', fokus: 'Data kuanti & kuali dikumpulkan bersamaan' },
+  { label: 'Concurrent Embedded', fokus: 'Satu metode utama, metode lain pendukung' },
+  { label: 'Concurrent Transformative', fokus: 'Data bersamaan dengan kerangka teori tertentu' },
+  { label: 'Convergent Parallel Design', fokus: 'Data kuanti & kuali dikumpulkan lalu digabung' },
+  { label: 'Embedded Design', fokus: 'Satu jenis data dimasukkan ke metode utama' },
+  { label: 'Explanatory Sequential Design', fokus: 'Hasil kuantitatif dijelaskan dengan kualitatif' },
+  { label: 'Exploratory Sequential Design', fokus: 'Temuan kualitatif diuji dengan kuantitatif' },
+  { label: 'Multiphase Design', fokus: 'Penelitian dalam beberapa tahap' },
+  { label: 'Intervention Design', fokus: 'Metode campuran untuk menguji intervensi' },
+  { label: 'Case Study Mixed Methods', fokus: 'Studi kasus dengan data kuanti & kuali' },
+  { label: 'Experimental Mixed Methods', fokus: 'Eksperimen dipadukan dengan data kualitatif' },
+  { label: 'Evaluation Mixed Methods', fokus: 'Evaluasi program dengan dua jenis data' },
+  { label: 'Participatory Mixed Methods', fokus: 'Melibatkan partisipasi subjek' },
+  { label: 'Transformative Mixed Methods', fokus: 'Menggunakan perspektif perubahan sosial' },
+  { label: 'Instrument Development Design', fokus: 'Data kualitatif untuk menyusun instrumen kuantitatif' },
+];
+const DESAIN_PUSTAKA: OpsiDesain[] = [
+  { label: 'Studi Kepustakaan Kualitatif', fokus: 'Menganalisis teori & hasil penelitian dari sumber tertulis' },
+  { label: 'Analisis Isi Kualitatif', fokus: 'Mengkaji makna isi teks, media, atau dokumen' },
+  { label: 'Hermeneutika', fokus: 'Menafsirkan makna teks secara mendalam' },
+  { label: 'Analisis Wacana', fokus: 'Mengkaji bahasa, ideologi, dan kekuasaan' },
+  { label: 'Semiotika', fokus: 'Mengkaji tanda, simbol, dan makna' },
+  { label: 'Sejarah/Historis', fokus: 'Mengkaji peristiwa masa lalu dari sumber sejarah' },
+  { label: 'Studi Dokumen', fokus: 'Mengkaji dokumen sebagai sumber data utama' },
+];
+const DESAIN_RND: OpsiDesain[] = [
+  { label: 'Borg and Gall', fokus: 'Pengembangan & pengujian produk pendidikan' },
+  { label: 'ADDIE', fokus: 'Analysis, Design, Development, Implementation, Evaluation' },
+  { label: '4D (Thiagarajan)', fokus: 'Define, Design, Develop, Disseminate' },
+  { label: 'Dick and Carey', fokus: 'Pengembangan sistem pembelajaran' },
+  { label: 'ASSURE', fokus: 'Pembelajaran berbasis karakteristik peserta didik' },
+  { label: 'Plomp', fokus: 'Pengembangan produk & pemecahan masalah pendidikan' },
+  { label: 'Reeves', fokus: 'Pengembangan berbasis penelitian desain' },
+  { label: 'Design-Based Research', fokus: 'Pengembangan solusi dalam kondisi nyata' },
+];
+const DESAIN_HUKUM: OpsiDesain[] = [
+  { label: 'Pendekatan Perundang-undangan (Statute Approach)', fokus: 'Menelaah peraturan yang terkait isu hukum' },
+  { label: 'Pendekatan Konseptual (Conceptual Approach)', fokus: 'Beranjak dari doktrin & pandangan ahli hukum' },
+  { label: 'Pendekatan Kasus (Case Approach)', fokus: 'Menelaah putusan pengadilan yang terkait' },
+  { label: 'Pendekatan Historis (Historical Approach)', fokus: 'Menelusuri latar belakang & perkembangan pengaturan' },
+  { label: 'Pendekatan Perbandingan (Comparative Approach)', fokus: 'Membandingkan dengan hukum negara/sistem lain' },
+];
+const ALAT_KUANTITATIF = [
+  { value: 'SPSS', label: 'SPSS' },
+  { value: 'SmartPLS', label: 'SmartPLS (PLS-SEM)' },
+  { value: 'AMOS', label: 'AMOS (CB-SEM)' },
+  { value: 'LISREL', label: 'LISREL (CB-SEM)' },
+  { value: 'EViews', label: 'EViews' },
+  { value: 'Stata', label: 'Stata' },
+  { value: 'R', label: 'R / RStudio' },
+  { value: 'JASP', label: 'JASP' },
+  { value: 'Minitab', label: 'Minitab' },
+  { value: 'Lainnya', label: 'Lainnya…' },
+];
+const ALAT_KUALITATIF = [
+  { value: 'Manual', label: 'Manual (koding manual)' },
+  { value: 'NVivo', label: 'NVivo' },
+  { value: 'ATLAS.ti', label: 'ATLAS.ti' },
+  { value: 'MAXQDA', label: 'MAXQDA' },
+  { value: 'Lainnya', label: 'Lainnya…' },
+];
 
 /* Ikon lucide (inline SVG) — paritas referensi, tanpa dependency tambahan */
 const LUCIDE: Record<string, string> = {
@@ -93,6 +201,23 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [editVal, setEditVal] = useState('');
   const [editSaving, setEditSaving] = useState(false);
+
+  // Alur berantai paritas referensi: dialog Bagan Kerangka Berpikir (Bab II),
+  // dialog metodologi (Bab III), lalu Lampiran gratis setelah Bab III
+  const chainRef = useRef(false);
+  const [dlgBagan, setDlgBagan] = useState(false);
+  const [baganPilihan, setBaganPilihan] = useState<'ai' | 'kirim' | null>(null);
+  const [baganTeks, setBaganTeks] = useState('');
+  const [dlgMetode, setDlgMetode] = useState(false);
+  const [mPop, setMPop] = useState('');
+  const [mTak, setMTak] = useState(false);
+  const [mKepercayaan, setMKepercayaan] = useState('95');
+  const [mMargin, setMMargin] = useState('0.05');
+  const [mProporsi, setMProporsi] = useState('0.5');
+  const [mDesain, setMDesain] = useState('');
+  const [mAlat, setMAlat] = useState('SPSS');
+  const [mAlatLain, setMAlatLain] = useState('');
+  const mulaiRef = useRef(false);
 
   const ROMAWI_HURUF = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
@@ -336,21 +461,97 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
   }
   useEffect(() => { load(); }, [id]);
 
-  async function generate(force = false, instruksi?: string) {
-    if (active === 'pustaka') return;
+  // Paritas referensi: proyek baru dengan ?mulai=1 → Bab I langsung digenerate,
+  // lalu rantai berhenti menunggu konfirmasi dialog Bagan (Bab II).
+  useEffect(() => {
+    if (!proyek || mulaiRef.current) return;
+    mulaiRef.current = true;
+    let mulai = false;
+    try { mulai = new URLSearchParams(window.location.search).get('mulai') === '1'; } catch { /* abaikan */ }
+    if (!mulai) return;
+    if (proyek.content?.bab1 || loading) return;
+    chainRef.current = true;
+    generate(false, undefined, undefined, 'bab1');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [proyek]);
+
+  async function generate(force = false, instruksi?: string, ekstra?: Record<string, unknown>, babAwal?: string) {
+    const bab = babAwal || active;
+    if (bab === 'pustaka') return;
+    // Jeda interaktif paritas referensi: dialog Bagan (Bab II) & metodologi (Bab III)
+    if (!force && !ekstra && !proyek?.content?.[bab]) {
+      if (bab === 'bab2') { setActive('bab2'); setDlgBagan(true); return; }
+      if (bab === 'bab3') { setActive('bab3'); setDlgMetode(true); return; }
+    }
     setLoading(true); setErr(''); setNeedsTopup(false); setPesan('');
+    if (!force && (bab === 'bab1' || bab === 'bab2' || bab === 'bab3') && !proyek?.content?.[bab]) chainRef.current = true;
     try {
-      const r = await apiPostStream(`/api/projects/${id}/generate-bab-stream${force ? '?ulang=1' : ''}`, { bab: active, studi: active === 'bab2' ? studi : undefined, force, instruksi: instruksi || undefined }, (t) => {
-        setProyek((p: any) => ({ ...p, content: { ...(p?.content || {}), [active]: t } }));
+      const r = await apiPostStream(`/api/projects/${id}/generate-bab-stream${force ? '?ulang=1' : ''}`, { bab, studi: bab === 'bab2' ? studi : undefined, force, instruksi: instruksi || undefined, ...ekstra }, (t) => {
+        setProyek((p: any) => ({ ...p, content: { ...(p?.content || {}), [bab]: t } }));
       });
       if (r.cached) setErr('');
       if (force && !r.cached) setPesan(`${metaBab?.label || 'Bab'} selesai ditulis ulang.`);
       await load();
+      // Alur berantai (paritas referensi): Bab I → dialog Bagan (Bab II) →
+      // dialog metodologi (Bab III) → Lampiran otomatis GRATIS
+      if (chainRef.current && !force && !r.cached) {
+        if (bab === 'bab1') { setActive('bab2'); setDlgBagan(true); return; }
+        if (bab === 'bab2') { setActive('bab3'); setDlgMetode(true); return; }
+        if (bab === 'bab3') {
+          setPesan('Bab III selesai. Lampiran dibuat otomatis — GRATIS.');
+          setActive('lampiran');
+          chainRef.current = false;
+          setLoading(false);
+          generate(false, undefined, { lewatRantai: true }, 'lampiran');
+          return;
+        }
+      }
+      chainRef.current = false;
     } catch (e: any) {
       setErr(e.message);
       if (isInsufficientCredits(e)) setNeedsTopup(true);
+      chainRef.current = false;
     }
     setLoading(false);
+  }
+
+  /* ---------------- Konfirmasi dialog Bagan Kerangka Berpikir (Bab II) ---------------- */
+  function konfirmasiBagan(pilihan: 'ai' | 'kirim') {
+    const ekstra: Record<string, unknown> = { bagan: pilihan };
+    if (pilihan === 'kirim') {
+      const teks = baganTeks.trim();
+      if (teks.length < 10) { setErr('Tulis dulu deskripsi baganmu (min. 10 karakter).'); return; }
+      ekstra.baganTeks = teks;
+    }
+    setErr('');
+    setDlgBagan(false);
+    setBaganPilihan(null);
+    setBaganTeks('');
+    generate(false, undefined, ekstra);
+  }
+
+  /* ---------------- Konfirmasi dialog metodologi (Bab III) ---------------- */
+  function konfirmasiMetodologi(lewati: boolean) {
+    const metode = String(proyek?.metode || '');
+    const kual = /kualitatif/i.test(metode);
+    const wajib = !kual && !/pustaka/i.test(metode);
+    if (!lewati && wajib && !mTak && !/^\d+$/.test(mPop.trim())) {
+      setErr('Jumlah populasi wajib diisi angka, atau centang "Populasi tidak diketahui".');
+      return;
+    }
+    setErr('');
+    setDlgMetode(false);
+    if (lewati) { generate(false, undefined, { lewatRantai: true }); return; }
+    generate(false, undefined, {
+      populasi: /^\d+$/.test(mPop.trim()) ? Number(mPop.trim()) : undefined,
+      takDiketahui: mTak,
+      desain: mDesain || undefined,
+      software: mAlat === 'Lainnya' ? mAlatLain.trim() || undefined : mAlat,
+      kepercayaan: mKepercayaan,
+      margin: mMargin,
+      proporsi: mProporsi,
+      lewatRantai: true,
+    });
   }
 
   /* ---------------- Generate Ulang Bab Ini (tulis ulang + arahan, alur referensi) ---------------- */
@@ -367,7 +568,7 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
       `Tulis ulang ${a}${r ? ' dengan arahanmu' : ' dari awal'}? ` +
       (r ? `Arahanmu: "${r.slice(0, 180)}${r.length > 180 ? '…' : ''}" ` : '') +
       `• Isi ${a} yang sekarang akan DITULIS ULANG, termasuk bagian yang sudah kamu sunting manual — suntinganmu akan hilang. ` +
-      `• Dikenakan 10 kredit. ` +
+      `• Dikenakan ${proyek?.jenis === 'tesis' ? 8 : 10} kredit. ` +
       (r
         ? `• Arahanmu diikuti sejauh tidak melanggar aturan penulisan (struktur, sitasi, panjang). `
         : `• Kalau kamu mengulang karena datanya salah, perbaiki dulu data di pengaturan proyek — kalau tidak, hasilnya akan sama saja. `) +
@@ -693,7 +894,7 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
             <p className="hidden truncate text-sm font-semibold text-text-secondary xl:block">{proyek?.judul}</p>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:ml-auto lg:flex lg:flex-wrap lg:items-center">
               {text && (
-                <button onClick={downloadWord} className={btnChip} title="Unduh naskah (.docx)"><Ico n="download" /> Unduh Word</button>
+                <button onClick={downloadWord} className={btnChip} title="Unduh naskah (.docx)"><Ico n="download" /> {proyek?.tahap === 'proposal' ? 'Unduh Proposal' : 'Unduh Word'}</button>
               )}
               <button onClick={downloadRis} className={btnChip} title="Unduh Daftar Pustaka (.ris) — siap impor ke Mendeley/Zotero"><Ico n="download" /> RIS</button>
               <Link href="/dashboard/plagiasi" className={`${btnChip} inline-flex`} title="Cek Plagiasi"><Ico n="shield" /> Cek Plagiasi</Link>
@@ -1017,6 +1218,157 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
             </div>
           </div>
         )}
+
+        {/* Dialog: Bagan Kerangka Berpikir (Bab II) — paritas referensi */}
+        {dlgBagan && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setDlgBagan(false)}>
+            <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-bg-surface p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+              <div className="mb-1 flex items-center justify-between">
+                <h3 className="font-bold text-lg text-text-primary">Bagan Kerangka Berpikir</h3>
+                <button onClick={() => setDlgBagan(false)} className="rounded p-1 text-text-muted hover:bg-bg-surface-hover">✕</button>
+              </div>
+              <p className="mb-4 text-sm text-text-secondary">
+                Bab II memuat bagan Kerangka Berpikir. Biarkan AI menyusunkannya dari judulmu, atau gambar sendiri kalau kerangkamu punya bentuk khusus.
+              </p>
+              {!baganPilihan ? (
+                <div className="space-y-3">
+                  <button onClick={() => setBaganPilihan('ai')} className="w-full rounded-lg border border-brand-primary bg-brand-primary/5 p-4 text-left transition-colors hover:bg-brand-primary/10">
+                    <p className="text-sm font-bold text-brand-primary">Biarkan AI menyusunkan</p>
+                    <p className="mt-1 text-xs text-text-secondary">Bagan dibuat otomatis dari judul &amp; variabel penelitianmu. Masih bisa diubah kapan saja lewat tombol <b>Ubah bagan</b> di Bab II.</p>
+                  </button>
+                  <button onClick={() => setBaganPilihan('kirim')} className="w-full rounded-lg border border-border-strong p-4 text-left transition-colors hover:bg-bg-surface-hover">
+                    <p className="text-sm font-bold text-text-primary">Gambar sendiri bagannya</p>
+                    <p className="mt-1 text-xs text-text-secondary">Tulis deskripsi kotak &amp; panah baganmu - mis. {"\u201cBudaya Kerja Digital \u2192 Motivasi Kerja \u2192 Prestasi Kerja, dengan Work Overload sebagai variabel antara\u201d"}.</p>
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <label className="text-sm font-semibold text-text-primary" htmlFor="bagan-teks">Deskripsi bagan (kotak &amp; panah)</label>
+                  <textarea
+                    id="bagan-teks"
+                    rows={6}
+                    value={baganTeks}
+                    onChange={(e) => setBaganTeks(e.target.value)}
+                    placeholder="Tulis urutan kotak dan panahnya — AI akan menggambar sesuai deskripsimu."
+                    className="w-full rounded-lg border border-border-strong bg-bg-surface p-3 text-sm text-text-primary"
+                  />
+                  <div className="flex justify-end gap-2">
+                    <button onClick={() => { setBaganPilihan(null); setBaganTeks(''); }} className="border border-border-strong rounded-lg px-4 py-2 text-sm font-bold text-text-primary">Kembali</button>
+                    <button onClick={() => konfirmasiBagan('kirim')} className="bg-brand-primary text-white rounded-lg px-5 py-2 text-sm font-bold">Kirim &amp; Generate</button>
+                  </div>
+                </div>
+              )}
+              {err && <p className="mt-2 text-sm text-accent-red">{err}</p>}
+            </div>
+          </div>
+        )}
+
+        {/* Dialog: Metodologi Penelitian (Bab III) — paritas referensi */}
+        {dlgMetode && (() => {
+          const metode = String(proyek?.metode || '');
+          const kual = /kualitatif/i.test(metode);
+          const pustakaOnly = /pustaka/i.test(metode);
+          const campuran = /mixed|campuran/i.test(metode);
+          const wajib = !kual && !pustakaOnly;
+          const judulJumlah = pustakaOnly ? 'Jumlah Sumber Utama' : kual ? 'Jumlah Informan' : 'Jumlah Populasi';
+          const tanyaJumlah = pustakaOnly
+            ? 'Berapa jumlah sumber utama (buku & artikel) yang akan dianalisis? Angka ini menjadi dasar pembahasan di Bab III.'
+            : kual
+              ? 'Berapa jumlah informan/partisipan penelitianmu? Angka ini menjadi dasar Subjek Penelitian di Bab III.'
+              : 'Berapa total populasi penelitianmu? Angka ini menjadi dasar populasi & perhitungan sampel (mis. Slovin) di Bab III.';
+          const desain = campuran ? DESAIN_CAMPURAN : kual ? DESAIN_KUALITATIF : pustakaOnly ? DESAIN_PUSTAKA : DESAIN_KUANTITATIF;
+          const alat = kual ? ALAT_KUALITATIF : ALAT_KUANTITATIF;
+          const lemeshow = wajib;
+          const disabled = wajib && !mTak && !/^\d+$/.test(mPop.trim());
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setDlgMetode(false)}>
+              <div className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-xl bg-bg-surface p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                <div className="mb-1 flex items-center gap-2">
+                  <h3 className="font-bold text-lg text-text-primary">{judulJumlah}</h3>
+                </div>
+                <p className="mb-4 text-sm text-text-secondary">{tanyaJumlah}</p>
+                <input
+                  type="number"
+                  min={1}
+                  value={mPop}
+                  onChange={(e) => setMPop(e.target.value)}
+                  placeholder={kual ? 'mis. 12' : pustakaOnly ? 'mis. 25' : 'mis. 285'}
+                  disabled={mTak}
+                  autoFocus
+                  className={`h-11 w-full rounded-lg border border-border-strong bg-bg-surface px-3 text-sm text-text-primary disabled:bg-bg-surface-hover disabled:text-text-muted ${lemeshow ? 'mb-2' : 'mb-4'}`}
+                />
+                {lemeshow && (
+                  <div className="mb-4 rounded-lg border border-border-strong bg-bg-surface-hover p-3">
+                    <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-text-primary">
+                      <input type="checkbox" checked={mTak} onChange={(e) => setMTak(e.target.checked)} />
+                      Populasi tidak diketahui — hitung sampel dengan rumus Lemeshow
+                    </label>
+                    {mTak && (
+                      <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+                        <label className="space-y-1">
+                          <span className="text-text-secondary">Kepercayaan</span>
+                          <select value={mKepercayaan} onChange={(e) => setMKepercayaan(e.target.value)} className="h-9 w-full rounded border border-border-strong bg-bg-surface px-2 text-text-primary">
+                            <option value="90">90%</option>
+                            <option value="95">95%</option>
+                            <option value="99">99%</option>
+                          </select>
+                        </label>
+                        <label className="space-y-1">
+                          <span className="text-text-secondary">Margin error</span>
+                          <select value={mMargin} onChange={(e) => setMMargin(e.target.value)} className="h-9 w-full rounded border border-border-strong bg-bg-surface px-2 text-text-primary">
+                            <option value="0.10">10%</option>
+                            <option value="0.05">5%</option>
+                          </select>
+                        </label>
+                        <label className="space-y-1">
+                          <span className="text-text-secondary">Proporsi</span>
+                          <select value={mProporsi} onChange={(e) => setMProporsi(e.target.value)} className="h-9 w-full rounded border border-border-strong bg-bg-surface px-2 text-text-primary">
+                            <option value="0.5">P 0,5</option>
+                            <option value="0.3">P 0,3</option>
+                            <option value="0.2">P 0,2</option>
+                            <option value="0.1">P 0,1</option>
+                          </select>
+                        </label>
+                      </div>
+                    )}
+                    <p className="mt-2 text-[11px] text-text-muted">95% + 10% + P 0,5 → 97 responden · 95% + 5% + P 0,5 → 385 responden. Perhitungan ditulis lengkap di Bab III.</p>
+                  </div>
+                )}
+                <div className="mb-4 space-y-1.5">
+                  <label className="text-sm font-semibold text-text-primary" htmlFor="desain-pen">Jenis / desain penelitian</label>
+                  <select id="desain-pen" value={mDesain} onChange={(e) => setMDesain(e.target.value)} className="h-11 w-full rounded-lg border border-border-strong bg-bg-surface px-3 text-sm text-text-primary">
+                    <option value="">✨ Sarankan AI (otomatis, sesuai judul)</option>
+                    {desain.map((o) => (
+                      <option key={o.label} value={o.label}>{o.label} — {o.fokus}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-text-muted">
+                    {mDesain
+                      ? 'Dipakai sebagai fokus metodologismu di Bab III.'
+                      : 'Biarkan "Sarankan AI" agar AI memilih yang paling sesuai, atau pilih sendiri.'}
+                  </p>
+                </div>
+                <div className="mb-5 space-y-1.5">
+                  <label className="text-sm font-semibold text-text-primary" htmlFor="alat-olah">{kual ? 'Alat bantu analisis' : 'Alat olah data'}</label>
+                  <select id="alat-olah" value={mAlat} onChange={(e) => setMAlat(e.target.value)} className="h-11 w-full rounded-lg border border-border-strong bg-bg-surface px-3 text-sm text-text-primary">
+                    {alat.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                  {mAlat === 'Lainnya' && (
+                    <input type="text" value={mAlatLain} onChange={(e) => setMAlatLain(e.target.value)} placeholder="Tulis nama perangkat lunak (mis. GeoGebra, Excel)" className="mt-2 h-11 w-full rounded-lg border border-border-strong bg-bg-surface px-3 text-sm text-text-primary" />
+                  )}
+                  <p className="text-xs text-text-muted">Bagian Teknik Analisis Data menyesuaikan alat ini.</p>
+                </div>
+                {err && <p className="mb-2 text-sm text-accent-red">{err}</p>}
+                <div className="flex flex-wrap justify-end gap-2">
+                  <button onClick={() => konfirmasiMetodologi(true)} className="border border-border-strong rounded-lg px-4 py-2.5 text-sm font-bold text-text-primary">Lewati</button>
+                  <button onClick={() => konfirmasiMetodologi(false)} disabled={disabled} className="inline-flex items-center gap-1.5 rounded-lg bg-brand-primary px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50">
+                    <Ico n="sparkles" /> Generate Bab III Metodologi
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {showDisc && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">

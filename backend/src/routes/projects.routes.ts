@@ -10,11 +10,16 @@ const router = Router();
 const db = () => supabaseAdmin || supabaseAnon;
 
 const BAB_LIST = ['bab1', 'bab2', 'bab3', 'bab4', 'bab5', 'lampiran'];
+// Biaya generate per bab: tesis 8 kredit/bab (paritas referensi), lainnya 10
+// Biaya per bab: tesis 8 kredit (paritas referensi), lainnya 10. Lampiran GRATIS
+// (referensi men-auto-generate Lampiran setelah Bab III tanpa memotong kredit).
+export const biayaBab = (p: any, bab?: string) =>
+  bab === 'lampiran' ? 0 : p?.jenis === 'tesis' ? 8 : FEATURE_COSTS.bab;
 
 export const OUTLINE: Record<string, { bab: string; subs: string[] }> = {
-  bab1: { bab: 'Bab I Pendahuluan', subs: ['1.1 Latar Belakang', '1.2 Identifikasi Masalah', '1.3 Rumusan Masalah', '1.4 Tujuan Penelitian', '1.5 Manfaat Penelitian', '1.6 Batasan Masalah', '1.7 Sistematika Penulisan'] },
+  bab1: { bab: 'Bab I Pendahuluan', subs: ['1.1 Latar Belakang', '1.2 Identifikasi Masalah', '1.3 Rumusan Masalah', '1.4 Tujuan Penelitian', '1.5 Manfaat Penelitian', '1.6 Batasan Masalah', '1.7 Kebaruan Penelitian', '1.8 Sistematika Penulisan'] },
   bab2: { bab: 'Bab II Tinjauan Pustaka', subs: ['2.1 Landasan Teori', '2.2 Kerangka Teori', '2.3 Hubungan Antar Variabel', '2.4 Penelitian Terdahulu', '2.5 Kerangka Berpikir', '2.6 Hipotesis'] },
-  bab3: { bab: 'Bab III Metodologi', subs: ['3.1 Jenis & Desain Penelitian', '3.2 Populasi & Sampel', '3.3 Definisi Operasional', '3.4 Teknik Pengumpulan Data', '3.5 Teknik Analisis Data', '3.6 Jadwal Penelitian'] },
+  bab3: { bab: 'Bab III Metodologi', subs: ['3.1 Jenis & Desain Penelitian', '3.2 Populasi & Sampel', '3.3 Definisi Operasional', '3.4 Teknik Pengumpulan Data', '3.5 Teknik Analisis Data', '3.6 Etika Penelitian', '3.7 Jadwal Penelitian'] },
   bab4: { bab: 'Bab IV Hasil Penelitian dan Pembahasan', subs: ['4.1 Gambaran Umum Objek Penelitian', '4.2 Hasil Penelitian', '4.3 Pembahasan', '4.4 Implikasi'] },
   bab5: { bab: 'Bab V Penutup', subs: ['5.1 Simpulan', '5.2 Saran'] },
   lampiran: { bab: 'Lampiran', subs: ['6.1 Kisi-Kisi Penelitian', '6.2 Pernyataan Kuesioner'] },
@@ -73,9 +78,12 @@ function refBlock(refs: { doi: string; title: string; authors: string; year: str
     refs.map((r, i) => `${i + 1}. ${r.authors} (${r.year}). ${r.title}. https://doi.org/${r.doi}`).join('\n');
 }
 
-const SITASI = `Aturan format: tulis TEKS BERSIH tanpa markdown (tanpa **, tanpa ---, tanpa preamble seperti "Berikut adalah..."). Langsung mulai dari judul bab. Wajib: (1) tulis dalam bahasa yang diminta, (2) bodynote sesuai gaya sitasi yang diminta di setiap sub-bab yang memakai teori/temuan, (3) akhiri dengan sub-bagian "Daftar Pustaka Bab Ini" berisi referensi di atas dalam format gaya sitasi yang diminta lengkap dengan link DOI yang bisa diklik. Jangan mengarang DOI/judul di luar daftar. Jangan tulis kata "Ilustratif": tabel fenomena hanya boleh berisi data nyata bersumber, bila tidak ada maka hapus tabelnya.`;
+const SITASI = `Aturan format: teks bersih — TANPA **bold**, tanpa ---, tanpa preamble seperti "Berikut adalah...". Satu-satunya markdown yang boleh adalah TABEL (baris | kolom | dengan baris pemisah |---|). Langsung mulai dari judul bab. Wajib: (1) tulis dalam bahasa yang diminta, (2) bodynote sesuai gaya sitasi yang diminta di setiap sub-bab yang memakai teori/temuan, (3) akhiri dengan sub-bagian "Daftar Pustaka Bab Ini" berisi referensi di atas dalam format gaya sitasi yang diminta lengkap dengan link DOI yang bisa diklik. Jangan mengarang DOI/judul di luar daftar. Jangan tulis kata "Ilustratif": tabel fenomena hanya boleh berisi data nyata bersumber, bila tidak ada maka hapus tabelnya.`;
 
-function babPrompt(bab: string, p: any, refs: { doi: string; title: string; authors: string; year: string; url: string }[]) {
+// Pilihan interaktif studio (paritas referensi): bagan Bab II + input metodologi Bab III
+type Ekstra = { bagan?: string; baganTeks?: string; populasi?: string; takDiketahui?: boolean; desain?: string; software?: string };
+
+function babPrompt(bab: string, p: any, refs: { doi: string; title: string; authors: string; year: string; url: string }[], ekstra: Ekstra = {}) {
   const style = p.citation_style || 'APA 7th';
   const lang = p.language || 'Indonesia';
   const base = `Judul: ${p.judul}\nJenis: ${p.jenis}\nMetode: ${p.metode}\nBahasa penulisan: ${lang}\nGaya sitasi: ${style}\n${p.initial_data ? `Data awal penelitian: ${String(p.initial_data).slice(0, 1000)}\n` : ''}`;
@@ -86,10 +94,24 @@ function babPrompt(bab: string, p: any, refs: { doi: string; title: string; auth
     ? `Sertakan tabel fenomena di latar belakang (angka/fakta + sumber + tahun). Bila topik sangat lokal tanpa data daring, tulis apa adanya tanpa mengarang.\n` : '';
   const wajib = Array.isArray(p.custom_sources) && p.custom_sources.length
     ? `SUMBER WAJIB (arahan pembimbing — harus disitasi bila relevan, masuk Daftar Pustaka):\n${p.custom_sources.map((s: any, i: number) => `${i + 1}. ${s.name}: ${String(s.text || '').slice(0, 800)}`).join('\n')}\n` : '';
+  // --- Struktur & tabel persis pola referensi ---
+  const struktur1 = `Susun BAB I dengan TEPAT 8 sub-bagian berurutan: 1.1 Latar Belakang (15–25 paragraf, tiap paragraf punya bodynote bila memakai angka/temuan), 1.2 Identifikasi Masalah (daftar bernomor), 1.3 Rumusan Masalah, 1.4 Tujuan Penelitian, 1.5 Manfaat Penelitian, 1.6 Batasan Masalah, 1.7 Kebaruan Penelitian (jelaskan gap/kebaruan dibanding penelitian terdahulu — teks + boleh tabel ringkas), 1.8 Sistematika Penulisan (daftar per bab).\n`;
+  const struktur2 = `Struktur wajib BAB II: 2.1 Landasan Teori — untuk SETIAP konstruk/variabel penelitian buat sub-sub BERTINGKAT 5 tingkat dengan pola: "2.1.1.1 Teori yang Mendasari <variabel>", "2.1.1.2 Pengertian <variabel>", "2.1.1.3 Dimensi <variabel>", "2.1.1.4 Indikator <variabel>", "2.1.1.5 Faktor-Faktor yang Memengaruhi <variabel>" (sub-sub berikutnya lanjut 2.1.2, 2.1.3, dst.); 2.2 Kerangka Teori; 2.3 Hubungan Antar Variabel (satu sub tiap pasangan hubungan termasuk mediasi); 2.4 Penelitian Terdahulu; 2.5 Kerangka Berpikir; 2.6 Hipotesis.\nWAJIB: sub 2.4 Penelitian Terdahulu berupa TABEL markdown persis kolom "No | Nama (Tahun) | Judul | Hasil | Gap" berisi 10 penelitian terdahulu nyata dari referensi yang relevan (1 paragraf penjelasan pendahulu tabel juga boleh).\n`;
+  const baganNote = ekstra.bagan === 'kirim' && ekstra.baganTeks
+    ? `2.5 Kerangka Berpikir: ikuti DESKRIPSI bagan dari penulis berikut, jadikan urutan kotak/panahnya (sajikan sebagai blok teks terstruktur pakai karakter → dan baris per kotak):\n${String(ekstra.baganTeks).slice(0, 800)}\n`
+    : `2.5 Kerangka Berpikir: akhiri sub-bagian ini dengan BAGAN TEKS terstruktur (baris per kotak, hubungkan dengan →, sebutkan X1, X2, Z, Y sesuai variabel judul) setelah paragraf penjelasan, lalu kalimat "Kerangka berpikir tersebut disajikan pada gambar berikut." sebelum blok bagan.\n`;
+  const populasiNote = (() => {
+    if (ekstra.takDiketahui) return `Populasi: TOTAL populasi tidak diketahui — gunakan rumus Lemeshow untuk menentukan besar sampel.\n`;
+    if (ekstra.populasi) return `Populasi: ${ekstra.populasi} (besaran sesuai satuan objek pada judul) — hitung besar sampel dengan rumus Slovin, tingkat kesalahan (e) 5%.\n`;
+    return '';
+  })();
+  const desainNote = ekstra.desain ? `Jenis/desain penelitian: ${ekstra.desain} — sebutkan dan kembangkan alasannya di 3.1.\n` : '';
+  const softwareNote = ekstra.software ? `Software analisis: ${ekstra.software} — sebutkan pada 3.5 Teknik Analisis Data.\n` : '';
+  const struktur3 = `Struktur wajib BAB III: 3.1 Jenis & Desain Penelitian, 3.2 Populasi & Sampel, 3.3 Definisi Operasional, 3.4 Teknik Pengumpulan Data (sub 3.4.1 Kuesioner dengan sub per variabel), 3.5 Teknik Analisis Data (3.5.1 Uji Validitas, 3.5.2 Uji Reliabilitas, 3.5.3 Uji Asumsi Klasik — 3.5.3.1 Normalitas, 3.5.3.2 Multikolinearitas, 3.5.3.3 Heteroskedastisitas, 3.5.4 Analisis Regresi Linear Berganda — 3.5.4.1 Uji t, 3.5.4.2 Uji F, 3.5.4.3 Koefisien Determinasi R², 3.5.5 Uji Mediasi (Path Analysis)), 3.6 Etika Penelitian, 3.7 Jadwal Penelitian.\nWAJIB TABEL: (a) sub 3.3 Definisi Operasional berupa TABEL markdown persis 7 kolom "Variabel | Definisi Konseptual | Definisi Operasional | Dimensi | Indikator | Skala Pengukuran | Sumber" (satu baris per variabel); (b) sub 3.7 Jadwal Penelitian berupa TABEL GANTT bulanan — kolom "No | Kegiatan | Januari 2026 | Februari 2026 | Maret 2026 | April 2026 | Mei 2026 | Juni 2026" dengan tanda X pada bulan berjalan (sesuaikan tahun dengan tahun sekarang).\n`;
   const map: Record<string, string> = {
-    bab1: `Susun BAB I PENDAHULUAN (latar belakang, rumusan masalah, tujuan, manfaat, batasan) untuk skripsi berikut.\n${base}${ref}\n${wajib}${fenomena}Tulis akademik formal Indonesia, siap tempel ke Word.\n${scopeNote}${outlineNote}${SITASI}`,
-    bab2: `Susun BAB II TINJAUAN PUSTAKA (teori utama, penelitian terdahulu, kerangka berpikir, hipotesis bila kuantitatif).\n${base}${ref}\n${scopeNote}${outlineNote}${SITASI}`,
-    bab3: `Susun BAB III METODE PENELITIAN (pendekatan, populasi/sampel, variabel & indikator, teknik pengumpulan data, uji/analisis).\n${base}${ref}\nIkuti kaidah metodologi standar Indonesia.\n${scopeNote}${outlineNote}${SITASI}`,
+    bab1: `${struktur1}Judul: karya berikut.\n${base}${ref}\n${wajib}${fenomena}Tulis akademik formal Indonesia, siap tempel ke Word.\n${scopeNote}${outlineNote}${SITASI}`,
+    bab2: `${struktur2}${baganNote}Judul: karya berikut.\n${base}${ref}\n${scopeNote}${outlineNote}${SITASI}`,
+    bab3: `${struktur3}${populasiNote}${desainNote}${softwareNote}Judul: karya berikut.\n${base}${ref}\nIkuti kaidah metodologi standar Indonesia.\n${scopeNote}${outlineNote}${SITASI}`,
     bab4: `Susun BAB IV HASIL DAN PEMBAHASAN (deskripsi data, hasil analisis, pembahasan dikaitkan teori Bab II).\n${base}${ref}\nGunakan tabel Markdown bila perlu.\n${scopeNote}${outlineNote}${SITASI}`,
     bab5: `Susun BAB V PENUTUP (kesimpulan menjawab rumusan masalah + saran praktis/metodologis).\n${base}${ref}\nRingkas dan tegas.\n${scopeNote}${outlineNote}${SITASI}`,
     lampiran: `Susun LAMPIRAN skripsi (bab penunjang setelah Bab V) berisi instrumen penelitian.\n${base}${ref}\nIsinya diturunkan dari kajian pustaka dan metode artikelmu: ${p.metode === 'Kualitatif'
@@ -138,8 +160,9 @@ router.post('/:id/generate-bab', requireAuthOrKey, async (req: AuthRequest, res)
     if (!BAB_LIST.includes(bab)) return res.status(400).json({ error: `bab harus salah satu: ${BAB_LIST.join(', ')}` });
     const { data: p, error } = await db().from('projects').select('*').eq('id', id).eq('user_id', req.userId!).single();
     if (error || !p) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
+    const cost = biayaBab(p, bab);
     try {
-      await consumeCredits(req.userId!, 'bab', `proyek:${id}:${bab}`);
+      await consumeCredits(req.userId!, 'bab', `proyek:${id}:${bab}`, cost);
     } catch (e: any) {
       if (e.code === 'INSUFFICIENT_CREDITS') return res.status(402).json({ error: e.message, remaining: e.remaining });
       throw e;
@@ -150,7 +173,7 @@ router.post('/:id/generate-bab', requireAuthOrKey, async (req: AuthRequest, res)
       text = await generateContent(babPrompt(bab, p, refs));
     } catch (e: any) {
       const { addCredits } = await import('../services/credits.service');
-      await addCredits(req.userId!, 10, `refund:${id}:${bab}-gagal`).catch(() => {});
+      await addCredits(req.userId!, cost, `refund:${id}:${bab}-gagal`).catch(() => {});
       throw e;
     }
     const content = { ...(p.content || {}), [bab]: text };
@@ -163,13 +186,23 @@ router.post('/:id/generate-bab', requireAuthOrKey, async (req: AuthRequest, res)
 router.post('/:id/generate-bab-stream', requireAuthOrKey, async (req: AuthRequest, res) => {
   try {
     const id = String(req.params.id);
-    const { bab, studi, force, instruksi } = req.body || {};
+    const { bab, studi, force, instruksi, bagan, baganTeks, populasi, takDiketahui, desain, software } = req.body || {};
     if (!BAB_LIST.includes(bab)) return res.status(400).json({ error: `bab harus salah satu: ${BAB_LIST.join(', ')}` });
     const { data: p, error } = await db().from('projects').select('*').eq('id', id).eq('user_id', req.userId!).single();
     if (error || !p) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
     const extraStudi = bab === 'bab2' && studi ? ` Bahas ${Math.min(Math.max(parseInt(studi, 10) || 10, 5), 50)} studi terdahulu, 1 paragraf per studi.` : '';
     // Arahan penulis untuk "Generate Ulang Bab Ini" (opsional, maks 1500 karakter)
     const extraArahan = instruksi ? ` Arahan penulis (ikuti sejauh tidak melanggar aturan penulisan — struktur, sitasi, panjang): ${String(instruksi).slice(0, 1500)}` : '';
+    // Pilihan interaktif (paritas referensi): bagan Bab II + input metodologi Bab III
+    const ekstra = {
+      bagan: bagan === 'kirim' ? 'kirim' : bagan === 'ai' ? 'ai' : undefined,
+      baganTeks: baganTeks ? String(baganTeks).slice(0, 800) : undefined,
+      populasi: populasi ? String(populasi).slice(0, 40) : undefined,
+      takDiketahui: !!takDiketahui,
+      desain: desain ? String(desain).slice(0, 80) : undefined,
+      software: software ? String(software).slice(0, 40) : undefined,
+    };
+    const cost = biayaBab(p, bab);
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
@@ -181,7 +214,7 @@ router.post('/:id/generate-bab-stream', requireAuthOrKey, async (req: AuthReques
       return res.end();
     }
     try {
-      const r = await consumeCredits(req.userId!, 'bab', `proyek:${id}:${bab}`);
+      const r = await consumeCredits(req.userId!, 'bab', `proyek:${id}:${bab}`, cost);
       send('cost', { cost: r.cost });
     } catch (e: any) {
       if (e.code === 'INSUFFICIENT_CREDITS') { send('error', { error: e.message }); return res.end(); }
@@ -190,19 +223,19 @@ router.post('/:id/generate-bab-stream', requireAuthOrKey, async (req: AuthReques
     const refs = await crossrefTop(p.judul, 6, p.min_year);
     let full = '';
     try {
-      for await (const t of generateContentStream(babPrompt(bab, p, refs) + extraStudi + extraArahan)) {
+      for await (const t of generateContentStream(babPrompt(bab, p, refs, ekstra) + extraStudi + extraArahan)) {
         full += t;
         send('chunk', { t });
       }
     } catch (e: any) {
       const { addCredits } = await import('../services/credits.service');
-      await addCredits(req.userId!, 10, `refund:${id}:${bab}-stream-gagal`).catch(() => {});
+      await addCredits(req.userId!, cost, `refund:${id}:${bab}-stream-gagal`).catch(() => {});
       send('error', { error: e.message || 'Gagal generate' });
       return res.end();
     }
     const content = { ...(p.content || {}), [bab]: full };
     await db().from('projects').update({ content, updated_at: new Date().toISOString() }).eq('id', id);
-    send('done', { cost: 10 });
+    send('done', { cost });
     res.end();
   } catch (e: any) {
     try { res.write(`event: error\ndata: ${JSON.stringify({ error: e.message })}\n\n`); res.end(); } catch { /* abaikan */ }
@@ -403,7 +436,7 @@ router.post('/:id/generate-subbab', requireAuthOrKey, async (req: AuthRequest, r
     let cost = 0;
     if (force || ((!paid || !paid.length) && !(p.content || {})[bab])) {
       try {
-        const r = await consumeCredits(req.userId!, 'bab', `proyek:${id}:${bab}`);
+        const r = await consumeCredits(req.userId!, 'bab', `proyek:${id}:${bab}`, biayaBab(p, bab));
         cost = r.cost;
       } catch (e: any) {
         if (e.code === 'INSUFFICIENT_CREDITS') return res.status(402).json({ error: e.message, remaining: e.remaining });
@@ -444,7 +477,7 @@ router.post('/:id/generate-subbab-stream', requireAuthOrKey, async (req: AuthReq
     let cost = 0;
     if ((!paid || !paid.length) && !(p.content || {})[bab]) {
       try {
-        const r = await consumeCredits(req.userId!, 'bab', `proyek:${id}:${bab}`);
+        const r = await consumeCredits(req.userId!, 'bab', `proyek:${id}:${bab}`, biayaBab(p, bab));
         cost = r.cost;
       } catch (e: any) {
         if (e.code === 'INSUFFICIENT_CREDITS') { send('error', { error: e.message }); return res.end(); }
@@ -594,72 +627,325 @@ router.post('/:id/generate-karil', requireAuthOrKey, async (req: AuthRequest, re
 });
 
 // Export .docx asli: sampul + semua bab + hyperlink DOI + footer romawi/arab + TOC
+// ---------------------------------------------------------------------------
+// Ekspor DOCX — paritas spesifikasi mantrariset (lihat hasil-analisis-mantrariset):
+// sampul TESIS → front matter 9 H1 (roman) → isi BAB (decimal) + Daftar Pustaka +
+// Lampiran · heading biru 2E74B5/1F4D78 · body rata kiri-kanan line 360 firstLine 720 ·
+// pustaka hanging 720 · TOC \o 1-2 + \a Gambar/Tabel · footer PAGE + disclaimer AI.
+// ---------------------------------------------------------------------------
 router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) => {
   try {
     const id = String(req.params.id);
     const { data: pr, error } = await db().from('projects').select('*').eq('id', id).eq('user_id', req.userId!).single();
     if (error || !pr) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
-    const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, PageNumber, NumberFormat, Footer, TableOfContents, ExternalHyperlink } = await import('docx');
+    const docx: any = await import('docx');
+    const {
+      Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, PageNumber,
+      Footer, TableOfContents, ExternalHyperlink, Table, TableRow, TableCell,
+      WidthType, BorderStyle, LevelFormat, NumberFormat, SectionType,
+    } = docx;
+
     const ident = pr.identitas || {};
-    const C: any[] = [];
-    const center = (text: string, bold = false, size = 24) =>
-      new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text, font: 'Times New Roman', size, bold })] });
-    const just = (text: string) =>
-      new Paragraph({ alignment: AlignmentType.JUSTIFIED, spacing: { line: 360 }, indent: { firstLine: 567 }, children: [new TextRun({ text, font: 'Times New Roman', size: 24 })] });
-    // Sampul
-    C.push(center(String(pr.judul || '').toUpperCase(), true, 28));
-    if (ident.nama) C.push(center(ident.nama, true));
-    if (ident.nim) C.push(center(`NIM: ${ident.nim}`));
-    if (ident.kampus || ident.jurusan || ident.fakultas) C.push(center([ident.kampus, ident.jurusan, ident.fakultas].filter(Boolean).join(' — '), true));
-    const mdBody = (md: string) => {
-      for (const raw of String(md || '').split('\n')) {
-        const line = raw.trim();
-        if (!line) continue;
-        const h = line.match(/^(#{1,3})\s+(.*)/);
-        if (h) {
-          C.push(new Paragraph({ heading: h[1].length === 1 ? HeadingLevel.HEADING_1 : HeadingLevel.HEADING_2, alignment: h[1].length === 1 ? AlignmentType.CENTER : AlignmentType.LEFT, children: [new TextRun({ text: h[2].replace(/\*\*/g, ''), font: 'Times New Roman', size: 28, bold: true })] }));
-          continue;
-        }
-        const parts = line.split(/(https?:\/\/doi\.org\/[^\s)]+|https?:\/\/[^\s)]+)/g);
-        const runs: any[] = [];
-        parts.forEach((seg, i) => {
-          if (/^https?:\/\//.test(seg)) runs.push(new ExternalHyperlink({ children: [new TextRun({ text: seg, style: 'Hyperlink', font: 'Times New Roman', size: 24 })], link: seg }));
-          else runs.push(new TextRun({ text: seg.replace(/\*\*/g, ''), font: 'Times New Roman', size: 24 }));
-        });
-        const mSub = line.match(/^(\d+\.\d+(?:\.\d+)?)\s+(\S.*)/);
-        if (mSub && line.length < 120) {
-          C.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: line.replace(/\*\*/g, ''), font: 'Times New Roman', size: 24, bold: true })] }));
+    const judul = String(pr.judul || '');
+    const jenisSelected = pr.jenis === 'tesis' ? 'Tesis' : pr.jenis === 'disertasi' ? 'Disertasi' : 'Skripsi';
+    const tahun = new Date().getFullYear();
+    const nama = String(ident.nama || '');
+    const nim = String(ident.nim || '');
+    const jurusan = String(ident.jurusan || '');
+    const fakultas = String(ident.fakultas || '');
+    const kampus = String(ident.kampus || '');
+    const DISCLAIMER = 'Draft dihasilkan dengan bantuan AI — wajib diverifikasi, dikritisi, dan direvisi oleh penulis. Tanggung jawab akademik & orisinalitas ada pada penulis (Permendiknas No. 17/2010).';
+    const CATATAN_FIELD = 'Daftar ini belum dimutakhirkan Word. Klik kanan di baris ini → Update Field → Update entire table. (Word lama: klik daftar ini lalu tekan F9.)';
+
+    const C: any[] = []; // penampung sementara per bagian
+    const TNR = 'Times New Roman';
+    const center = (text: string, opts: any = {}) =>
+      new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text, font: TNR, size: 24, ...opts })] });
+
+    const HEADING_LV: any = { 1: HeadingLevel.HEADING_1, 2: HeadingLevel.HEADING_2, 3: HeadingLevel.HEADING_3, 4: HeadingLevel.HEADING_4 };
+    const H = (level: number, text: string) => {
+      const lvl = Math.min(Math.max(level, 1), 4);
+      C.push(new Paragraph({
+        heading: HEADING_LV[lvl],
+        pageBreakBefore: lvl === 1,
+        alignment: lvl === 1 ? AlignmentType.CENTER : AlignmentType.LEFT,
+        children: [new TextRun({
+          text, font: TNR, bold: true,
+          size: lvl === 1 ? 32 : lvl === 2 ? 26 : 24,
+          color: lvl === 3 ? '1F4D78' : '2E74B5',
+        })],
+      }));
+    };
+
+    // Paragraf biasa (rata kanan-kiri, spasi 1.5, indent 1 cm) + hyperlink URL/DOI
+    const P = (text: string, opts: any = {}) => {
+      const parts = String(text).split(/(https?:\/\/[^\s)<]+|(?:https?:\/\/)?doi\.org\/[^\s)<]+)/g);
+      const runs: any[] = [];
+      for (const seg of parts) {
+        if (!seg) continue;
+        if (/^(https?:\/\/|doi\.org\/)/.test(seg)) {
+          const link = /^https?:\/\//.test(seg) ? seg : `https://${seg}`;
+          runs.push(new ExternalHyperlink({ children: [new TextRun({ text: seg, style: 'Hyperlink', font: TNR, size: 24 })], link }));
         } else {
-          C.push(new Paragraph({ alignment: AlignmentType.JUSTIFIED, spacing: { line: 360 }, indent: { firstLine: 567 }, children: runs }));
+          runs.push(new TextRun({ text: seg.replace(/\*\*/g, ''), font: TNR, size: 24 }));
         }
       }
+      C.push(new Paragraph({
+        alignment: AlignmentType.JUSTIFIED,
+        spacing: { line: 360 },
+        indent: opts.hang ? { left: 720, hanging: 720 } : { firstLine: 720 },
+        children: runs,
+      }));
     };
-    if (pr.content?.abstrak) {
-      C.push(new Paragraph({ heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'ABSTRAK', font: 'Times New Roman', size: 28, bold: true })] }));
-      mdBody(pr.content.abstrak);
+
+    const cell = (text: string, header = false) =>
+      new TableCell({
+        margins: { top: 40, bottom: 40, left: 80, right: 80 },
+        children: [new Paragraph({ children: [new TextRun({ text: String(text || ''), font: TNR, size: 22, bold: header })] })],
+      });
+    const tblBorders = {
+      top: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+      bottom: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+      left: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+      right: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+      insideHorizontal: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+      insideVertical: { style: BorderStyle.SINGLE, size: 4, color: '000000' },
+    };
+
+    // Parser markdown: heading (BAB / 1.1 / 1.1.1 / #), tabel, daftar, paragraf
+    const mdBody = (md: string) => {
+      const lines = String(md || '').split('\n');
+      let i = 0;
+      while (i < lines.length) {
+        const line = lines[i].trim();
+        if (!line || /^-{3,}$/.test(line)) { i++; continue; }
+
+        // Tabel markdown
+        if (/^\|.+\|$/.test(line) && i + 1 < lines.length && /^\|[\s:\-|]+\|$/.test(lines[i + 1].trim())) {
+          const cols = line.split('|').map((c) => c.trim()).filter(Boolean);
+          const rows: string[][] = [];
+          i += 2;
+          while (i < lines.length && /^\|.+\|$/.test(lines[i].trim())) {
+            rows.push(lines[i].trim().split('|').map((c) => c.trim()).filter(Boolean));
+            i++;
+          }
+          C.push(new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            borders: tblBorders,
+            rows: [
+              new TableRow({ tableHeader: true, children: cols.map((c) => cell(c, true)) }),
+              ...rows.map((r) => new TableRow({ children: cols.map((_, k) => cell(r[k] || '')) })),
+            ],
+          }));
+          C.push(new Paragraph({ spacing: { after: 60 }, children: [] }));
+          continue;
+        }
+
+        // Heading markdown "#"
+        const mh = line.match(/^(#{1,6})\s+(.*)$/);
+        if (mh) { H(mh[1].length, mh[2].replace(/\*\*/g, '').trim()); i++; continue; }
+
+        // Judul bab / front-back matter
+        if (/^(BAB\s+[IVX]+|DAFTAR PUSTAKA|LAMPIRAN)\b/i.test(line) && line.length < 120) {
+          H(1, line.replace(/\*\*/g, ''));
+          i++; continue;
+        }
+        if (/^daftar pustaka/i.test(line) && line.length < 80) { H(3, line); i++; continue; }
+
+        // Sub-bab bernomor: 1.1 → H2, 1.1.1 → H3, 1.1.1.1 → H4
+        const mn = line.match(/^(\d+(?:\.\d+)+)\.?\s+(\S.*)$/);
+        if (mn && line.length < 130) {
+          const level = Math.min(mn[1].split('.').length + 1, 4);
+          H(level, line.replace(/\*\*/g, ''));
+          i++; continue;
+        }
+
+        // Daftar bullet / bernomor → ListParagraph
+        if (/^[-*•]\s+/.test(line) || /^\d+\.\s+/.test(line)) {
+          const num = /^\d+\.\s+/.test(line);
+          C.push(new Paragraph({
+            numbering: { reference: num ? 'daftar-num' : 'daftar-bullet', level: 0 },
+            alignment: AlignmentType.JUSTIFIED,
+            spacing: { line: 360 },
+            children: [new TextRun({ text: line.replace(/^([-*•]|\d+\.)\s+/, '').replace(/\*\*/g, ''), font: TNR, size: 24 })],
+          }));
+          i++; continue;
+        }
+
+        P(line);
+        i++;
+      }
+    };
+
+    const paras = (text: string) => String(text || '').split('\n').map((l) => l.trim()).filter(Boolean).forEach((l) => P(l));
+
+    /* ---------------- 1. Sampul ---------------- */
+    const cover: any[] = [
+      center(jenisSelected.toUpperCase(), { bold: true, size: 28 }),
+      center(''),
+      center(judul.toUpperCase(), { bold: true, size: 28 }),
+      center(''),
+      center('Diajukan untuk memenuhi salah satu syarat memperoleh gelar akademik'),
+      center(''),
+      center('Disusun oleh:'),
+      center(nama, { bold: true }),
+      center(nim ? `NIM. ${nim}` : ''),
+      center(''),
+      center(jurusan.toUpperCase(), { bold: true }),
+      center(fakultas.toUpperCase(), { bold: true }),
+      center(kampus.toUpperCase(), { bold: true }),
+      center(String(tahun), { bold: true }),
+    ];
+
+    /* ---------------- 2. Front matter (9 H1, penomoran romawi) ---------------- */
+    const front: any[] = [];
+    const pushFront = () => { front.push(...C.splice(0, C.length)); };
+
+    H(1, 'KATA PENGANTAR');
+    paras(
+      `Puji dan syukur penulis panjatkan ke hadirat Tuhan Yang Maha Esa atas berkat dan rahmat-Nya sehingga penulis dapat menyelesaikan ${jenisSelected.toLowerCase()} yang berjudul "${judul}".\n\n` +
+      `${jenisSelected} ini disusun untuk memenuhi salah satu syarat memperoleh gelar pada ${jurusan || '-'} ${kampus}.\n\n` +
+      'Penulis menyadari bahwa penyusunan karya ini tidak lepas dari bantuan berbagai pihak. Oleh karena itu, penulis mengucapkan terima kasih kepada semua pihak yang telah memberikan bimbingan, dukungan, dan doa.\n\n' +
+      'Penulis menyadari masih terdapat kekurangan dalam karya ini. Kritik dan saran yang membangun sangat penulis harapkan demi perbaikan di masa mendatang. Semoga karya ini bermanfaat.\n\n' +
+      `(Kota), ${tahun}\nPenulis,\n${nama}`
+    );
+    pushFront();
+
+    H(1, 'LEMBAR PERSETUJUAN');
+    paras(
+      `${jenisSelected} dengan judul:\n"${judul}"\n` +
+      `yang disusun oleh ${nama}, NIM ${nim}, Program Studi ${jurusan}, telah diperiksa dan disetujui oleh dosen pembimbing untuk diujikan dalam sidang ${jenisSelected.toLowerCase()}.\n\n` +
+      'Menyetujui,\nDosen Pembimbing\n(........................................)'
+    );
+    pushFront();
+
+    H(1, 'LEMBAR PENGESAHAN');
+    paras(
+      `${jenisSelected} dengan judul:\n"${judul}"\n` +
+      `yang disusun oleh ${nama}, NIM ${nim}, Program Studi ${jurusan}, telah dipertahankan di depan dewan penguji dan disahkan sebagai salah satu syarat memperoleh gelar pada ${jurusan} ${kampus}.\n\n` +
+      'Mengesahkan,\nDosen Pembimbing\n(........................................)\n\n' +
+      'Mengetahui,\n' +
+      `Ketua ${jurusan}\n(........................................)`
+    );
+    pushFront();
+
+    H(1, 'LEMBAR PERNYATAAN KEASLIAN');
+    paras(
+      'Yang bertanda tangan di bawah ini:\n' +
+      `Nama : ${nama}\nNIM : ${nim}\nProgram Studi : ${jurusan}\n` +
+      `Dengan ini menyatakan bahwa ${jenisSelected.toLowerCase()} yang berjudul "${judul}" adalah benar-benar hasil karya sendiri dan bukan merupakan plagiat dari karya orang lain. Apabila di kemudian hari terbukti sebaliknya, penulis bersedia menerima sanksi sesuai ketentuan yang berlaku.\n\n` +
+      `(Kota), ${tahun}\nYang menyatakan,\n${nama}\n${nim}`
+    );
+    pushFront();
+
+    H(1, 'ABSTRAK');
+    if (pr.content?.abstrak) paras(pr.content.abstrak);
+    else paras('Abstrak dibuat setelah penelitian selesai. Lanjutkan ke Bab IV–V lebih dulu; abstrak lalu tergenerate otomatis. Bisa juga ditulis sendiri — klik teks ini untuk mengetik.');
+    pushFront();
+
+    H(1, 'ABSTRACT');
+    paras('The abstract is written after the research is completed. Continue to Chapters IV-V first; the abstract will then be generated automatically. You can also write it yourself — click this text to type.');
+    pushFront();
+
+    const tocHint = () => C.push(new Paragraph({ children: [new TextRun({ text: CATATAN_FIELD, font: TNR, italics: true, color: '808080', size: 24 })] }));
+
+    H(1, 'DAFTAR ISI');
+    C.push(new TableOfContents('Daftar Isi', { hyperlink: true, headingStyleRange: '1-2', beginDirty: true }));
+    tocHint();
+    pushFront();
+
+    H(1, 'DAFTAR GAMBAR');
+    C.push(new TableOfContents('Daftar Gambar', { hyperlink: true, captionLabel: 'Gambar', beginDirty: true }));
+    tocHint();
+    pushFront();
+
+    H(1, 'DAFTAR TABEL');
+    C.push(new TableOfContents('Daftar Tabel', { hyperlink: true, captionLabel: 'Tabel', beginDirty: true }));
+    tocHint();
+    pushFront();
+
+    /* ---------------- 3. Isi: BAB → Daftar Pustaka → Lampiran ---------------- */
+    C.length = 0;
+    const isiBab = (kunci: string) => {
+      const utama = String(pr.content?.[kunci] || '');
+      const subs = Object.entries(pr.content || {})
+        .filter(([k]) => k.startsWith(`${kunci}:`))
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([, v]) => String(v))
+        .filter((v) => v && !utama.includes(v.slice(0, 120)));
+      const gabung = [utama, ...subs].filter(Boolean).join('\n\n');
+      if (gabung.trim()) mdBody(gabung);
+    };
+    for (const b of ['bab1', 'bab2', 'bab3', 'bab4', 'bab5']) isiBab(b);
+
+    // Daftar Pustaka: unggahan user dulu, lalu Crossref by judul
+    const custom: any[] = Array.isArray(ident.refs) ? ident.refs : [];
+    let refs: any[] = [];
+    try { refs = [...custom, ...(await crossrefTop(judul, 40, pr.min_year))]; } catch { refs = custom; }
+    if (refs.length) {
+      H(1, 'DAFTAR PUSTAKA');
+      for (const r of refs) {
+        const kepala = `${r.authors || ''} (${r.year || 't.t.'}). ${r.title || ''}.`.replace(/\s+/g, ' ').trim();
+        const sisa = [r.jurnal, r.doi ? '' : r.url].filter(Boolean).join('. ');
+        P(`${kepala}${sisa ? ` ${sisa}.` : ''}`.trim(), { hang: true });
+        if (r.doi) P(`https://doi.org/${r.doi}`, { hang: true });
+      }
     }
-    const order = ['bab1', 'bab2', 'bab3', 'bab4', 'bab5'];
-    for (const b of order) if (pr.content?.[b]) mdBody(pr.content[b]);
-    if (pr.content?.lampiran) {
-      C.push(new Paragraph({ heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'LAMPIRAN', font: 'Times New Roman', size: 28, bold: true })] }));
-      mdBody(pr.content.lampiran);
-    }
+
+    if (pr.content?.lampiran) isiBab('lampiran');
+    const isi: any[] = [...C.splice(0, C.length)];
+
+    /* ---------------- Footer: PAGE + disclaimer AI (italik abu 6pt) ---------------- */
+    const footerNomor = new Footer({
+      children: [
+        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ children: [PageNumber.CURRENT], font: TNR, size: 24 })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: DISCLAIMER, font: TNR, italics: true, color: '999999', size: 12 })] }),
+      ],
+    });
+    const footerKosong = new Footer({ children: [new Paragraph({ children: [new TextRun({ text: '', font: TNR, size: 24 })] })] });
+    const pageSize = { width: 11905, height: 16837 };
+    const margin = { top: 1700, right: 1700, bottom: 1700, left: 2267, header: 708, footer: 708 };
+
     const doc = new Document({
       creator: 'Skripsi Palembang',
-      title: String(pr.judul || ''),
-      sections: [{
-        properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 2268, left: 2268, bottom: 1701, right: 1701 } } },
-        footers: { default: new Footer({ children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ children: [PageNumber.CURRENT] })] })] }) },
-        children: [
-          new Paragraph({ heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'DAFTAR ISI', font: 'Times New Roman', size: 28, bold: true })] }),
-          new TableOfContents('Daftar Isi', { hyperlink: true, headingStyleRange: '1-2' }),
-          ...C,
+      title: judul,
+      description: `${jenisSelected} — ${judul}`,
+      styles: {
+        default: { document: { run: { font: TNR, size: 24 } } },
+        paragraphStyles: [
+          { id: 'Heading1', name: 'Heading 1', basedOn: 'Normal', next: 'Normal', quickFormat: true,
+            run: { font: TNR, bold: true, size: 32, color: '2E74B5' },
+            paragraph: { alignment: AlignmentType.CENTER, spacing: { before: 240, after: 120 } } },
+          { id: 'Heading2', name: 'Heading 2', basedOn: 'Normal', next: 'Normal', quickFormat: true,
+            run: { font: TNR, bold: true, size: 26, color: '2E74B5' },
+            paragraph: { alignment: AlignmentType.LEFT, spacing: { before: 120, after: 60 } } },
+          { id: 'Heading3', name: 'Heading 3', basedOn: 'Normal', next: 'Normal', quickFormat: true,
+            run: { font: TNR, bold: true, size: 24, color: '1F4D78' },
+            paragraph: { alignment: AlignmentType.LEFT, spacing: { before: 120, after: 60 } } },
+          { id: 'Heading4', name: 'Heading 4', basedOn: 'Normal', next: 'Normal', quickFormat: true,
+            run: { font: TNR, bold: true, size: 24, color: '2E74B5' },
+            paragraph: { alignment: AlignmentType.LEFT, spacing: { before: 60, after: 60 } } },
         ],
-      }],
+      },
+      numbering: {
+        config: [
+          { reference: 'daftar-bullet', levels: [{ level: 0, format: LevelFormat.BULLET, text: '•', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 720, hanging: 360 } } } }] },
+          { reference: 'daftar-num', levels: [{ level: 0, format: LevelFormat.DECIMAL, text: '%1.', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 720, hanging: 360 } } } }] },
+        ],
+      },
+      sections: [
+        // Sampul — tanpa nomor halaman
+        { properties: { page: { size: pageSize, margin } }, footers: { default: footerKosong }, children: cover },
+        // Front matter — romawi, mulai 1
+        { properties: { type: SectionType.NEXT_PAGE, page: { size: pageSize, margin, pageNumbers: { start: 1, formatType: NumberFormat.LOWER_ROMAN } } }, footers: { default: footerNomor }, children: front },
+        // Isi — desimal, mulai 1
+        { properties: { type: SectionType.NEXT_PAGE, page: { size: pageSize, margin, pageNumbers: { start: 1, formatType: NumberFormat.DECIMAL } } }, footers: { default: footerNomor }, children: isi },
+      ],
     });
     const buf = await Packer.toBuffer(doc);
+    const slug = judul.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'naskah';
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', 'attachment; filename="skripsi.docx"');
+    res.setHeader('Content-Disposition', `attachment; filename="proposal-${pr.jenis || 'skripsi'}-${slug}.docx"`);
     res.send(Buffer.from(buf));
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });

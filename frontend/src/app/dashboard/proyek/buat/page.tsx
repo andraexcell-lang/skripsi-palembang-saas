@@ -47,7 +47,28 @@ export default function BuatSkripsiPage() {
   const [busy, setBusy] = useState('');
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
+  const [konfirmasi, setKonfirmasi] = useState(false);
   const router = useRouter();
+
+  const JENIS_LABEL: Record<string, string> = { skripsi: 'Skripsi (S1)', tesis: 'Tesis (S2)', disertasi: 'Disertasi (S3)', artikel: 'Ubah Skripsi → Artikel' };
+  const ringkas = (): [string, string][] => {
+    const scopes = [scopeSinta ? 'Sinta' : '', scopeScopus ? 'Scopus' : ''].filter(Boolean);
+    const sumber = [scopeUmum ? 'Umum' : '', ...scopes].join(' + ') || 'Umum';
+    const rows: [string, string][] = [
+      ['Judul', judul.trim()],
+      ['Jenis', JENIS_LABEL[jenis] || jenis],
+      ['Metode', metode],
+    ];
+    if (jenis !== 'artikel') rows.push(['Tahap', tahap === 'proposal' ? 'Proposal (Bab I–III)' : 'Skripsi Penuh (Bab I–V)']);
+    rows.push(
+      ['Gaya sitasi', gaya],
+      ['Bahasa tulisan', bahasa],
+      ['Asal referensi', asal === 'semua' ? 'Indonesia & Internasional' : asal === 'indonesia' ? 'Indonesia' : 'Internasional'],
+      ['Sumber referensi', sumber],
+      ['Struktur bab', outlineOn && outline.trim() ? `Custom (${(outline.match(/BAB/gi) || []).length || '-'} bab)` : 'Baku'],
+    );
+    return rows;
+  };
 
   useEffect(() => {
     try {
@@ -95,6 +116,11 @@ export default function BuatSkripsiPage() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!konfirmasi) { setKonfirmasi(true); return; }
+    await jalankan();
+  }
+
+  async function jalankan() {
     setErr(''); setLoading(true);
     try {
       const scopes = [];
@@ -113,7 +139,7 @@ export default function BuatSkripsiPage() {
       if (jenis === 'artikel') {
         router.push('/dashboard/artikel-sinta');
       } else {
-        router.push(`/dashboard/studio/${r.item.id}`);
+        router.push(`/dashboard/studio/${r.item.id}?mulai=1`);
       }
     } catch (e: any) { setErr(e.message); }
     setLoading(false);
@@ -314,7 +340,31 @@ export default function BuatSkripsiPage() {
         </div>
 
         {err && <p className="text-sm text-accent-red">{err}</p>}
-        <button disabled={loading} className="w-full bg-brand-primary text-white py-3 rounded-xl font-bold text-sm disabled:opacity-50">
+
+        {konfirmasi && (
+          <div className="border border-brand-primary/40 bg-brand-primary/5 rounded-xl p-5 space-y-3">
+            <p className="text-sm font-semibold text-text-primary">Periksa dulu sebelum generate</p>
+            <p className="text-xs text-text-muted">Pilihan di bawah menentukan arah seluruh naskah. Mengubahnya nanti berarti generate ulang.</p>
+            <dl className="space-y-1.5 text-xs">
+              {ringkas().map(([k, v]) => (
+                <div key={k} className="flex gap-2">
+                  <dt className="w-28 shrink-0 text-text-muted">{k}</dt>
+                  <dd className="font-medium text-text-primary">{v}</dd>
+                </div>
+              ))}
+            </dl>
+            <div className="flex gap-2 pt-1">
+              <button type="button" onClick={() => setKonfirmasi(false)} disabled={loading} className="flex-1 border border-border-strong rounded-lg py-2.5 text-sm font-bold text-text-primary disabled:opacity-50">
+                Ubah dulu
+              </button>
+              <button type="button" onClick={() => jalankan()} disabled={loading} className="flex-1 bg-brand-primary text-white rounded-lg py-2.5 text-sm font-bold disabled:opacity-50">
+                {loading ? 'Menyiapkan…' : 'Ya, generate'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        <button disabled={loading || konfirmasi} className="w-full bg-brand-primary text-white py-3 rounded-xl font-bold text-sm disabled:opacity-50">
           {loading ? 'Menyimpan...' : 'Lanjut Generate Skripsi →'}
         </button>
       </form>

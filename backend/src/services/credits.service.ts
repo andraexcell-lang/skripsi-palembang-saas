@@ -42,8 +42,8 @@ export async function addCredits(userId: string, amount: number, ref: string, me
   return next;
 }
 
-export async function consumeCredits(userId: string, feature: string, ref = '') {
-  const cost = FEATURE_COSTS[feature] ?? 1;
+export async function consumeCredits(userId: string, feature: string, ref = '', costOverride?: number) {
+  const cost = costOverride ?? FEATURE_COSTS[feature] ?? 1;
   const bal = await getBalance(userId);
   // Admin: semua fitur gratis tanpa potong kredit
   if (bal.plan === 'admin') return { cost: 0, remaining: bal.credits };
