@@ -1,0 +1,28 @@
+/* _tokens.css — Design tokens dari analisis mantrariset.com vs skripsi-palembang-saas */
+/* Diimplementasikan pada Fase 0 (persiapan & branding) */
+
+/* Warna (disesuaikan dari analisis DOM 7 Okt 2026): */
+/* --primary: rgb(37, 99, 235)   — biru primer (mirip mantrariset blue-600) */
+/* --primary-hover: rgba(37,99,235,0.05) — pill/hover state */
+/* --danger: rgb(220, 38, 38)       — merah kredit 0 */
+/* --danger-light: rgba(220,38,38,0.1) — badge kredit 0 light */
+/* --success: rgb(37, 211, 102)     — hijau WA */
+/* --bg-light: rgb(241, 245, 249)   — body light mode (slate-100) */
+/* --bg-dark: rgb(11, 18, 32)        — body dark mode */
+/* --text: rgb(15, 23, 42)          — teks utama (slate-900) */
+/* --text-secondary: rgb(71, 85, 105) — teks sekunder (slate-600) */
+/* --placeholder: rgb(148, 163, 184) — placeholder/teks abu-abu */
+
+/* Radius: */
+/* --radius-sm: 6px       — tombol utama, input */
+/* --radius-md: 8px       — pill, tag */
+/* --radius-full: 9999px    — FAB, avatar */
+
+/* Font Size: */
+/* --fs-sm: 12px */
+/* --fs-md: 14px */
+/* --fs-lg: 16px */
+
+/* Komponen Khusus: */
+/* --fab-size: 48px       — FAB diameter */
+/* --badge-diameter: 28px — badge kredit diameter */
