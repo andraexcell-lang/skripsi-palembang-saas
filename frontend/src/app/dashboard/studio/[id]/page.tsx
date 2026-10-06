@@ -1,7 +1,7 @@
 'use client';
 import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { apiGet, apiPost, apiPostStream, apiUpload, apiDownloadPptx, isInsufficientCredits } from '@/lib/api';
+import { apiGet, apiPost, apiPatch, apiPostStream, apiUpload, apiDownloadPptx, isInsufficientCredits } from '@/lib/api';
 
 const BABS = [
   { id: 'bab1', label: 'Bab I Pendahuluan', gen: 'Bab I: Pendahuluan' },
@@ -89,6 +89,11 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
   const [upLoading, setUpLoading] = useState(false);
   const [upMsg, setUpMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
+  // Editor inline per paragraf (paritas referensi): klik → textarea, simpan saat blur
+  const [editIdx, setEditIdx] = useState<number | null>(null);
+  const [editVal, setEditVal] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+
   const ROMAWI_HURUF = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
   function fmtHeading(line: string): string {
@@ -103,6 +108,34 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
 
   function cleanMd(s: string): string {
     return s.replace(/\*\*(.+?)\*\*/g, '$1').replace(/(^|\s)\*([^*\n]+)\*(?=\s|$)/g, '$1$2').trim();
+  }
+
+  /* ---------------- Editor inline per paragraf (paritas referensi) ---------------- */
+  function mulaiEdit(idx: number, nilai: string) {
+    setErr('');
+    setEditIdx(idx);
+    setEditVal(nilai);
+  }
+
+  async function simpanEdit(idx: number, nilai: string) {
+    const lama = String(proyek?.content?.[active] ?? '');
+    const baris = lama.split('\n');
+    if ((baris[idx] ?? '') === nilai) return; // tak ada perubahan → tak usah kirim
+    const sebelum = baris[idx] ?? '';
+    baris[idx] = nilai;
+    const baru = baris.join('\n');
+    setEditSaving(true);
+    try {
+      await apiPatch(`/api/projects/${id}/content`, { key: active, text: baru });
+      setProyek((p: any) => ({ ...p, content: { ...(p?.content || {}), [active]: baru } }));
+    } catch (e: any) {
+      setErr(`Gagal menyimpan perubahan: ${e.message}`);
+      // kembalikan teks editor agar pengguna tak kehilangan ketikan
+      setEditIdx(idx);
+      setEditVal(sebelum);
+    } finally {
+      setEditSaving(false);
+    }
   }
 
   function renderDoc(body: string) {
@@ -136,8 +169,34 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
         // Sub-bab baru (boleh "1.1 Judul" atau "1.1. Judul") → kelompok sendiri untuk kontrol Perkaya / Hapus
         bagian.push({ raw: cleanMd(t), anak: [] });
         target = bagian[bagian.length - 1].anak;
+      } else if (editIdx === i) {
+        // Editor inline (paritas referensi): textarea + petunjuk Markdown, simpan saat blur
+        target.push(
+          <div key={`edit-${i}`} className="mb-3">
+            <textarea
+              value={editVal}
+              autoFocus
+              onChange={(e) => setEditVal(e.target.value)}
+              onBlur={() => { const idx = editIdx; const nilai = editVal; setEditIdx(null); simpanEdit(idx, nilai); }}
+              ref={(el) => { if (el) { el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px`; } }}
+              className="w-full resize-none overflow-hidden rounded-md border border-brand-primary/40 bg-brand-primary/5 p-3 font-sans text-sm leading-relaxed text-text-primary focus:outline-none focus:ring-1 focus:ring-brand-primary"
+              style={{ minHeight: '6rem' }}
+            />
+            <p className="mt-1 font-sans text-[11px] text-text-muted">
+              Ketik langsung seperti di Word. Klik di luar kotak untuk menyimpan. (Markdown: **tebal**, tabel |…|, poin, ### sub-sub-bab.)
+            </p>
+          </div>
+        );
       } else {
-        target.push(<p key={i} className="text-justify indent-8 mb-3 leading-relaxed">{renderSitasi(cleanMd(t), `l${i}-`)}</p>);
+        target.push(
+          <p
+            key={i}
+            onClick={(e) => { if ((e.target as HTMLElement).closest('a')) return; mulaiEdit(i, lines[i]); }}
+            className="cursor-text -mx-1 mb-3 rounded-md px-1 text-justify indent-8 leading-relaxed transition-colors hover:bg-brand-primary/5"
+          >
+            {renderSitasi(cleanMd(t), `l${i}-`)}
+          </p>
+        );
       }
       i++;
     }
@@ -174,6 +233,12 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
     );
   }
   const [showDisc, setShowDisc] = useState(false);
+
+  // Tutup editor inline saat pindah tab/bab — indeks baris lama tak berlaku
+  useEffect(() => {
+    setEditIdx(null);
+    setEditVal('');
+  }, [active]);
 
   useEffect(() => {
     try {
