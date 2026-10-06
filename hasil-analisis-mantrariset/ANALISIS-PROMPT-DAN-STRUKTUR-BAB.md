@@ -50,7 +50,7 @@ Ya. Halaman **AI Mantra Riset** (`/dashboard/member/asisten`) punya **10 slash-c
 
 Deskripsi asisten: "Saya bisa menyusun judul, lalu memandu sampai proyeknya siap ditulis." · "Enter untuk kirim · Shift+Enter baris baru · **/ untuk perintah**"
 
-**Kita (paritas):** `/dashboard/asisten` QUICK baru **4** (`/judul`, `/skripsi`, `/parafrase`, `/kelayakan judul`); command palette `/` di search bar punya 12 (`/novelty`, `/artikel-sinta`, `/artikel-scopus`, `/ppt`, `/sidang`, `/plagiasi`, `/olah-data`, `/billing` tambahan). **Selisih:** QUICK asisten tidak memuat `/tesis`, `/disertasi`, `/sinta`, `/scopus`, `/ppt`, `/cari artikel`.
+**Kita (paritas):** `/dashboard/asisten` QUICK baru **4** (`/judul`, `/skripsi`, `/parafrase`, `/kelayakan judul`); command palette `/` di search bar punya 12 (`/novelty`, `/artikel-sinta`, `/artikel-scopus`, `/ppt`, `/sidang`, `/plagiasi`, `/olah-data`, `/billing` tambahan). **Selisih (SELESAI 7 Okt 2026):** QUICK asisten kini **10 command** persis referensi — urutan & teks identik; **dropdown `/`** muncul saat mengetik (filter prefiks, opsi mengisi input `<cmd> `), chip = tombol yang MENGISI input (bukan link — paritas referensi), textarea auto-grow (Enter kirim / Shift+Enter baris baru), hint di dalam kotak input: "Enter untuk kirim · Shift+Enter baris baru · / untuk perintah", subtitle persis referensi.
 
 ## 3. STRUKTUR BAB BAKU — apakah mereka punya struktur standar?
 
@@ -103,12 +103,12 @@ Struktur teramati = base `skripsi_kuantitatif` + overlay `f` **persis**: Bab I 8
 | 2 | Overlay tesis bab4/5 (Temuan, Implikasi Teoretis, Agenda Penelitian) | Bab1/Bab3 overlay sudah ada (1.7, 3.6 ✓), bab4/5 belum | Tambah 3 sub overlay untuk tesis |
 | 3 | Disertasi overlay (`y`) | tidak ada | Opsional — kalau jenis disertasi didukung |
 | 4 | Custom outline terstruktur (node + arahan per node + "bantuan AI") | `custom_outline` teks bebas | Bisa ditingkatkan bertahap (prioritas rendah) |
-| 5 | QUICK asisten: 4 vs 10 | `/judul /skripsi /parafrase /kelayakan judul` | Tambah `/tesis /disertasi /sinta /scopus /ppt /cari artikel` (mudah, teks persis referensi) |
+| 5 | QUICK asisten: 4 vs 10 | **SELESAI 7 Okt 2026** — 10 QUICK teks/urutan persis referensi; dropdown `/` (filter prefiks → isi input), chip = tombol isi input, textarea + hint paritas | Selesai — DOM mantrariset diverifikasi langsung, `tsc` + `npm run build` lolos |
 | 6 | Prompt sistem | kita sudah punya prompt sendiri (server-side) | Tidak ada tindakan — referensi juga tidak mengekspos |
 
 **Tidak ada yang bisa/boleh disalin dari prompt mereka** (tidak terekspos). Struktur bab baku mereka justru sudah 90% kita tiru — selisih nyata hanya varian per metode + overlay bab IV/V tesis.
 
-**UPDATE 6 Okt 2026:** selisih **#1, #2, #3 di bawah sudah SELESAI** — detail implementasi & hasil uji di bagian 5.
+**UPDATE 6 Okt 2026:** selisih **#1, #2, #3 di bawah sudah SELESAI** — detail implementasi & hasil uji di bagian 5. **UPDATE 7 Okt 2026:** selisih **#5 (QUICK asisten) SELESAI** — paritas penuh 10 slash-command + dropdown `/` (verifikasi DOM mantrariset langsung).
 
 ## 5. STATUS IMPLEMENTASI (6 Okt 2026, commit `09cd676` + `1c9523d`)
 
@@ -179,4 +179,4 @@ Prompt `babPrompt` diuji via `node tes-prompt.cjs` → struktur per varian outpu
 - Overlay `f`/`y` **tidak punya flag `skipKualitatif`/`onlyKualitatif` di teks chunk** — efek serupa tercapai otomatis via cek `e.sub.some(s => s.key === a.key)` (sub sudah ada di base → di-skip). Paritas perilaku identik.
 - Prompt referensi tetap 100% server-side mereka — **tidak bisa & tidak perlu disalin** (prompt kita sudah dibuat sendiri, kini terstruktur per varian).
 
-**Kesimpulan implementasi:** selisih struktur baku #1–#3 **SELESAI** dengan data yang diekstrak penuh dari chunk referensi (bukan estimasi). Tinggal QUICK asisten (#5) + custom outline terstruktur (#4, prioritas rendah).
+**Kesimpulan implementasi:** selisih struktur baku #1–#3 **SELESAI** dengan data yang diekstrak penuh dari chunk referensi (bukan estimasi); QUICK asisten (#5) **SELESAI 7 Okt 2026**. Tinggal custom outline terstruktur (#4, prioritas rendah).
