@@ -323,7 +323,13 @@ Halaman baru **`/dashboard/admin`** (hanya akun `plan=admin`, guard dobel: link 
 - **Tab Fitur**: 20 saklar fitur dashboard (sidebar + kartu + FAB asisten) → flags global `app_settings.feature_flags`, efek langsung ke seluruh UI semua pengguna tanpa reload.
 - **Penyimpanan**: tabel `app_settings` (migrasi **dijalankan 8 Okt 2026** via Management API) + fallback file `backend/data/app-settings.json` bila tabel tak ada + **auto-import** file→tabel.
 - **Verifikasi**: `node tools/smoke-admin.js` **14/14 PASS** · `node tools/smoke-admin.js --guard` **5/5 PASS** (403 non-admin) · E2E browser (link admin, toggle live + persist, kartu/FAB ikut, panel 403) · `tsc` 0 error · `next build` 35 route lolos.
-- **Tahap lanjut (menunggu owner)**: manajemen user/kredit/monitor generate; Opsi A upload `.xlsx/.csv` Bab IV; guard mock payment P0.
+- **Tahap lanjut (menunggu owner)**: manajemen user/kredit/monitor generate; testing lintas-browser.
+
+## Opsi A tabulasi Bab IV + guard payment P0 — SELESAI 8 Okt 2026
+
+- **Opsi A (upload tabulasi `.xlsx/.csv`)**: panel **"Data Tabulasi Bab IV"** di studio (saat tab Bab IV) — unggah `.xlsx/.xls/.csv` (maks 8 MB; semua sheet dikonversi CSV, disimpan maks 20 rb karakter di `content.tabulasi`; endpoint `POST/DELETE /api/projects/:id/tabulasi`, guard punya project). Prompt Bab IV menyuntik blok wajib **"DATA TABULASI HASIL OLAH DATA"** → angka hasil WAJIB persis dari data user, **dilarang mengarang angka lain**; tanpa data → Opsi B (simulasi: semua uji lulus, semua hipotesis signifikan) tetap jalan. UI: chip "Terpasang" + preview + Ganti/Hapus. Verifikasi: `node tools/uji-tabulasi.js` **9/9 PASS** + unit `babPrompt` 6/6 PASS (injeksi hanya di bab4) · `tsc` BE+FE 0.
+- **Guard mock payment P0**: `/api/billing/checkout` + `/confirm` **mati default (503)** — nyalakan hanya opt-in `BILLING_MOCK=1` di `backend/.env` pengembangan (tetap mati walau salah set saat `NODE_ENV=production`); `/packages` mengembalikan `mock` → UI billing 3 keadaan: Midtrans siap → bayar real · mock aktif → tombol mock · keduanya mati → tombol "Pembayaran belum aktif" (disabled) + "hubungi admin". Terbukti: default 503/503/401 · opt-in 200 (kredit 5→115 lalu dibalik bersih, `.env` dikembalikan).
+- **Regen Bab III final (terjadwal otomatis)**: `node tools/regen-bab3-aman.js` berjalan di background 8 Okt — **backup content dulu**, tunggu reset kuota **00:00 UTC (07:00 WIB)**, regen `bab3 --coba=3` (1 kredit), wajib **≥25.000 karakter** → kalau kurang **RESTORE backup otomatis** (aman dari model lite yang menulis pendek).
 
 ## Tunda (butuh owner)
 

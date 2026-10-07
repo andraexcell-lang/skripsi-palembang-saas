@@ -117,7 +117,7 @@ e. **Audit**: cek baru — tiap blok tabel punya baris judul sebelumnya; jumlah 
 
 ## 6. Bab IV — minta user upload tabulasi data mentah, ATAU agen yang buatkan (lulus semua uji, semua hipotesis signifikan)
 
-**Status**: ⚠️ **OPSI B TERPASANG (7 Okt 2026)** — prompt `TESIS_BAB4` "DATA & HASIL" (tabulasi konsisten, semua uji lulus, seluruh hipotesis signifikan) + hint studio saat Bab IV kosong ("Belum ada data? Agen menyusun tabulasi & hasil olahannya sendiri…") — terverifikasi tampil E2E. **OPSI A (upload `.xlsx/.csv` + olah nyata) masih menunggu keputusan owner.** Output Bab IV belum bisa E2E (proyek uji tahap proposal → bab terkunci) — verifikasi sifatnya review kode/prompt.
+**Status**: ✅ **OPSI B + OPSI A TERPASANG (7–8 Okt 2026)** — **Opsi B**: prompt `TESIS_BAB4` "DATA & HASIL" (tabulasi konsisten, semua uji lulus, seluruh hipotesis signifikan) + hint studio ("Belum ada data? Agen menyusun tabulasi & hasil olahannya sendiri…"). **Opsi A (8 Okt)**: panel **"Data Tabulasi Bab IV"** di studio — unggah `.xlsx/.xls/.csv` (semua sheet → CSV, maks 20 rb karakter) → `POST /api/projects/:id/tabulasi` → `content.tabulasi`; prompt Bab IV menyuntik blok wajib **"DATA TABULASI HASIL OLAH DATA"** (angka PERSIS dari data ini, angka lain DILARANG dikarang) + tombol Ganti/Hapus. Verifikasi: `tools/uji-tabulasi.js` **9/9 PASS** (upload csv & xlsx 2-sheet, tolak `.txt`/kosong, DELETE bersih, kunci lain utuh) + uji unit `babPrompt` **6/6 PASS** (hanya bab4 memuat blok+angka; bab1/bab5 tidak; tanpa data prompt tetap jalan → Opsi B). Output Bab IV belum E2E (proyek uji tahap proposal → bab terkunci) — verifikasi sifatnya API/unit/review kode. Catatan desain: backend TIDAK menghitung statistik sendiri — model mengolah angka dari data yang disuntik; Lampiran 6.2–6.6 tetap penanda kosong (keputusan item 9).
 
 **Temuan**: belum ada alur upload data mentah (Bab IV kini terkunci tahap `proposal`); modal sudah ada — dependensi `xlsx` + endpoint pemrosesan dokumen (`files.routes.ts`).
 **Opsi A — upload**: sebelum generate Bab IV, studio minta user unggah tabulasi `.xlsx/.csv` → backend mengolah (uji validitas, reliabilitas, asumsi klasik/regresi-PLS) → angka nyata masuk prompt & Lampiran 2–4 terisi otomatis.
@@ -158,4 +158,17 @@ e. **Audit**: cek baru — tiap blok tabel punya baris judul sebelumnya; jumlah 
 
 **Verifikasi**: `tools/smoke-admin.js` **14/14 PASS** (CRUD model, mask key, merge key, validasi 400, flags, status, jalur openai terbukti — 401 dari OpenRouter saat key palsu, reset default) + mode `--guard` **5/5 PASS** (semua endpoint admin tolak non-admin 403, `/api/flags` publik tetap 200); E2E browser: link Admin muncul-hilang ikut plan, toggle fitur sembunyikan menu/kartu/FAB langsung + persist reload, panel 403 untuk non-admin; `tsc` backend+frontend 0 error, `next build` lolos (35 route).
 
-**Tahap berikutnya (menunggu arahan owner)**: Opsi A upload `.xlsx/.csv` Bab IV; manajemen user/kredit/monitor generate; testing lintas-browser; guard endpoint mock payment P0 (`/billing/checkout`+`/confirm` masih terbuka) — pertanyaan "Mau saya tutup sekarang?" belum dijawab.
+**Tahap berikutnya (menunggu arahan owner)**: manajemen user/kredit/monitor generate; testing lintas-browser. ~~Opsi A upload `.xlsx/.csv` Bab IV~~ & ~~guard endpoint mock payment P0~~ → ✅ **dikerjakan 8 Okt 2026** (lihat item 6 dan item 11 di bawah).
+
+---
+
+## 11. Guard endpoint mock payment P0 (8 Okt 2026)
+
+**Status**: ✅ **SELESAI + TERVERIFIKASI (8 Okt 2026)** — `POST /api/billing/checkout` + `/confirm` (mock) dulunya terbuka untuk SEMUA user login → siapa pun bisa "bayar" mock dan mencetak kredit + plan + komisi affiliate sendiri (lubang P0).
+
+**Rapiannya**:
+- Guard `mockAktif()` = **`BILLING_MOCK=1`** (opt-in eksplisit) **dan** `NODE_ENV !== 'production'` — walau salah set di production tetap mati. Default: **503** dengan pesan jelas.
+- `/api/billing/packages` ikut mengembalikan `mock` (boolean) → frontend billing punya 3 keadaan: Midtrans siap → tombol **Bayar** real; mock aktif (dev) → tombol mock; keduanya mati → tombol **"Pembayaran belum aktif"** (disabled) + teks "hubungi admin untuk aktivasi paket".
+- Pembayaran real via `/midtrans/charge` + webhook bersignature tidak terpengaruh.
+
+**Verifikasi**: default → `checkout 503` · `confirm 503` · tanpa auth `401` · `packages: mock=false`; opt-in `BILLING_MOCK=1` → checkout 200 → confirm 200 (kredit 5→115, plan→mahasiswa) lalu **semua efek uji dibalik** (kredit 5/free, transaksi uji dihapus, `.env` dikembalikan tanpa `BILLING_MOCK`); `tsc` BE+FE 0 error.
