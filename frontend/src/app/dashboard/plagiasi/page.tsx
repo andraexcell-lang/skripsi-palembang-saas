@@ -1,6 +1,7 @@
 "use client";
 
 import { aiGenerate } from "@/lib/api";
+import CreditBadge from "@/components/CreditBadge";
 
 import { useState } from "react";
 
@@ -36,10 +37,7 @@ export default function CekPlagiasiPage() {
       <header className="h-16 flex items-center px-8 border-b border-border-subtle bg-bg-surface sticky top-0 z-20">
         <div className="flex items-center gap-4 w-full">
           <div className="flex items-center gap-2 cursor-pointer ml-auto">
-             <div className="text-xs font-semibold text-accent-red border border-accent-red/20 bg-accent-red/10 px-3 py-1 rounded-full flex items-center gap-1 mr-4">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
-                0 kredit
-             </div>
+             <CreditBadge />
              <button className="text-text-secondary hover:text-text-primary">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
              </button>

@@ -23,6 +23,7 @@ export const FEATURE_COSTS: Record<string, number> = {
   transkripsi: 1,
   kualitatif: 1,
   dokumen: 1,
+  visual: 4, // Analisis Visual Video (paritas mantrariset: ~4 kredit)
   revisi: 1,
   chat: 1,
 };
