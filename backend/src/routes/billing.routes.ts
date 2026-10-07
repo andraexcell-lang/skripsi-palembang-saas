@@ -16,6 +16,8 @@ export const PACKAGES = [
   { id: 'prof-bulanan', group: 'Profesor', name: 'Bulanan', price: 134000, credits: 160, desc: '150 + 10 bonus kredit' },
   { id: 'prof-3bulan', group: 'Profesor', name: '3 Bulan', price: 399000, credits: 525, desc: '450 + 75 bonus kredit', popular: true },
   { id: 'prof-semester', group: 'Profesor', name: 'Semester (6 bln)', price: 775000, credits: 1100, desc: '900 + 200 bonus kredit' },
+  // Paritas referensi (3000+500); harga diskala ke pola harga kita (keputusan owner)
+  { id: 'prof-tahunan', group: 'Profesor', name: 'Tahunan', price: 1548000, credits: 3500, desc: '3000 + 500 bonus kredit' },
 ];
 
 router.get('/packages', (_req, res) => res.json({ items: PACKAGES, midtrans: midtransReady() }));
