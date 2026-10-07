@@ -1,12 +1,41 @@
 'use client';
 import Link from "next/link";
 import { ReactNode, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import UserChip from "@/components/UserChip";
 import ThemeToggle from "@/components/ThemeToggle";
 import CreditBadge from "@/components/CreditBadge";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+
+  // Penanda halaman aktif di sidebar (paritas referensi):
+  // sorot menu sesuai route yang dibuka; hanya menu nav (di dalam .custom-scrollbar)
+  // yang disorot — logo & chip kredit dikecualikan lewat scoping selektor ini.
+  useEffect(() => {
+    if (!pathname) return;
+    const nav = document.querySelector('.custom-scrollbar');
+    if (!nav) return;
+    const tautan = nav.querySelectorAll<HTMLAnchorElement>('a[href^="/dashboard"]');
+    tautan.forEach((a) => {
+      const href = a.getAttribute('href') || '';
+      const aktif =
+        href === '/dashboard'
+          ? pathname === '/dashboard'
+          : pathname === href ||
+            pathname.startsWith(href + '/') ||
+            (href === '/dashboard/proyek' && pathname.startsWith('/dashboard/studio'));
+      a.classList.toggle('bg-brand-primary/10', aktif);
+      a.classList.toggle('text-brand-primary', aktif);
+      a.classList.toggle('font-medium', aktif);
+      a.classList.toggle('text-text-secondary', !aktif);
+      a.classList.toggle('hover:text-text-primary', !aktif);
+      a.classList.toggle('hover:bg-bg-surface-hover', !aktif);
+      if (aktif) a.setAttribute('aria-current', 'page');
+      else a.removeAttribute('aria-current');
+    });
+  }, [pathname]);
 
   // Tutup drawer saat Escape / pindah ke lebar desktop
   useEffect(() => {
