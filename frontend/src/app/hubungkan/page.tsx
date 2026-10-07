@@ -29,25 +29,25 @@ export default function HubungkanPage() {
 
   if (done) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-bg-base p-4">
+      <main className="min-h-screen flex items-center justify-center bg-bg-base p-4">
         <div className="w-full max-w-md bg-bg-surface border border-border-subtle rounded-xl p-8 text-center space-y-3">
           <div className="text-green-500 text-4xl">✓</div>
           <h1 className="text-xl font-bold text-text-primary">Word berhasil terhubung 🎉</h1>
           <p className="text-sm text-text-secondary">Kembali ke Microsoft Word — panel akan aktif dalam beberapa detik. Kamu bisa menutup halaman ini.</p>
           <p className="text-xs text-text-muted">Perangkat ini kini punya akses ke proyek &amp; kredit akunmu. Kamu bisa memutusnya kapan saja lewat <Link href="/dashboard/pengaturan" className="text-brand-primary">Pengaturan → Kunci API</Link>.</p>
         </div>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-bg-base p-4">
+    <main className="min-h-screen flex items-center justify-center bg-bg-base p-4">
       <div className="w-full max-w-md bg-bg-surface border border-border-subtle rounded-xl p-8 space-y-4">
         <h1 className="text-xl font-bold text-text-primary">Hubungkan Microsoft Word</h1>
         <p className="text-sm text-text-secondary">Cocokkan kode yang tampil di panel plugin Word.</p>
         <div>
-          <label className="text-sm font-semibold text-text-primary">Kode dari plugin</label>
-          <input value={kode} onChange={(e) => setKode(e.target.value.toUpperCase())} placeholder="XXXX-XXXX" className="mt-1 w-full text-center tracking-widest font-bold bg-bg-base border border-border-strong rounded-lg p-3 text-text-primary" />
+          <label htmlFor="hub-kode" className="text-sm font-semibold text-text-primary">Kode dari plugin</label>
+          <input id="hub-kode" value={kode} onChange={(e) => setKode(e.target.value.toUpperCase())} placeholder="XXXX-XXXX" className="mt-1 w-full text-center tracking-widest font-bold bg-bg-base border border-border-strong rounded-lg p-3 text-text-primary" />
         </div>
         {err && <p className="text-sm text-accent-red">{err}</p>}
         {logged === false && (
@@ -58,6 +58,6 @@ export default function HubungkanPage() {
         </button>
         <p className="text-xs text-text-muted">Dengan menyetujui, plugin Word di perangkat itu bisa membaca proyekmu dan memakai kreditmu untuk generate. Jangan setujui kode yang tidak kamu minta sendiri.</p>
       </div>
-    </div>
+    </main>
   );
 }

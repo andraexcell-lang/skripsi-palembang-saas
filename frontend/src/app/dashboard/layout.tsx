@@ -62,7 +62,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <span className="font-bold text-base tracking-wide">Skripsi<span className="text-brand-primary">Palembang</span></span>
         </Link>
         <div className="flex items-center gap-2">
-          <Link href="/dashboard/kredit" className="inline-flex items-center" title="Sisa kredit AI">
+          <Link href="/dashboard/kredit" className="inline-flex items-center py-1.5 -my-1.5" title="Sisa kredit AI">
             <CreditBadge />
           </Link>
           <button
@@ -71,7 +71,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             aria-expanded={open}
             aria-controls="sidebar-utama"
             onClick={() => setOpen((v) => !v)}
-            className="p-1 text-text-secondary hover:text-text-primary"
+            className="p-2 -m-1 text-text-secondary hover:text-text-primary"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
           </button>

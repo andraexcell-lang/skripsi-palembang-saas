@@ -27,6 +27,9 @@ export default function BillingPage() {
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState('');
   const [midtrans, setMidtrans] = useState(false);
+  // True setelah load() pertama selesai — cegah flash klaim palsu
+  // ("mode mock", "Login dulu…", "Belum ada transaksi") sebelum data datang.
+  const [ready, setReady] = useState(false);
 
   async function load() {
     try {
@@ -41,6 +44,7 @@ export default function BillingPage() {
     try {
       setBal(await apiGet('/api/credits/balance'));
     } catch { /* belum login / backend belum jalan */ }
+    setReady(true);
   }
   useEffect(() => { load(); }, []);
 
@@ -75,7 +79,7 @@ export default function BillingPage() {
         <div>
           <h1 className="text-2xl font-bold text-text-primary">Billing</h1>
           <p className="text-text-secondary text-sm">
-            {midtrans ? 'Pembayaran real via Midtrans (QRIS/e-wallet/transfer bank).' : 'Midtrans belum dikonfigurasi — mode mock aktif.'}
+            {!ready ? 'Memuat info pembayaran…' : midtrans ? 'Pembayaran real via Midtrans (QRIS/e-wallet/transfer bank).' : 'Midtrans belum dikonfigurasi — mode mock aktif.'}
           </p>
         </div>
         {msg && <p className="text-sm text-text-primary bg-bg-surface border border-border-subtle rounded-lg p-3">{msg}</p>}
@@ -133,13 +137,19 @@ export default function BillingPage() {
               </div>
             </div>
           ))}
-          {pkgs.length === 0 && <p className="text-sm text-text-muted">Login dulu lalu pastikan backend jalan untuk memuat paket.</p>}
+          {!ready ? (
+            <p className="text-sm text-text-muted">Memuat paket…</p>
+          ) : pkgs.length === 0 && (
+            <p className="text-sm text-text-muted">Paket gagal dimuat. Muat ulang halaman untuk mencoba lagi.</p>
+          )}
           <p className="text-xs text-text-muted text-center mt-3">Pembayaran via QRIS + scan, paket langsung aktif otomatis.</p>
         </div>
 
         <div>
           <h3 className="font-bold text-text-primary mb-3">Riwayat Transaksi</h3>
-          {trx.length === 0 ? (
+          {!ready ? (
+            <p className="text-sm text-text-muted">Memuat riwayat…</p>
+          ) : trx.length === 0 ? (
             <p className="text-sm text-text-muted">Belum ada transaksi.</p>
           ) : (
             <div className="bg-bg-surface border border-border-subtle rounded-xl overflow-hidden">

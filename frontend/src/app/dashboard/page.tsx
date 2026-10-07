@@ -173,7 +173,6 @@ export default function DashboardIndex() {
 
             <div className="relative">
               <button
-                aria-label="Menu akun"
                 onClick={() => { setMenuOpen((v) => !v); setNotifOpen(false); }}
                 className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 hover:bg-bg-surface-hover"
               >
@@ -224,7 +223,7 @@ export default function DashboardIndex() {
                   <span className="shrink-0 text-xs font-semibold text-text-primary">{doneCount}/5 bab · {pct}%</span>
                 </div>
                 <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                  <span className="flex items-center gap-1.5 text-xs text-[#7185A8] dark:text-text-muted">
+                  <span className="flex items-center gap-1.5 text-xs text-text-muted">
                     <IcCalendar /> Diperbarui {tgl(latest.updated_at)}
                   </span>
                   <Link href={`/dashboard/studio/${latest.id}`} className={btnPrimer}>
@@ -242,7 +241,7 @@ export default function DashboardIndex() {
                 Pilih jenis karya di bawah, isi topiknya, dan AI menyusun kerangkanya.
               </p>
               <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                <span className="text-xs text-[#7185A8] dark:text-text-muted">Gratis untuk mulai</span>
+                <span className="text-xs text-text-muted">Gratis untuk mulai</span>
                 <Link href="/dashboard/proyek/buat" className={btnPrimer}>
                   Buat Proyek <IcArrowRight />
                 </Link>
@@ -259,7 +258,7 @@ export default function DashboardIndex() {
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5">
                   <p className="text-sm font-bold text-text-primary">{paket}</p>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-800 dark:text-emerald-400">
                     {bal?.plan && bal.plan !== 'free' && bal.plan !== 'admin' ? 'Aktif' : bal?.plan === 'admin' ? 'Admin' : 'Gratis'}
                   </span>
                 </div>
@@ -289,7 +288,7 @@ export default function DashboardIndex() {
                 href={GRUP_WA || '#'}
                 target={GRUP_WA ? '_blank' : undefined}
                 rel="noreferrer"
-                className="flex items-center gap-1.5 text-xs font-semibold text-[#25D366] hover:underline"
+                className="flex items-center gap-1.5 text-xs font-semibold text-[#0B7A38] dark:text-[#25D366] hover:underline"
                 title={GRUP_WA ? undefined : 'Link Grup WA belum diisi'}
               >
                 <IcWa /> Grup WA

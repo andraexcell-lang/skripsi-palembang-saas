@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-surface p-6">
+    <main className="min-h-screen flex flex-col items-center justify-center bg-surface p-6">
       <div className="max-w-3xl text-center space-y-6">
         <h1 className="text-4xl md:text-6xl font-extrabold text-text-primary tracking-tight">
           Asisten <span className="text-brand-primary">Riset</span> AI Anda
@@ -17,6 +17,6 @@ export default function Home() {
           </Link>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

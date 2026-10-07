@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Varian `dark:` harus mengikuti class .dark di <html> (ThemeToggle),
+   BUKAN prefers-color-scheme OS — tanpa ini, latar dark:* dan token warna
+   bisa berbeda channel saat pilihan tema ≠ tema OS (kartu gelap + teks terang). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Default: terang. Gelap via class .dark di <html> */
 :root {
   --bg-base: #edf1f7;
@@ -9,7 +14,8 @@
   --border-strong: #cbd5e1;
   --text-primary: #0f172a;
   --text-secondary: #475569;
-  --text-muted: #94a3b8;
+  /* #94a3b8 hanya 2,1:1 di bg terang — #5b6b80 lolos WCAG AA (4,8:1) */
+  --text-muted: #5b6b80;
   color-scheme: light;
 }
 
@@ -21,7 +27,8 @@
   --border-strong: #334155;
   --text-primary: #F8FAFC;
   --text-secondary: #94A3B8;
-  --text-muted: #64748B;
+  /* #64748B hanya 3,3:1 di bg gelap — #7e8fa8 lolos WCAG AA (4,7:1) */
+  --text-muted: #7e8fa8;
   color-scheme: dark;
 }
 
@@ -77,6 +84,13 @@
     font-family: 'Inter', system-ui, sans-serif;
   }
 }
+
+/* Mode gelap: #2563eb sebagai TEKS hanya 3,3:1 di bg gelap — naikkan ke blue-400
+   (#60a5fa, ≥4,5:1 di semua bg gelap). Elemen teks putih (tombol solid) dikecualikan;
+   bg tombol tetap biru paritas. */
+.dark .text-brand-primary:not(.text-white) { color: #60a5fa; }
+.dark .hover\:text-brand-primary:hover { color: #60a5fa; }
+.dark .group:hover .group-hover\:text-brand-primary { color: #60a5fa; }
 
 /* Custom Scrollbar for dark theme */
 ::-webkit-scrollbar {
