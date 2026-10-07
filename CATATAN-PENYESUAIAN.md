@@ -146,4 +146,16 @@ e. **Audit**: cek baru — tiap blok tabel punya baris judul sebelumnya; jumlah 
 
 ---
 
-## 10. (item berikutnya — diisi saat owner menyampaikan)
+## 10. Dashboard Admin — kelola model/router AI + saklar fitur dashboard (permintaan owner 8 Okt 2026)
+
+**Status**: ✅ **TAHAP 1 (Model + Fitur) SELESAI + TERVERIFIKASI (8 Okt 2026)** — halaman `/dashboard/admin` (hanya akun `plan=admin`; guard dobel: link disembunyikan + backend `requireAdmin` → 403).
+
+**Isi halaman**:
+- **Tab Model AI** — tabel entri model = (nama id, provider `gemini`/`openai`, base URL, API key, aktif, urutan ↑↓). Provider **openai** = gateway OpenAI-compatible (OpenRouter/LiteLLM/OneAPI/NewAPI/relay 9router, dsb) → request `/chat/completions` streaming SSE; provider **gemini** = SDK resmi (API key per entri = multi-key, baseUrl opsional). Rotasi/blok kuota/RPM tetap seperti semula per-entri. Key TIDAK pernah dikirim ke klien (hanya `••••`), save ulang tanpa ubah key = key lama dipertahankan, ada tombol **Tes** (1 request mini) & **Reset ke bawaan**, panel status runtime (blok menit, rpm, urutan berjalan).
+- **Tab Fitur** — 20 saklar (Utama/Penelitian/Uji & Revisi/Pendampingan) → flags global; sidebar + kartu dashboard + FAB asisten ikut tampil/sembunyi untuk SEMUA pengguna, langsung tanpa reload (pendengar `perbaruiFlags`).
+
+**Penyimpanan**: tabel `app_settings` (migrasi `backend/supabase/migration_admin.sql`) — **migrasi belum dijalankan** (butuh SQL Editor Supabase milik owner), jadi backend otomatis fallback ke `backend/data/app-settings.json` (ter-`.gitignore`) dan **auto-import ke tabel** begitu migrasi dijalankan.
+
+**Verifikasi**: `tools/smoke-admin.js` **14/14 PASS** (CRUD model, mask key, merge key, validasi 400, flags, status, jalur openai terbukti — 401 dari OpenRouter saat key palsu, reset default) + mode `--guard` **5/5 PASS** (semua endpoint admin tolak non-admin 403, `/api/flags` publik tetap 200); E2E browser: link Admin muncul-hilang ikut plan, toggle fitur sembunyikan menu/kartu/FAB langsung + persist reload, panel 403 untuk non-admin; `tsc` backend+frontend 0 error, `next build` lolos (35 route).
+
+**Tahap berikutnya (menunggu arahan owner)**: Opsi A upload `.xlsx/.csv` Bab IV; manajemen user/kredit/monitor generate; testing lintas-browser; guard endpoint mock payment P0 (`/billing/checkout`+`/confirm` masih terbuka) — pertanyaan "Mau saya tutup sekarang?" belum dijawab.

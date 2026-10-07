@@ -315,6 +315,16 @@ Playwright 1.63 + Firefox 155 (build v1543) di Windows, skrip **`tools/ff-smoke.
 
 **Audit akhir:44/46 lolos · 0 gagal · 0 peringatan** (2 SKIP = bab4/5 dikunci tahap proposal) — semua cek khas varian tesis baru PASS (bab2: tabel 6 kolom +9 sub-sub +4 sintesis; bab3:4 kisi-kisi + Gantt + Likert + Slovin; lampiran: kuesioner+screening + ☐ + Turnitin jujur). Catatan: Bab I masih konten struktur lama (lolos cek umum) — regenerasi bab1 (1 kredit) bila owner ingin sinkron penuh; bab4/bab5 terkunci sampai tahap `full`.
 
+## Dashboard Admin tahap 1 (Model + Fitur) — SELESAI 8 Okt 2026
+
+Halaman baru **`/dashboard/admin`** (hanya akun `plan=admin`, guard dobel: link sidebar tersembunyi + backend `requireAdmin` → 403):
+
+- **Tab Model AI**: kelola daftar model = (id, provider `gemini`/**`openai`** gateway OpenAI-compatible — siap untuk rencana **9router/multi-gateway** owner, base URL, API key per entri, aktif, urutan ↑↓). Rotasi/blok kuota/RPM per-entri tetap; key tidak pernah dikirim ke klien (masked `••••`, save ulang mempertahankan key lama, ada tombol **Tes** per baris + **Reset ke bawaan**); panel status runtime (blok menit, rpm, urutan berjalan).
+- **Tab Fitur**: 20 saklar fitur dashboard (sidebar + kartu + FAB asisten) → flags global `app_settings.feature_flags`, efek langsung ke seluruh UI semua pengguna tanpa reload.
+- **Penyimpanan**: tabel `app_settings` bila migrasi dijalankan, selama itu fallback file `backend/data/app-settings.json` (ter-ignore git) + **auto-import** ke tabel setelah migrasi.
+- **Verifikasi**: `node tools/smoke-admin.js` **14/14 PASS** · `node tools/smoke-admin.js --guard` **5/5 PASS** (403 non-admin) · E2E browser (link admin, toggle live + persist, kartu/FAB ikut, panel 403) · `tsc` 0 error · `next build` 35 route lolos.
+- **Tahap lanjut (menunggu owner)**: manajemen user/kredit/monitor generate; Opsi A upload `.xlsx/.csv` Bab IV; guard mock payment P0.
+
 ## Tunda (butuh owner)
 
 1. Project Supabase BARU (kunci bersih) + ulangi 5 migrasi + update env Railway/Vercel/lokal
@@ -322,6 +332,7 @@ Playwright 1.63 + Firefox 155 (build v1543) di Windows, skrip **`tools/ff-smoke.
 3. **Kuota Gemini free tier** (`GenerateRequestsPerDayPerProjectPerModel-FreeTier` = 20 req/hari per **model**; RPM 5, TPM 250 rb). **Sudah diakali dari kode** (commit `2228c7a`): `ai.service.ts` kini punya rantai fallback 8 model (`2.5-flash → 3.x flash → 3.x lite`) + jendela 4 request/menit per model; kalau satu model 429/kuota habis otomatis pindah model berikutnya, dan model yang kena `retryDelay` ditahan sesuai sisa waktunya → kapasitas harian = gabungan semua model (±150+ req/hari), bukan cuma 20. **Tetap disarankan**: pasang billing Google AI Studio (min $5) sebelum ada user riil, karena rantai fallback hanya menunda batas, bukan menghapusnya. **Keputusan owner 7 Okt**: YA — pasang billing $5 (menunggu aksi owner). **Langkah konkret**: (1) buka `aistudio.google.com/apikey` (login akun yang punya `GEMINI_API_KEY` backend), (2) di tabel API key cari project free-tier → tombol **"Set up billing"** pada kolom *Billing Tier*, (3) ikuti wizard: setuju ToS negara → kontak → metode pembayaran → **prabayar minimum $5** (atau postpay), (4) aktifkan *auto-reload* agar tak kehabisan di tengah user, (5) verifikasi di halaman Billing AI Studio: status Paid/Prepay + saldo > $0. Pastikan API key di env Railway `GEMINI_API_KEY` berada di **project yang sama** yang di-upgrade (kalau beda project, kuartanya tetap free tier)
 4. Konten: video tutorial, link Grup WA (`https://chat.whatsapp.com/JFKzEThZQzDGwZKkMcxLq6`), payout affiliate manual, plugin Word
 5. Custom domain `api.skripsiplg.my.id` (opsional)
+6. **Jalankan `backend/supabase/migration_admin.sql`** di SQL Editor Supabase (tabel `app_settings` untuk Dashboard Admin) — sampai dijalankan, pengaturan model/fitur tersimpan di file lokal `backend/data/app-settings.json` dan otomatis pindah ke tabel setelah migrasi jalan
 
 ## Akun uji (password minta ke owner)
 
