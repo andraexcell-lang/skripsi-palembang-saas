@@ -24,11 +24,11 @@ export default function ThemeToggle() {
   }
 
   return (
-    <div className="flex items-center bg-bg-base rounded-lg p-1 border border-border-subtle">
-      <button onClick={() => pick('terang')} className={`flex-1 flex justify-center py-1.5 rounded-md text-xs font-medium ${mode === 'terang' ? 'bg-bg-surface-hover text-text-primary shadow-sm border border-border-subtle' : 'text-text-secondary hover:text-text-primary'}`}>
+    <div role="radiogroup" aria-label="Tema tampilan" className="flex items-center bg-bg-base rounded-lg p-1 border border-border-subtle">
+      <button role="radio" aria-checked={mode === 'terang'} onClick={() => pick('terang')} className={`flex-1 flex justify-center py-1.5 rounded-md text-xs font-medium ${mode === 'terang' ? 'bg-bg-surface-hover text-text-primary shadow-sm border border-border-subtle' : 'text-text-secondary hover:text-text-primary'}`}>
         ☀ Terang
       </button>
-      <button onClick={() => pick('gelap')} className={`flex-1 flex justify-center py-1.5 rounded-md text-xs font-medium ${mode === 'gelap' ? 'bg-bg-surface-hover text-text-primary shadow-sm border border-border-subtle' : 'text-text-secondary hover:text-text-primary'}`}>
+      <button role="radio" aria-checked={mode === 'gelap'} onClick={() => pick('gelap')} className={`flex-1 flex justify-center py-1.5 rounded-md text-xs font-medium ${mode === 'gelap' ? 'bg-bg-surface-hover text-text-primary shadow-sm border border-border-subtle' : 'text-text-secondary hover:text-text-primary'}`}>
         🌙 Gelap
       </button>
     </div>
