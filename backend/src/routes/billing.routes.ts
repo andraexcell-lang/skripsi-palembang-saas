@@ -29,10 +29,19 @@ export const PACKAGES = [
   { id: 'prof-tahunan', group: 'Profesor', name: 'Tahunan', price: 1548000, credits: 3500, desc: '3000 + 500 bonus kredit' },
 ];
 
-router.get('/packages', (_req, res) => res.json({ items: PACKAGES, midtrans: midtransReady() }));
+router.get('/packages', (_req, res) => res.json({ items: PACKAGES, midtrans: midtransReady(), mock: mockAktif() }));
+
+/** Checkout/confirm MOCK = lubang kredit gratis (siapa pun login bisa cetak kredit sendiri) — P0.
+ * Default MATI; nyalakan hanya eksplisit untuk pengembangan lokal: BILLING_MOCK=1
+ * (dan tetap mati walau salah set di production). Pembayaran real = webhook Midtrans. */
+const mockAktif = () => process.env.NODE_ENV !== 'production' && process.env.BILLING_MOCK === '1';
+
+const MOCK_OFF = { error: 'Checkout mock dimatikan (default). Konfigurasi Midtrans, atau set BILLING_MOCK=1 di backend/.env khusus pengembangan.' };
+const CONFIRM_OFF = { error: 'Konfirmasi mock dimatikan (default). Lunas hanya divalidasi via webhook Midtrans.' };
 
 // Mock checkout (dev/sandbox tanpa Midtrans). Bila Midtrans terkonfigurasi, pakai /midtrans/charge.
 router.post('/checkout', requireAuth, async (req: AuthRequest, res) => {
+  if (!mockAktif()) return res.status(503).json(MOCK_OFF);
   try {
     const { packageId } = req.body || {};
     const pkg = PACKAGES.find((p) => p.id === packageId);
@@ -52,6 +61,7 @@ router.post('/checkout', requireAuth, async (req: AuthRequest, res) => {
 });
 
 router.post('/confirm', requireAuth, async (req: AuthRequest, res) => {
+  if (!mockAktif()) return res.status(503).json(CONFIRM_OFF);
   try {
     const { transactionId } = req.body || {};
     if (!transactionId) return res.status(400).json({ error: 'transactionId wajib' });

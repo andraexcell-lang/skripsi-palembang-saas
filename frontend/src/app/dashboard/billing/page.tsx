@@ -33,6 +33,8 @@ export default function BillingPage() {
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState('');
   const [midtrans, setMidtrans] = useState(false);
+  // Mode mock hanya bila backend mengizinkan (BILLING_MOCK=1); default mati (guard P0 kredit gratis)
+  const [mock, setMock] = useState(false);
   // True setelah load() pertama selesai — cegah flash klaim palsu
   // ("mode mock", "Login dulu…", "Belum ada transaksi") sebelum data datang.
   const [ready, setReady] = useState(false);
@@ -42,6 +44,7 @@ export default function BillingPage() {
       const p = await apiGet('/api/billing/packages');
       setPkgs(p.items);
       setMidtrans(!!p.midtrans);
+      setMock(!!p.mock);
     } catch { /* backend belum jalan / belum login */ }
     try {
       const t = await apiGet('/api/billing/transactions');
@@ -85,7 +88,7 @@ export default function BillingPage() {
         <div>
           <h1 className="text-2xl font-bold text-text-primary">Billing</h1>
           <p className="text-text-secondary text-sm">
-            {!ready ? 'Memuat info pembayaran…' : midtrans ? 'Pembayaran real via Midtrans (QRIS/e-wallet/transfer bank).' : 'Midtrans belum dikonfigurasi — mode mock aktif.'}
+            {!ready ? 'Memuat info pembayaran…' : midtrans ? 'Pembayaran real via Midtrans (QRIS/e-wallet/transfer bank).' : mock ? 'Midtrans belum dikonfigurasi — mode mock aktif.' : 'Pembayaran online belum aktif — hubungi admin untuk aktivasi paket.'}
           </p>
         </div>
         {msg && <p className="text-sm text-text-primary bg-bg-surface border border-border-subtle rounded-lg p-3">{msg}</p>}
@@ -132,9 +135,13 @@ export default function BillingPage() {
                         <button onClick={() => payMidtrans(p.id)} disabled={!!loading} className="w-full bg-brand-primary text-white font-bold text-xs py-3 rounded-lg disabled:opacity-50">
                           {loading === p.id ? 'Membuat pembayaran...' : `Bayar ${p.name}`}
                         </button>
-                      ) : (
+                      ) : mock ? (
                         <button onClick={() => checkoutMock(p.id)} disabled={!!loading} className="w-full bg-bg-surface-hover border border-border-strong text-text-primary font-bold text-xs py-3 rounded-lg disabled:opacity-50">
                           {loading === p.id ? 'Memproses...' : `Pilih ${p.name} (mock)`}
+                        </button>
+                      ) : (
+                        <button disabled className="w-full bg-bg-surface border border-border-subtle text-text-muted font-bold text-xs py-3 rounded-lg cursor-not-allowed">
+                          Pembayaran belum aktif
                         </button>
                       )}
                     </div>
