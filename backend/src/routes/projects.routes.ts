@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
+import * as XLSX from 'xlsx';
 import { AuthRequest, requireAuth } from '../middleware/auth';
 import { requireAuthOrKey } from '../middleware/apiKey';
 import { supabaseAdmin, supabaseAnon } from '../config/supabase';
@@ -600,11 +601,18 @@ PANDUAN ISI per sub:
     return (akhir > 0 ? sisa.slice(0, akhir) : sisa).slice(0, 9000);
   })();
 
+  // Opsi A (upload .xlsx/.csv): data tabulasi milik user → angka Bab IV WAJIB dari
+  // data ini, dilarang mengarang angka lain (tanpa data, agen tetap simulasi).
+  const tabulasiNote =
+    bab === 'bab4' && p?.content?.tabulasi
+      ? `DATA TABULASI HASIL OLAH DATA (milik penulis — satu-satunya sumber angka): seluruh angka/tabel hasil pada Bab IV WAJIB diambil PERSIS dari data di bawah; angka yang tidak ada di data ini DILARANG dikarang; bila data tidak mencukupi suatu analisis, sajikan tanpa mengarang angka.\n${String(p.content.tabulasi).slice(0, 12000)}\n`
+      : '';
+
   const map: Record<string, string> = {
     bab1: `${struktur1}${target1}Judul: karya berikut.\n${base}${ref}\n${wajib}${fenomena}Tulis akademik formal Indonesia, siap tempel ke Word.\n${scopeNote}${outlineNote}${SITASI}${SITASI_KUTIP}`,
     bab2: `${struktur2}${target2}${baganNote}Judul: karya berikut.\n${base}${ref}\n${scopeNote}${outlineNote}${SITASI}${SITASI_KUTIP}`,
     bab3: `${struktur3}${target3}${populasiNote}${desainNote}${softwareNote}Judul: karya berikut.\n${base}${ref}\nIkuti kaidah metodologi standar Indonesia.\n${scopeNote}${outlineNote}${SITASI}${SITASI_KUTIP}`,
-    bab4: `${struktur4}${target4}${base}${ref}\nGunakan tabel Markdown bila perlu.\n${scopeNote}${outlineNote}${SITASI}${SITASI_KUTIP}`,
+    bab4: `${struktur4}${target4}${tabulasiNote}${base}${ref}\nGunakan tabel Markdown bila perlu.\n${scopeNote}${outlineNote}${SITASI}${SITASI_KUTIP}`,
     bab5: `${struktur5}${target5}${base}${ref}\n${scopeNote}${outlineNote}${SITASI}${SITASI_BAB5}`,
     lampiran: `Susun LAMPIRAN ${p.jenis === 'disertasi' ? 'disertasi' : p.jenis === 'tesis' ? 'tesis' : 'skripsi'} (bab penunjang setelah Bab V).\n${targetL}${base}${ref}\n${strukturL}${kisiKonteks ? `KONTEKS WAJIB — KISI-KISI DARI BAB 3.3 (jumlah butir & kode item di Lampiran 6.1 WAJIB persis mengikuti indikator di sini):\n${kisiKonteks}\n` : ''}${strukturL ? '' : `Isinya diturunkan dari kajian pustaka dan metode artikelmu: ${p.metode === 'Kualitatif'
       ? 'kisi-kisi wawancara/pedoman wawancara, daftar informan, contoh transkrip, lembar observasi'
@@ -895,6 +903,61 @@ router.patch('/:id/content', requireAuthOrKey, async (req: AuthRequest, res) => 
     // Bab utuh dinormalisasi (buang **/LaTeX + rapikan nomor sub-bab); potongan "bab:sub" tidak
     const isi = key.includes(':') ? text : normalisasiBab(text);
     const content = { ...(p.content || {}), [key]: isi.slice(0, 60000) };
+    const { error: e2 } = await db().from('projects').update({ content, updated_at: new Date().toISOString() }).eq('id', id);
+    if (e2) throw new Error(e2.message);
+    res.json({ ok: true });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+/* Opsi A — upload tabulasi Bab IV (.xlsx/.xls/.csv, maks 8 MB) → semua sheet
+ * dikonversi CSV dan disimpan di content.tabulasi (kunci khusus — PATCH /content
+ * memakai normalisasiBab yang bisa merusak CSV, jadi lewat endpoint tersendiri). */
+const upTabulasi = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 * 1024 * 1024 } }).single('file');
+
+router.post('/:id/tabulasi', requireAuthOrKey, (req: AuthRequest, res, next) => {
+  upTabulasi(req, res, (err: any) => (err ? res.status(400).json({ error: `Upload gagal: ${err.message || err}` }) : next()));
+}, async (req: AuthRequest, res) => {
+  try {
+    const id = String(req.params.id);
+    let teks = '';
+    let namaFile = '';
+    if (req.file) {
+      const nama = (req.file.originalname || '').toLowerCase();
+      if (!/\.(xlsx|xls|csv)$/.test(nama)) return res.status(400).json({ error: 'Format harus .xlsx, .xls, atau .csv' });
+      if (nama.endsWith('.csv')) {
+        teks = req.file.buffer.toString('utf8');
+      } else {
+        const wb = XLSX.read(req.file.buffer, { type: 'buffer' });
+        const bagian: string[] = [];
+        for (const n of wb.SheetNames) {
+          const csv = XLSX.utils.sheet_to_csv(wb.Sheets[n]).trim();
+          if (csv) bagian.push(wb.SheetNames.length > 1 ? `[Sheet: ${n}]\n${csv}` : csv);
+        }
+        teks = bagian.join('\n\n');
+      }
+      namaFile = req.file.originalname;
+    } else if (typeof req.body?.csv === 'string') {
+      teks = req.body.csv;
+    }
+    teks = teks.replace(/^\uFEFF/, '').trim();
+    if (teks.length < 10) return res.status(400).json({ error: 'Isi tabulasi kosong (min. 10 karakter)' });
+    teks = teks.slice(0, 20000);
+    const { data: p, error } = await db().from('projects').select('content').eq('id', id).eq('user_id', req.userId!).single();
+    if (error || !p) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
+    const content = { ...(p.content || {}), tabulasi: teks };
+    const { error: e2 } = await db().from('projects').update({ content, updated_at: new Date().toISOString() }).eq('id', id);
+    if (e2) throw new Error(e2.message);
+    res.json({ ok: true, tabulasi: teks, chars: teks.length, baris: teks.split('\n').length, namaFile, preview: teks.split('\n').slice(0, 8).join('\n') });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.delete('/:id/tabulasi', requireAuthOrKey, async (req: AuthRequest, res) => {
+  try {
+    const id = String(req.params.id);
+    const { data: p, error } = await db().from('projects').select('content').eq('id', id).eq('user_id', req.userId!).single();
+    if (error || !p) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
+    const content = { ...(p.content || {}) };
+    delete content.tabulasi;
     const { error: e2 } = await db().from('projects').update({ content, updated_at: new Date().toISOString() }).eq('id', id);
     if (e2) throw new Error(e2.message);
     res.json({ ok: true });

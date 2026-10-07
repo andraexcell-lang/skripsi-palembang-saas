@@ -1,7 +1,7 @@
 'use client';
 import { use, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { apiGet, apiPost, apiPatch, apiPostStream, apiUpload, apiDownloadPptx, isInsufficientCredits } from '@/lib/api';
+import { apiGet, apiPost, apiPatch, apiPostStream, apiUpload, apiDelete, apiDownloadPptx, isInsufficientCredits } from '@/lib/api';
 
 const BABS = [
   { id: 'bab1', label: 'Bab I Pendahuluan', gen: 'Bab I: Pendahuluan' },
@@ -198,6 +198,10 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
   const [upFile, setUpFile] = useState<File | null>(null);
   const [upLoading, setUpLoading] = useState(false);
   const [upMsg, setUpMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  // Opsi A: unggah tabulasi .xlsx/.csv → angka Bab IV memakai data asli pengguna
+  const [tabFile, setTabFile] = useState<File | null>(null);
+  const [tabLoading, setTabLoading] = useState(false);
+  const [tabMsg, setTabMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   // Editor inline per paragraf (paritas referensi): klik → textarea, simpan saat blur
   const [editIdx, setEditIdx] = useState<number | null>(null);
@@ -717,6 +721,38 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
     setUpLoading(false);
   }
 
+  /* ---------------- Opsi A: tabulasi Bab IV (.xlsx/.csv) ---------------- */
+  async function kirimTabulasi() {
+    if (!tabFile || tabLoading) return;
+    setTabLoading(true); setTabMsg(null);
+    try {
+      const r = await apiUpload(`/api/projects/${id}/tabulasi`, tabFile);
+      setProyek((p: any) => ({ ...p, content: { ...(p?.content || {}), tabulasi: r.tabulasi } }));
+      setTabMsg({ ok: true, text: `Tersimpan: ${r.chars} karakter · ${r.baris} baris${r.namaFile ? ` · ${r.namaFile}` : ''}. Angka Bab IV kini memakai data ini.` });
+      setTabFile(null);
+    } catch (e: any) {
+      setTabMsg({ ok: false, text: e.message });
+    }
+    setTabLoading(false);
+  }
+
+  async function hapusTabulasi() {
+    if (tabLoading) return;
+    setTabLoading(true); setTabMsg(null);
+    try {
+      await apiDelete(`/api/projects/${id}/tabulasi`);
+      setProyek((p: any) => {
+        const c = { ...(p?.content || {}) };
+        delete c.tabulasi;
+        return { ...p, content: c };
+      });
+      setTabMsg({ ok: true, text: 'Data tabulasi dihapus — Bab IV kembali memakai simulasi agen.' });
+    } catch (e: any) {
+      setTabMsg({ ok: false, text: e.message });
+    }
+    setTabLoading(false);
+  }
+
   function downloadRis() {
     apiGet(`/api/projects/${id}/references`).then((r: any) => {
       const ris = (r.items || []).map((x: any) => {
@@ -771,6 +807,7 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
 
   const text = active === 'pustaka' ? '' : (proyek?.content?.[active] || '');
   const isPustaka = active === 'pustaka';
+  const tabulasiAda = Boolean(proyek?.content?.tabulasi);
   const subsLampiran = outline?.lampiran?.subs?.length ? outline.lampiran.subs : SUB_LAMPIRAN_BAWAAN;
   // Progress rail (paritas referensi): "N dari 5 Bab · NN% selesai"
   const nBabSelesai = BABS.filter((b) => b.id !== 'lampiran' && proyek?.content?.[b.id]).length;
@@ -1095,6 +1132,41 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
           <div id="dapus" className="bg-white dark:bg-bg-surface text-slate-900 dark:text-text-primary border border-border-subtle rounded-md p-4 sm:p-8 text-sm scroll-mt-24 shadow-sm" style={{ fontFamily: "'Times New Roman', Georgia, serif" }}>{renderDoc(text)}</div>
         )}
 
+        {/* Opsi A — unggah tabulasi (.xlsx/.csv): angka Bab IV dari data asli */}
+        {active === 'bab4' && !isPustaka && (
+          <div className="mt-10 border border-border-subtle rounded-lg bg-bg-surface p-4 text-xs space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="font-bold text-sm text-text-primary">Data Tabulasi Bab IV <span className="font-normal text-text-muted">(.xlsx / .csv — opsional)</span></h3>
+              {tabulasiAda && (
+                <span className="text-[10px] font-bold uppercase bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full">Terpasang</span>
+              )}
+            </div>
+            {tabulasiAda ? (
+              <div className="space-y-2">
+                <p className="text-text-secondary">Angka Bab IV diambil <b>persis</b> dari data ini (hasil uji, koefisien, hipotesis) — tanpa mengarang angka lain.</p>
+                <pre className="max-h-32 overflow-auto bg-bg-base border border-border-subtle rounded p-2 text-[11px] text-text-muted whitespace-pre-wrap">{String(proyek?.content?.tabulasi || '').slice(0, 1200)}</pre>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <input id="tab-ganti" type="file" accept=".xlsx,.xls,.csv" onChange={(e) => { const f = e.target.files?.[0] || null; if (f) { setTabFile(f); setTabMsg(null); } }} className="hidden" />
+                  <button onClick={() => document.getElementById('tab-ganti')?.click()} disabled={tabLoading} className="rounded-md border border-border-strong px-3 py-1.5 font-semibold text-text-primary disabled:opacity-50">Ganti file</button>
+                  <button onClick={hapusTabulasi} disabled={tabLoading} className="rounded-md border border-border-strong px-3 py-1.5 font-semibold text-accent-red disabled:opacity-50">{tabLoading ? 'Memproses…' : 'Hapus'}</button>
+                  {tabFile && (
+                    <button onClick={kirimTabulasi} disabled={tabLoading} className="rounded-md bg-brand-primary text-white px-3 py-1.5 font-bold disabled:opacity-50">{tabLoading ? 'Menyimpan…' : `Simpan ${tabFile.name}`}</button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-text-secondary">Punya hasil olah data (SPSS/Excel)? Unggah supaya Bab IV memakai angka aslimu. Belum ada? Agen menyusun tabulasi & hasil olahan simulasi sendiri (seluruh uji lulus, semua hipotesis signifikan).</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <input type="file" accept=".xlsx,.xls,.csv" onChange={(e) => { setTabFile(e.target.files?.[0] || null); setTabMsg(null); }} className="block w-full sm:w-auto text-[11px] text-text-secondary file:mr-3 file:rounded-md file:border-0 file:bg-brand-primary file:px-4 file:py-2 file:text-xs file:font-bold file:text-white hover:file:opacity-90" />
+                  <button onClick={kirimTabulasi} disabled={!tabFile || tabLoading} className="bg-brand-primary text-white px-4 py-2 rounded-lg font-bold disabled:opacity-50">{tabLoading ? 'Membaca…' : 'Pasang untuk Bab IV'}</button>
+                </div>
+              </div>
+            )}
+            {tabMsg && <p className={`text-[11px] ${tabMsg.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-accent-red'}`}>{tabMsg.text}</p>}
+          </div>
+        )}
+
         {/* Footer generate — paritas referensi: "Bab belum dibuat." + Mulai Generate, atau Generate Ulang Bab Ini */}
         {!isPustaka && (text || active !== 'lampiran') && (
           <div className="mt-10 flex flex-col items-center gap-2 border-t border-border-subtle pt-6 text-center">
@@ -1103,9 +1175,9 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
                 <p className="text-sm text-text-secondary">Bab belum dibuat.</p>
                 {active === 'bab4' && (
                   <p className="max-w-xl text-xs text-text-muted">
-                    Punya tabulasi data mentah? Sertakan lewat <span className="font-semibold">Data Awal Penelitian</span> /
-                    tempel ringkasannya sebagai arahan — Bab IV akan mengolah angka itu. Belum ada data? Agen menyusun
-                    tabulasi & hasil olahannya sendiri: seluruh uji dinyatakan lulus dan semua hipotesis signifikan.
+                    Punya tabulasi data (.xlsx/.csv)? Unggah lewat panel <span className="font-semibold">Data Tabulasi Bab IV</span> di atas —
+                    Bab IV akan memakai angka aslimu. Belum ada data? Agen menyusun tabulasi & hasil olahannya sendiri: seluruh uji
+                    dinyatakan lulus dan semua hipotesis signifikan.
                   </p>
                 )}
                 <button onClick={() => generate()} disabled={loading} className="inline-flex items-center gap-2 rounded-lg bg-brand-primary px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50">
@@ -1118,8 +1190,8 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
                 <p className="text-xs text-text-secondary">Datanya salah atau hasilnya kurang tepat? Bab ini bisa ditulis ulang dari awal.</p>
                 {active === 'bab4' && (
                   <p className="max-w-xl text-xs text-text-muted">
-                    Punya tabulasi data mentah? Tempel ringkasannya sebagai <span className="font-semibold">arahan</span> saat
-                    Generate Ulang agar angka Bab IV memakai data aslimu; tanpa data, agen menyusun tabulasi & hasil olahan
+                    Punya tabulasi data (.xlsx/.csv)? Unggah di panel <span className="font-semibold">Data Tabulasi Bab IV</span> di atas
+                    sebelum Generate Ulang agar angka Bab IV memakai data aslimu; tanpa data, agen menyusun tabulasi & hasil olahan
                     simulasi (seluruh uji lulus, semua hipotesis signifikan).
                   </p>
                 )}

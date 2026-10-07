@@ -56,6 +56,13 @@ export async function apiPost(path: string, body: any) {
   return json;
 }
 
+export async function apiDelete(path: string) {
+  const res = await fetch(`${API}${path}`, { method: 'DELETE', headers: await authHeaders() });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiError(json.error || `DELETE ${path} gagal`, res.status);
+  return json;
+}
+
 export async function apiPatch(path: string, body: any) {
   const res = await fetch(`${API}${path}`, {
     method: 'PATCH',
