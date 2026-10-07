@@ -150,3 +150,29 @@ export async function apiDownloadPptx(jenis: string, materi: string, judul: stri
   a.click();
   URL.revokeObjectURL(a.href);
 }
+
+// Unduh BJT (Buku Jawaban Tugas) Tuton UT — POST /api/files/bjt → .docx bersampul
+export async function apiDownloadBjt(data: {
+  mataKuliah: string;
+  kode?: string;
+  nama: string;
+  nim: string;
+  upbjj?: string;
+  masaUjian?: string;
+  items: { jenis: string; judul?: string; soal: string; jawaban: string }[];
+}) {
+  const token = await authToken();
+  const res = await fetch(`${API}/api/files/bjt`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new ApiError((await res.json().catch(() => ({}))).error || 'Unduh BJT gagal', res.status);
+  const blob = await res.blob();
+  const slug = data.mataKuliah.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'tuton';
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `bjt-${slug}.docx`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}

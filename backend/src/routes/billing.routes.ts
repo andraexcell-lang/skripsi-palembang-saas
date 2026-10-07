@@ -8,6 +8,15 @@ import { grantCommission } from './affiliate.routes';
 
 const router = Router();
 
+// Set plan pelanggan saat pembayaran lunas (frontend menampilkan "Paket Mahasiswa/Profesor aktif";
+// sebelumnya plan tak pernah berubah sehingga selalu "free")
+async function applyPlan(userId: string, packageId: string) {
+  const pkg = PACKAGES.find((p) => p.id === packageId);
+  if (!pkg) return;
+  const db = supabaseAdmin || supabaseAnon;
+  await db.from('profiles').update({ plan: pkg.group.toLowerCase() }).eq('id', userId);
+}
+
 export const PACKAGES = [
   { id: 'mhs-bulanan', group: 'Mahasiswa', name: 'Bulanan', price: 89000, credits: 110, desc: '100 + 10 bonus kredit' },
   { id: 'mhs-3bulan', group: 'Mahasiswa', name: '3 Bulan', price: 248000, credits: 365, desc: '300 + 65 bonus kredit', popular: true },
@@ -52,6 +61,7 @@ router.post('/confirm', requireAuth, async (req: AuthRequest, res) => {
     if (trx.status === 'paid') return res.json({ ok: true, already: true });
     await db.from('transactions').update({ status: 'paid' }).eq('id', transactionId);
     const remaining = await addCredits(req.userId!, trx.credits, `billing:${trx.package_id}`, { transactionId });
+    await applyPlan(req.userId!, trx.package_id);
     await grantCommission(req.userId!, transactionId, trx.amount);
     res.json({ ok: true, remaining });
   } catch (e: any) {
@@ -111,6 +121,7 @@ router.post('/midtrans/webhook', async (req, res) => {
       if (trx && trx.status !== 'paid') {
         await db.from('transactions').update({ status: 'paid' }).eq('id', trx.id);
         await addCredits(trx.user_id, trx.credits, `billing:${trx.package_id}`, { orderId: order_id });
+        await applyPlan(trx.user_id, trx.package_id);
         await grantCommission(trx.user_id, trx.id, trx.amount);
       }
     } else if (['deny', 'expire', 'cancel'].includes(transaction_status)) {

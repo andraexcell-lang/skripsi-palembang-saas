@@ -533,6 +533,71 @@ router.post('/spss', requireAuth, upload.single('file'), async (req: AuthRequest
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// Unduh BJT (Buku Jawaban Tugas) Tuton UT — sampul resmi + jawaban per item (paritas §3.26)
+router.post('/bjt', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const { mataKuliah = '', kode = '', nama = '', nim = '', upbjj = '', masaUjian = '', items = [] } = req.body || {};
+    if (!String(mataKuliah).trim() || !String(nama).trim() || !String(nim).trim()) {
+      return res.status(400).json({ error: 'Mata kuliah, nama lengkap, dan NIM wajib diisi' });
+    }
+    if (!Array.isArray(items) || items.length === 0) return res.status(400).json({ error: 'Belum ada jawaban untuk diunduh' });
+    const docx: any = await import('docx');
+    const { Document, Packer, Paragraph, TextRun, AlignmentType } = docx;
+    const TNR = 'Times New Roman';
+    const size = 24; // 12 pt
+
+    const center = (text: string, opts: any = {}) =>
+      new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 60 }, children: [new TextRun({ text, font: TNR, size, ...opts })] });
+    const left = (text: string, opts: any = {}) =>
+      new Paragraph({ spacing: { after: 60 }, children: [new TextRun({ text, font: TNR, size, ...opts })] });
+    const kosong = () => new Paragraph({ children: [] });
+
+    // Sampul BJT
+    const cover = [
+      center('UNIVERSITAS TERBUKA', { bold: true, size: 32 }),
+      center('BUKU JAWABAN TUGAS (BJT)', { bold: true, size: 32 }),
+      kosong(), kosong(),
+      center(String(mataKuliah), { bold: true, size: 28 }),
+      center(kode ? `Kode Mata Kuliah: ${kode}` : ' ', { bold: true }),
+      kosong(), kosong(),
+      left(`Nama Lengkap : ${nama}`),
+      left(`NIM : ${nim}`),
+      left(`UPBJJ : ${upbjj || '—'}`),
+      left(`Masa Ujian : ${masaUjian || '—'}`),
+    ];
+
+    // Isi — tiap item: judul, soal, jawaban (paragraf per baris)
+    const isi: any[] = [];
+    items.slice(0, 80).forEach((it: any, i: number) => {
+      const judul = String(it.judul || `Butir ${i + 1}`);
+      isi.push(new Paragraph({ spacing: { before: 240, after: 120 }, children: [new TextRun({ text: `${i + 1}. ${it.jenis === 'Diskusi' ? 'Diskusi' : 'Tugas'} — ${judul}`, font: TNR, size, bold: true })] }));
+      if (it.soal) {
+        isi.push(new Paragraph({ spacing: { after: 60 }, children: [new TextRun({ text: 'Soal:', font: TNR, size, bold: true, italics: true })] }));
+        String(it.soal).split('\n').filter((l) => l.trim()).forEach((l) => isi.push(left(l)));
+      }
+      isi.push(new Paragraph({ spacing: { before: 120, after: 60 }, children: [new TextRun({ text: 'Jawaban:', font: TNR, size, bold: true, italics: true })] }));
+      String(it.jawaban || '—').split('\n').forEach((l) => isi.push(left(l || ' ')));
+    });
+
+    const page = { size: { width: 11905, height: 16837 }, margin: { top: 1700, right: 1700, bottom: 1700, left: 1700 } };
+    const doc = new Document({
+      creator: 'Skripsi Palembang',
+      title: `BJT ${mataKuliah}`,
+      description: `Buku Jawaban Tugas — ${mataKuliah}`,
+      styles: { default: { document: { run: { font: TNR, size }, paragraph: { spacing: { before: 0, after: 0, line: 360 } } } } },
+      sections: [
+        { properties: { page }, children: cover },
+        { properties: { page }, children: isi },
+      ],
+    });
+    const buf = await Packer.toBuffer(doc);
+    const slug = String(mataKuliah).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'bjt';
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename="bjt-${slug}.docx"`);
+    res.send(Buffer.from(buf));
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 // Pencarian referensi nyata ber-DOI via OpenAlex (gratis, tanpa kredit, tanpa login)
 router.get('/referensi', async (req, res) => {
   try {

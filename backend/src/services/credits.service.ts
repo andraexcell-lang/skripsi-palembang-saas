@@ -26,6 +26,9 @@ export const FEATURE_COSTS: Record<string, number> = {
   visual: 4, // Analisis Visual Video (paritas mantrariset: ~4 kredit)
   revisi: 1,
   chat: 1,
+  // Tuton UT (paritas §3.26): 3 kredit per Tugas, 1 per Diskusi
+  tuton_tugas: 3,
+  tuton_diskusi: 1,
 };
 
 export async function getBalance(userId: string) {

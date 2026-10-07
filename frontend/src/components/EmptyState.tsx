@@ -50,12 +50,14 @@ export function IcChat({ className = 'size-6' }: { className?: string }) {
 export default function EmptyState({
   ikon,
   teks,
+  judul,
   aksi,
   href,
   onClick,
 }: {
   ikon: ReactNode;
   teks: string;
+  judul?: string;
   aksi?: string;
   href?: string;
   onClick?: () => void;
@@ -65,6 +67,7 @@ export default function EmptyState({
   return (
     <div className="flex flex-col items-center justify-center gap-3 px-4 py-10 text-center">
       <span className="text-[#cbd5e1] dark:text-[#cbd5e1]">{ikon}</span>
+      {judul && <p className="max-w-md text-base font-bold text-text-primary">{judul}</p>}
       <p className="max-w-md text-sm text-text-muted">{teks}</p>
       {aksi &&
         (href ? (
