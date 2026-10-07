@@ -52,8 +52,10 @@ maupun build lokal:
   pada landing, login, register, hubungkan, dashboard, billing (kedua mode tema).
 - **Performa** — FCP ±148ms (lokal), CLS 0.028 (<0.1).
 - **Console** — nol error JavaScript di semua halaman yang diuji.
-- **Cross-browser** — Firefox/Safari belum teruji otomatis (lingkungan uji hanya
-  Chromium); gunakan output Tailwind sehingga risiko rendah, tetap perlu uji manual.
+- **Cross-browser** — **Firefox teruji otomatis (7 Okt): 15/15 PASS** via
+  Playwright (`tools/ff-smoke.js`) — nol error console, responsif, tema gelap,
+  §3.18 & kartu University lolos. **Safari**: mustahil di Windows, uji manual
+  di perangkat Apple (lihat PROJECT_STATUS); output Tailwind → risiko rendah.
 
 ## Deploy
 
