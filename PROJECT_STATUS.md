@@ -271,6 +271,34 @@ Playwright 1.63 + Firefox 155 (build v1543) di Windows, skrip **`tools/ff-smoke.
 
 **Runner uji tanpa browser** `node tools/gen-uji.js <project-id> <bab1|…|lampiran> [--studi=10]` — env `UJI_EMAIL`/`UJI_PASS` + backend lokal; `?ulang=1` = 1 kredit (lampiran gratis). *Catatan*: regenerasi E2E baru dijalankan pada varian **kuantitatif (tesis proposal)**; varian lain menunggu uji serupa agar hemat kuota free tier (prompt target umum & varian-aware).
 
+## Struktur baku baru KHUSUS tesis kuantitatif (TEMPLATE TESIS.docx) — verifikasi 7 Okt 2026
+
+**Permintaan owner**: analisis `C:\Users\user\Downloads\TEMPLATE TESIS.docx` (tesis lengkap Universitas Tridinanti, Magister Manajemen, kuantitatif SEM-PLS) lalu buatkan prompt agar agen AI mengisi bab/sub-bab sesuai template. Template berisi ±20 paragraf **"INSTRUKSI UNTUK PROMPT"** yang ditanamkan pembuat template — semuanya diterjemahkan menjadi panduan prompt.
+
+**Arsitektur**: varian baru **`V_TESIS_KUANTITATIF`** di `projects.routes.ts` — menggantikan **base+overlay tesis HANYA** untuk kombinasi `jenis=tesis` + `metode=kuantitatif` (`varianFor()` special-case, tanpa overlay `f` lama); jenis/metode lain terverifikasi tidak tersentuh (uji outline: skripsi kuantitatif & tesis kualitatif tetap struktur lama).
+
+**Struktur baru** (label persis template):
+- **Bab I** (6 sub): Latar Belakang · Identifikasi Masalah · Pembatasan Masalah · Perumusan Masalah · Tujuan Penelitian · Kegunaan Penelitian (Teoretis+Praktis).
+- **Bab II** (4 sub): Kajian Pustaka (per variabel bertingkat `2.1.x.1 Pengertian` = 10 definisi + sintesis, dimensi/indikator + sintesis) · Hasil Penelitian Yang Relevan (**tabel 6 kolom** No|Peneliti(Tahun)|Judul|Persamaan|Perbedaan|Hasil ≥10 studi) · Kerangka Berpikir (narasi per jalur + bagan) · Hipotesis Penelitian (H1..Hn).
+- **Bab III** (5 sub): Tempat dan Waktu (+Gantt di 3.1) · Populasi dan Sampel (`3.2.1/3.2.2` + Slovin + Purposive + kriteria inklusi) · Variabel dan Definisi Operasional (**kisi-kisi per variabel** `Dimensi|Indikator|No. Item Pernyataan`, kode item unik KM/BT/…) · Instrumen (Likert SS=5..STS=1) · Teknik Analisis Data (jalur SEM-PLS outer/inner/hipotesis + tabel keputusan t **atau** jalur regresi, konsisten sampai Bab IV).
+- **Bab IV** (2 sub): Hasil Analisis (demografis → deskriptif → inferensial, tabel 4.x lengkap `Original Sample (O) | Sample Mean (M) | STDEV | T Statistics | P Values`) · Pembahasan Hasil (5 paragraf per hipotesis, angka konsisten dengan 4.1).
+- **Bab V** (3 sub): Kesimpulan (per rumusan) · Implikasi Kebijakan (4 butir) · Saran (Praktis/Pihak Terkait/Akademis).
+- **Lampiran** (6 sub): Kuesioner (salam + screening ☐ + identitas + kuesioner utama per variabel Likert ☐) · Tabulasi · Deskriptif · Olah Data · **Turnitin placeholder JUJUR** (tanpa persentase karangan) · Artikel Ilmiah.
+
+**Target kedalaman varian tesis**: Bab I ≥25rb (umum) · Bab II ≥40rb · **Bab III ≥25rb + per-sub minimum** (3.1 ≥1,2rb / 3.2 ≥4,5rb / 3.3 ≥8rb / 3.4 ≥1rb / 3.5 ≥10rb — disesuaikan karena kuesioner pindah ke Lampiran; template asli BAB III = 26.821 kar) · Bab IV 25–50rb · Bab V ≥7rb · Lampiran ≥9rb.
+
+**Audit sadar-varian** (`tools/audit-hasil.js`): `tesisKuant` = jenis tesis + metode kuantitatif → ganti cek lama (5-kolom terdahulu, definisi operasional 7 kolom, kuesioner `3.4.x`) dengan cek template: tabel 6 kolom, sub-sub kajian ≥8 + sintesis ≥4, kisi-kisi ≥4 tabel, Gantt, Likert, Slovin/Purposive, `Original Sample`, pembahasan per hipotesis, screening/☐/Turnitin jujur; `minSubs` Bab IV = 2; `TARGETS_TESIS_KUANT.bab3 = 25000`.
+
+**Hasil uji E2E** proyek `200b68f5` (tesis kuantitatif, proposal;2 kredit bab + lampiran gratis; `finish=STOP` semua):
+
+| Bab | Struktur lama | Struktur baru | Target | % |
+|---|---|---|---|---|
+| Bab II | 84.856 (struktur lama) | **49.676** | ≥40.000 | **124%** |
+| Bab III | 34.407 (struktur lama) | **34.008** | ≥25.000 | **136%** |
+| Lampiran | 19.352 (struktur lama) | **18.893** | ≥9.000 | **210%** |
+
+**Audit akhir:44/46 lolos · 0 gagal · 0 peringatan** (2 SKIP = bab4/5 dikunci tahap proposal) — semua cek khas varian tesis baru PASS (bab2: tabel 6 kolom +9 sub-sub +4 sintesis; bab3:4 kisi-kisi + Gantt + Likert + Slovin; lampiran: kuesioner+screening + ☐ + Turnitin jujur). Catatan: Bab I masih konten struktur lama (lolos cek umum) — regenerasi bab1 (1 kredit) bila owner ingin sinkron penuh; bab4/bab5 terkunci sampai tahap `full`.
+
 ## Tunda (butuh owner)
 
 1. Project Supabase BARU (kunci bersih) + ulangi 5 migrasi + update env Railway/Vercel/lokal

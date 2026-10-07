@@ -37,6 +37,19 @@ const V_KUANTITATIF: Varian = {
   lampiran: { judul: 'Lampiran', subs: [S('kisi_kisi', 'Kisi-Kisi Penelitian'), S('kuisioner', 'Pernyataan Kuisioner')] },
 };
 
+/* Struktur baku baru KHUSUS tesis kuantitatif — diekstrak dari TEMPLATE TESIS.docx
+   (Daftar Isi Universitas Tridinanti, Magister Manajemen). Berlaku menggantikan
+   base+overlay tesis HANYA untuk kombinasi jenis=tesis & metode kuantitatif;
+   jenis/metode lain tidak tersentuh. */
+const V_TESIS_KUANTITATIF: Varian = {
+  bab1: { judul: 'Bab I Pendahuluan', subs: [S('latar_belakang', 'Latar Belakang'), S('identifikasi_masalah', 'Identifikasi Masalah'), S('pembatasan_masalah', 'Pembatasan Masalah'), S('perumusan_masalah', 'Perumusan Masalah'), S('tujuan_penelitian', 'Tujuan Penelitian'), S('kegunaan_penelitian', 'Kegunaan Penelitian')] },
+  bab2: { judul: 'Bab II Kajian Pustaka dan Hipotesis Penelitian', subs: [S('kajian_pustaka', 'Kajian Pustaka'), S('hasil_penelitian_relevan', 'Hasil Penelitian Yang Relevan'), S('kerangka_berpikir', 'Kerangka Berpikir'), S('hipotesis_penelitian', 'Hipotesis Penelitian')] },
+  bab3: { judul: 'Bab III Metode Penelitian', subs: [S('tempat_waktu', 'Tempat dan Waktu Penelitian'), S('populasi_sampel', 'Populasi dan Sampel'), S('variabel_definisi', 'Variabel dan Definisi Operasional'), S('instrumen_penelitian', 'Instrumen Penelitian'), S('teknik_analisis', 'Teknik Analisis Data')] },
+  bab4: { judul: 'Bab IV Hasil Analisis dan Pembahasan', subs: [S('hasil_analisis', 'Hasil Analisis'), S('pembahasan_hasil', 'Pembahasan Hasil')] },
+  bab5: { judul: 'Bab V Kesimpulan, Implikasi dan Saran', subs: [S('kesimpulan', 'Kesimpulan'), S('implikasi_kebijakan', 'Implikasi Kebijakan'), S('saran', 'Saran')] },
+  lampiran: { judul: 'Lampiran', subs: [S('kuesioner', 'Kuesioner'), S('tabulasi_data', 'Hasil Tabulasi Data Responden'), S('data_deskriptif', 'Hasil Deskriptif Jawaban Responden'), S('olah_data', 'Hasil Olah Data'), S('similarity_turnitin', 'Hasil Similarity Turnitin'), S('artikel_ilmiah', 'Pengajuan Artikel Ilmiah')] },
+};
+
 const V_KUALITATIF: Varian = {
   bab1: { judul: 'Bab I Pendahuluan', subs: [S('latar_belakang_umum_khusus', 'Latar Belakang'), S('identifikasi_masalah', 'Identifikasi Masalah'), S('rumusan_masalah', 'Rumusan Masalah'), S('tujuan_penelitian', 'Tujuan Penelitian'), S('manfaat_penelitian', 'Manfaat Penelitian'), S('batasan_masalah', 'Batasan Masalah'), S('sistematika_penulisan', 'Sistematika Penulisan')] },
   bab2: { judul: 'Bab II Kajian Pustaka', subs: [S('landasan_teori', 'Landasan Teori'), S('kerangka_teori', 'Kerangka Teori'), S('penelitian_terdahulu', 'Penelitian Terdahulu'), S('kerangka_berpikir', 'Kerangka Berpikir')] },
@@ -183,8 +196,10 @@ function terapkanOverlay(v: Varian, overlays: OverlayDef[]): Varian {
 // Varian final proyek: metode -> varian, lalu overlay tesis/disertasi (jenis)
 export function varianFor(p?: { metode?: string; jenis?: string } | null): Varian {
   const key = varianMetode(p?.metode);
-  const base = VARIAN[key] || V_KUANTITATIF;
   const jenis = p?.jenis;
+  // Tesis kuantitatif memakai struktur baku baru (TEMPLATE TESIS.docx) — TANPA overlay lama
+  if (jenis === 'tesis' && key === 'kuantitatif') return V_TESIS_KUANTITATIF;
+  const base = VARIAN[key] || V_KUANTITATIF;
   if ((jenis === 'tesis' || jenis === 'disertasi') && METODE_OVERLAY.has(key)) {
     return terapkanOverlay(base, jenis === 'disertasi' ? [...OVERLAY_TESIS, ...OVERLAY_DISERTASI] : OVERLAY_TESIS);
   }
@@ -312,6 +327,37 @@ const SITASI = `Aturan format: teks bersih — TANPA **bold**, tanpa ---, tanpa 
 // Pilihan interaktif studio (paritas referensi): bagan Bab II + input metodologi Bab III
 type Ekstra = { bagan?: 'kirim' | 'ai'; baganTeks?: string; populasi?: string; takDiketahui?: boolean; desain?: string; software?: string };
 
+/* ===== PROMPT STRUKTUR BAKU BARU KHUSUS TESIS KUANTITATIF =====
+   Diterjemahkan dari instruksi "INSTRUKSI UNTUK PROMPT" + contoh isi pada
+   TEMPLATE TESIS.docx (pemilik template = format baku yang diminta owner). */
+const TESIS_BAB2 = `Struktur wajib BAB II (TEPAT 4 sub-bagian): 2.1 Kajian Pustaka, 2.2 Hasil Penelitian Yang Relevan, 2.3 Kerangka Berpikir, 2.4 Hipotesis Penelitian.
+PANDUAN ISI per sub (urutan wajib diikuti):
+- 2.1 Kajian Pustaka — untuk SETIAP variabel dalam judul dengan urutan: variabel dependen (Y) dulu, lalu variabel mediasi/moderasi (bila ada), lalu X1, X2. Tiap variabel menjadi sub-bab "2.1.x <Nama Variabel>" yang berisi sub-sub BERTINGKAT bernomor:
+  • "2.1.x.1 Pengertian <variabel>" = 10 definisi dari literatur yang BERBEDA-beda (sitasi lengkap tiap definisi), ditutup 1 paragraf sintesis berpola "Berdasarkan uraian beberapa definisi di atas, maka dapat disimpulkan bahwa ...".
+  • Variabel dependen diberi sub tambahan "2.1.x.2 Faktor-Faktor yang Memengaruhi <variabel>" (4–6 faktor, uraian + sitasi).
+  • "2.1.x.n Dimensi dan Indikator <variabel>" = jabarkan 3–4 dimensi; tiap dimensi diberi uraian lalu indikatornya sebagai daftar bernomor; ditutup 1 paragraf sintesis operasional berpola "Secara operasional <nama ahli> (<tahun>) menyebutkan bahwa <variabel> dapat diukur melalui dimensi ...".
+- 2.2 Hasil Penelitian Yang Relevan — 1 paragraf pengantar (penelitian terdahulu sebagai dasar perbandingan) lalu TABEL markdown dengan PERSIS 6 kolom "No | Peneliti (Tahun) | Judul Penelitian | Persamaan | Perbedaan | Hasil Penelitian" berisi minimal 10 penelitian terdahulu NYATA dari daftar referensi; sel Persamaan/Perbedaan/Hasil diisi beberapa butir "• ..." (bukan satu kalimat).
+- 2.3 Kerangka Berpikir — narasi PER JALUR hipotesis: tiap jalur dibuka baris tersendiri pola "Pengaruh <X> terhadap <Z>" atau "Pengaruh <X> terhadap <Y> Dengan <Z> Sebagai Variabel Mediasi" (paragraf biasa tanpa ** dan tanpa nomor), lalu 3 paragraf: (1) landasan teoretis dengan sitasi; (2) mekanisme hubungan pada konteks objek penelitian; (3) dukungan empiris minimal 2 sitasi penelitian relevan. Tutup dengan paragraf "Berdasarkan teori-teori yang relevan dan didukung oleh hasil penelitian-penelitian sebelumnya, maka kerangka berpikir dalam penelitian ini adalah sebagai berikut:".
+- 2.4 Hipotesis Penelitian — 1 paragraf pembuka "Berdasarkan kerangka berpikir diatas, hipotesis penelitian yang akan diajukan dalam penelitian ini adalah:" lalu daftar "H1", "H2", ... berurutan (hipotesis pengaruh langsung dahulu, baru hipotesis mediasi); tiap baris tepat 1 kalimat pola "H<n> Diduga terdapat pengaruh <X> terhadap <Z> Pada <objek penelitian>." — jumlah hipotesis WAJIB sama dengan jalur pada kerangka berpikir dan rumusan masalah Bab I.
+`;
+const TESIS_BAB4 = `Susun BAB IV HASIL ANALISIS DAN PEMBAHASAN dengan TEPAT 2 sub-bagian urut: 4.1 Hasil Analisis, 4.2 Pembahasan Hasil.
+PANDUAN ISI:
+- 4.1 Hasil Analisis — urutkan tiga bagian berlabel baris tersendiri (paragraf biasa tanpa ** dan tanpa nomor):
+  (a) "Deskriptif Data Demografis Responden" dengan sub huruf per karakteristik (jenis kelamin; usia; pendidikan terakhir; pekerjaan/sektor; pendapatan) — tiap bagian 1 paragraf analisis + TABEL markdown "Karakteristik | Keterangan | Total Responden | Persentase (%)" dengan baris Jumlah berjumlah 100%.
+  (b) "Analisis Statistik Deskriptif" — TABEL kategori jawaban (Rendah/Sedang/Tinggi beserta rentang nilai rata-rata berselisih 1,33) + TABEL nilai rata-rata tiap variabel beserta kategorinya + narasi interpretasi.
+  (c) "Analisis Statistik Inferensial" mengikuti tepat tahapan yang kamu tetapkan pada Bab III. Jalur SEM-PLS/SmartPLS: TABEL outer loading tiap item (semua loading > 0,70) + narasi; TABEL AVE per variabel (≥ 0,5); TABEL akar kuadrat AVE; TABEL validitas diskriminan; TABEL cross loading; TABEL uji reliabilitas (Cronbach's Alpha + Composite Reliability > 0,7); TABEL R² dengan interpretasi kategori; TABEL F²; TABEL pengaruh langsung dengan PERSIS kolom "Original Sample (O) | Sample Mean (M) | Standard Deviation (STDEV) | T Statistics (|O/STDEV|) | P Values" untuk tiap jalur + narasi keputusan tiap hipotesis (t-hitung > 1,96 dan p < 0,05); TABEL pengaruh tidak langsung untuk jalur mediasi X → Z → Y + narasi keputusan serta klasifikasi pemediasian (parsial/penuh). Jalur regresi: uji validitas, uji reliabilitas, asumsi klasik, koefisien regresi, uji t, uji F, R², koefisien pengaruh langsung & tidak langsung.
+- 4.2 Pembahasan Hasil — buka tiap bagian dengan baris tersendiri pola "Pengaruh <X> terhadap <Z> Pada <objek>." untuk SETIAP hipotesis (urut H1, H2, ...; termasuk jalur mediasi). Tiap bagian 5 paragraf: (1) hasil empiris — angka Original Sample/beta, T-Statistics, P-Values + status signifikan (angka WAJIB sama persis dengan tabel di 4.1); (2) landasan teoretis dari Bab II dengan sitasi; (3) konteks faktual objek penelitian dikaitkan dengan data deskriptif bagian (a); (4) dukungan empiris minimal 2 sitasi penelitian terdahulu; (5) kalimat simpulan penutup.
+`;
+const TESIS_BAB5 = `Susun BAB V KESIMPULAN, IMPLIKASI DAN SARAN dengan TEPAT 3 sub-bagian urut: 5.1 Kesimpulan, 5.2 Implikasi Kebijakan, 5.3 Saran.
+PANDUAN ISI:
+- 5.1 Kesimpulan — 1 paragraf pembuka berpola "Berdasarkan perumusan masalah, tinjauan teoretis, dan hasil pengujian hipotesis ... maka kesimpulan dari penelitian ini dapat dirumuskan sebagai berikut:" lalu daftar bernomor SATU PER rumusan/hipotesis — nyatakan arah pengaruh, signifikansi, dan status pemediasian (parsial/penuh bila ada), konsisten dengan Bab IV.
+- 5.2 Implikasi Kebijakan — 1 paragraf pembuka lalu tepat 4 butir; tiap butir diawali frasa kunci lead yang berdiri sendiri (pola "Nama Kebijakan: uraian...", TANPA tanda **bold**) diikuti kebijakan/manajerial konkret untuk objek penelitian — 1–3 paragraf per butir, boleh disertai sub-daftar langkah implementasi.
+- 5.3 Saran — 1 paragraf pembuka lalu klasifikasi: "Saran bagi <objek penelitian> (Saran Praktis)" berisi 3 butir ber-frasa-kunci + uraian; "Saran bagi <pihak terkait/responden>" 1–2 butir; "Saran bagi Peneliti Selanjutnya (Saran Akademis)" 3 butir (memperluas variabel, memperluas ruang lingkup/objek penelitian, mengembangkan pendekatan metodologi).
+`;
+const TESIS_TARGET2 = `TARGET KEDALAMAN (wajib): total BAB II minimal 40.000 karakter; tiap variabel dibuka menjadi sub-sub Pengertian (10 definisi + sintesis) dan Dimensi dan Indikator (3–4 dimensi berindikator + sintesis) — penjelasan tiap sub-sub BERBEDA, dilarang mengulang kalimat; tabel Hasil Penelitian Yang Relevan minimal 10 studi; tiap jalur pada Kerangka Berpikir diuraikan narasi mendalam; tiap hipotesis bernomor H1, H2, ...\n`;
+const TESIS_TARGET3 = `TARGET KEDALAMAN (wajib): total BAB III minimal 25.000 karakter (setara template rujukan) — JANGAN berhenti lebih dini; bila semua sub sudah selesai tetapi total belum tercapai, perdalam tiap sub. Minimal per sub: 3.1 ≥1.200, 3.2 ≥4.500 (kriteria inklusi terurai butir per butir + mekanisme screening), 3.3 ≥8.000 (definisi konseptual & operasional tiap variabel lebih luas + kisi-kisi), 3.4 ≥1.000, 3.5 ≥10.000 (definisi tiap tahap, kriteria/ketentuan angka, rumus, tabel keputusan lengkap per jalur). Tiap kisi-kisi instrumen variabel minimal 12 butir nyata dengan kode item unik; perhitungan Slovin lengkap dengan keterangan simbol sampai jumlah sampel akhir.\n`;
+const TESIS_TARGET4 = `TARGET KEDALAMAN: 25.000–50.000 karakter — 4.1 memuat seluruh rangkaian tabel analisis (demografis, deskriptif, pengukuran/outer model, struktural/inner model, uji hipotesis) dan 4.2 membahas tiap hipotesis mendalam 5 paragraf, bukan ringkasan.\n`;
+
 // Buang penanda tebal markdown — SITASI melarang **bold**, tapi model kadang tetap
 // menulisnya (emphases nama dimensi/indikator). Dibersihkan deterministik di semua
 // jalur simpan/stream supaya TOC, taskpane, DOCX, dan audit selalu bersih.
@@ -333,6 +379,7 @@ export function babPrompt(bab: string, p: any, refs: { doi: string; title: strin
   const v = varianFor(p);
   const vk = varianMetode(p?.metode);
   const kuant = vk === 'kuantitatif' || vk === 'mixed'; // varian bergaya kuantitatif (mixed = kuant + pedoman)
+  const tesisKuant = p?.jenis === 'tesis' && vk === 'kuantitatif'; // struktur baku baru (TEMPLATE TESIS.docx)
   const tahun = new Date().getFullYear();
   const subsNum = (b: string) => (v[b] ? v[b].subs.map((s, i) => `${NOMOR_BAB[b] || 6}.${i + 1} ${s.label}`) : []);
   const nomorSub = (b: string, key: string) => {
@@ -353,10 +400,19 @@ export function babPrompt(bab: string, p: any, refs: { doi: string; title: strin
     definisi_konseptual_operasional: 'tabel definisi konseptual & operasional tiap istilah kunci',
   };
   const s1 = v.bab1 ? v.bab1.subs : [];
-  const struktur1 = `Susun BAB I dengan TEPAT ${s1.length} sub-bagian berurutan: ${s1.map((s, i) => {
+  const struktur1Dasar = `Susun BAB I dengan TEPAT ${s1.length} sub-bagian berurutan: ${s1.map((s, i) => {
     const n = `1.${i + 1} ${s.label}`;
     return nota1[s.key] ? `${n} (${nota1[s.key]})` : n;
   }).join(', ')}.\n`;
+  const struktur1 = tesisKuant
+    ? `Susun BAB I dengan TEPAT ${s1.length} sub-bagian berurutan: ${s1.map((s, i) => `1.${i + 1} ${s.label}`).join(', ')}.\nPANDUAN ISI (urutan langkah tiap sub wajib diikuti):
+1.1 Latar Belakang — alur UMUM → KHUSUS dengan urutan paragraf: (1) fenomena umum/kekinian dengan sitasi; (2) 1 paragraf variabel dependen (Y); (3) 1 paragraf variabel mediasi/moderasi bila ada di judul; (4) 1 paragraf X1; (5) 1 paragraf X2; (6) profil objek penelitian; (7) TABEL FENOMENA (markdown) tentang variabel dependen berisi angka nyata bersumber + 1 paragraf pembahasnya; (8) 2 paragraf fenomena variabel mediasi (bila ada); (9) 2 paragraf fenomena X1; (10) 2 paragraf fenomena X2; (11) urgensi penelitian; (12) research gap — bandingkan temuan penelitian relevan yang berbeda/berlawanan hasilnya; (13) kalimat penutup.
+1.2 Identifikasi Masalah — paragraf pembuka berpola "Sesuai uraian pada latar belakang masalah di atas, dapat diidentifikasi masalah ... antara lain:" lalu daftar bernomor minimal 6 butir; tiap butir fenomena nyata yang terukit dengan angka/tabel dan variabel penelitian.
+1.3 Pembatasan Masalah — 1 paragraf padat yang membatasi fokus pada X1, X2, variabel mediasi (bila ada), Y, objek penelitian, periode data, dan karakteristik responden.
+1.4 Perumusan Masalah — paragraf pembuka "Adapun masalah yang akan diselesaikan dalam penelitian ini adalah sebagai berikut:" lalu pertanyaan bernomor "1.", "2.", ... satu per jalur hipotesis (pengaruh langsung dahulu, lalu mediasi), pola "Apakah terdapat pengaruh <X> terhadap <Z> Pada <objek>?".
+1.5 Tujuan Penelitian — paragraf pembuka "Adapun tujuan penelitian yang akan dicapai dalam penelitian ini adalah sebagai berikut:" lalu butir bernomor SELARAS satu-per-satu dengan perumusan masalah, pola "Menganalisis pengaruh <X> terhadap <Z> pada <objek>".
+1.6 Kegunaan Penelitian — paragraf pembuka lalu "1. Kegunaan Teoretis" (Pengembangan Literatur; Rujukan Penelitian Lanjutan) dan "2. Kegunaan Praktis (Aplikatif)" (Bagi <objek/manajemen>; Bagi <pihak lain yang relevan>) — tiap butir diuraikan 2–4 kalimat.\n`
+    : struktur1Dasar;
 
   const catatan2: Record<string, string> = {
     kualitatif: `Uraikan teori utama tiap konsep kunci penelitian (sub-sub bertingkat bila perlu); TANPA hipotesis. WAJIB: sub Penelitian Terdahulu berupa TABEL markdown persis kolom "No | Nama (Tahun) | Judul | Hasil | Gap" berisi minimal 6 penelitian terdahulu nyata dari referensi yang relevan.\n`,
@@ -367,7 +423,9 @@ export function babPrompt(bab: string, p: any, refs: { doi: string; title: strin
     rnd: `Landasan teori pengembangan produk (kebutuhan, spesifikasi, teori pendukung domain). WAJIB: sub Penelitian Terdahulu berupa TABEL markdown persis kolom "No | Nama (Tahun) | Judul | Hasil | Gap" berisi minimal 6 literatur nyata dari referensi.\n`,
     eksakta: `Landasan teori sistem/rekayasa & konsep pendukung. WAJIB: sub Penelitian Terdahulu berupa TABEL markdown persis kolom "No | Nama (Tahun) | Judul | Hasil | Gap" berisi minimal 6 literatur nyata dari referensi.\n`,
   };
-  const struktur2 = kuant
+  const struktur2 = tesisKuant
+    ? TESIS_BAB2
+    : kuant
     ? `Struktur wajib BAB II: 2.1 Landasan Teori — untuk SETIAP konstruk/variabel penelitian buat sub-sub BERTINGKAT 5 tingkat dengan pola: "2.1.1.1 Teori yang Mendasari <variabel>", "2.1.1.2 Pengertian <variabel>", "2.1.1.3 Dimensi <variabel>", "2.1.1.4 Indikator <variabel>", "2.1.1.5 Faktor-Faktor yang Memengaruhi <variabel>" (sub-sub berikutnya lanjut 2.1.2, 2.1.3, dst.); 2.2 Kerangka Teori; 2.3 Hubungan Antar Variabel (satu sub tiap pasangan hubungan termasuk mediasi); 2.4 Penelitian Terdahulu; 2.5 Kerangka Berpikir; 2.6 Hipotesis.\nWAJIB: sub 2.4 Penelitian Terdahulu berupa TABEL markdown persis kolom "No | Nama (Tahun) | Judul | Hasil | Gap" berisi 10 penelitian terdahulu nyata dari referensi yang relevan (1 paragraf penjelasan pendahulu tabel juga boleh).\n`
     : `Struktur wajib ${((v.bab2 && v.bab2.judul.toUpperCase()) || 'BAB II')}: ${subsNum('bab2').join(', ')}.\n${catatan2[vk] || ''}`;
   const nBagan = nomorSub('bab2', 'kerangka_berpikir');
@@ -382,7 +440,7 @@ export function babPrompt(bab: string, p: any, refs: { doi: string; title: strin
     if (ekstra.populasi) return `Populasi: ${ekstra.populasi} (besaran sesuai satuan objek pada judul) — hitung besar sampel dengan rumus Slovin, tingkat kesalahan (e) 5%.\n`;
     return '';
   })();
-  const desainNote = ekstra.desain ? `Jenis/desain penelitian: ${ekstra.desain} — sebutkan dan kembangkan alasannya di ${(v.bab3 && nomorSub('bab3', 'jenis_desain_penelitian')) || '3.1'}.\n` : '';
+  const desainNote = ekstra.desain ? `Jenis/desain penelitian: ${ekstra.desain} — sebutkan dan kembangkan alasannya di ${(v.bab3 && (nomorSub('bab3', 'jenis_desain_penelitian') || (tesisKuant ? nomorSub('bab3', 'teknik_analisis') : ''))) || '3.1'}.\n` : '';
   const softwareNote = ekstra.software ? `Software analisis: ${ekstra.software} — sebutkan pada ${(v.bab3 && nomorSub('bab3', 'analisis_spss')) || (v.bab3 && nomorSub('bab3', 'teknik_analisis')) || '3.5'} Teknik Analisis Data.\n` : '';
 
   const catatan3: Record<string, string> = {
@@ -397,11 +455,19 @@ export function babPrompt(bab: string, p: any, refs: { doi: string; title: strin
   const nDef = nomorSub('bab3', 'definisi_operasional');
   const nKumpul = nomorSub('bab3', 'teknik_pengumpulan');
   const nAna = nomorSub('bab3', 'analisis_spss') || nomorSub('bab3', 'teknik_analisis');
-  const nJad = nomorSub('bab3', 'jadwal_penelitian');
+  const nJad = nomorSub('bab3', 'jadwal_penelitian') || (tesisKuant ? nomorSub('bab3', 'tempat_waktu') : '');
   const ganttKal = nJad
-    ? `sub ${nJad} Jadwal Penelitian berupa TABEL GANTT bulanan — kolom "No | Kegiatan | Januari ${tahun} | Februari ${tahun} | Maret ${tahun} | April ${tahun} | Mei ${tahun} | Juni ${tahun}" dengan tanda X pada bulan berjalan.`
+    ? `sub ${nJad} ${tesisKuant ? 'Tempat dan Waktu Penelitian' : 'Jadwal Penelitian'} berupa TABEL GANTT bulanan — kolom "No | Kegiatan | Januari ${tahun} | Februari ${tahun} | Maret ${tahun} | April ${tahun} | Mei ${tahun} | Juni ${tahun}" dengan tanda X pada bulan berjalan${tesisKuant ? ', baris kegiatan: penyusunan proposal, uji coba instrumen, pengumpulan data penelitian, pengolahan data, analisa data, menulis laporan penelitian, bimbingan tesis, sidang tesis' : ''}.`
     : '';
-  const struktur3 = kuant
+  const struktur3 = tesisKuant
+    ? `Struktur wajib BAB III (TEPAT 5 sub-bagian): ${subsNum('bab3').join(', ')}.
+PANDUAN ISI per sub:
+- 3.1 Tempat dan Waktu Penelitian — 1 paragraf (objek/lokasi penelitian + periode pelaksanaan) ${ganttKal ? `+ ${ganttKal}` : ''} — akhiri tabel dengan baris "Sumber : Data Diolah Peneliti, (${tahun})".
+- 3.2 Populasi dan Sampel — sub-sub BERTINGKAT: "3.2.1 Populasi" (definisi populasi menurut rujukan metode + populasi spesifik sesuai objek penelitian + jumlah N) dan "3.2.2 Sampel" (definisi sampel; rumus Slovin lengkap dengan keterangan simbol, perhitungan, sampai angka akhir dibulatkan ke atas; teknik Non-Probability Sampling dengan pendekatan Purposive Sampling; daftar kriteria inklusi bernomor; mekanisme pengumpulan daring dengan pertanyaan penyaring/screening agar sampel terjamin validnya).
+- 3.3 Variabel dan Definisi Operasional — paragraf pembuka "Uraian masing-masing variabel penelitian ini adalah sebagai berikut:" lalu per variabel (Y, mediasi bila ada, X1, X2): baris tersendiri "Variabel <Nama>" (paragraf biasa tanpa **), "Definisi Konseptual" (1 paragraf + sitasi), "Definisi Operasional" (1 paragraf konteks objek penelitian), "Kisi-Kisi Instrumen" berupa TABEL markdown PERSIS 3 kolom "Dimensi | Indikator | No. Item Pernyataan" — kode item unik tiap variabel (mis. KM01…, BT01…, SM01…, LS01…) dan setiap indikator punya butir pernyataan; akhiri tiap tabel dengan baris "Sumber : <sitasi>, (<tahun>)".
+- 3.4 Instrumen Penelitian — 1 paragraf skala Likert 1–5 (definisi + sitasi) lalu daftar 5 kategori jawaban "Sangat Setuju (SS) : Skor 5" sampai "Sangat Tidak Setuju (STS) : Skor 1".
+- 3.5 Teknik Analisis Data — definisi teknik analisis data (sitasi) + software yang dipakai. Tentukan SATU jalur analisis (SEM-PLS/SmartPLS bila judul/software menunjukkan SEM; regresi bila data regresi biasa) dan konsisten sampai Bab IV. Jalur PLS: "Analisa Outer Model" (Convergent Validity loading > 0,70; Discriminant Validity cross loading; AVE ≥ 0,5; Composite Reliability > 0,7 — tiap kriteria disertai definisi + sitasi rujukan), "Analisa Inner Model" (R²: 0,75 baik / 0,50 moderat / 0,25 lemah; F-Square: 0,02 lemah / 0,15 sedang / 0,35 besar; koefisien jalur dengan bootstrapping; persamaan struktural beserta keterangan simbol variabel; pengaruh langsung, tidak langsung, dan total), "Pengujian Hipotesis" (t-hitung > 1,96 dan p-value < 0,05; aturan H0 ditolak/Ha diterima) + TABEL markdown pengambilan keputusan uji t dengan kolom "No | Hipotesis | H0 | H1 | Keputusan" untuk tiap jalur. Jalur regresi: uji validitas butir, uji reliabilitas (α > 0,70), asumsi klasik (normalitas, multikolinearitas, heteroskedastisitas), regresi linear berganda, uji t, uji F, koefisien determinasi R², uji mediasi.\n`
+    : kuant
     ? `Struktur wajib BAB III: ${(v.bab3 ? v.bab3.subs : []).map((s, i) => {
         const n = `3.${i + 1} ${s.label}`;
         if (s.key === 'teknik_pengumpulan') return `${n} (sub ${nKumpul}.1 Kuesioner dengan sub per variabel)`;
@@ -420,14 +486,26 @@ export function babPrompt(bab: string, p: any, refs: { doi: string; title: strin
     eksakta: `Deskripsi data uji, implementasi/eksperimen, Hasil Pengujian dalam tabel/grafik, Pembahasan dibandingkan tolok ukur & literatur.`,
   };
   const adaAgenda = v.bab5 && v.bab5.subs.some((s) => s.key === 'agenda_penelitian');
-  const struktur4 = kuant
+  const struktur4 = tesisKuant
+    ? TESIS_BAB4
+    : kuant
     ? `Susun BAB IV HASIL DAN PEMBAHASAN (deskripsi data, hasil analisis, pembahasan dikaitkan teori Bab II). Sub-bagian urut sesuai struktur: ${subsNum('bab4').join(', ')}.\n`
     : `Susun ${((v.bab4 && v.bab4.judul.toUpperCase()) || 'BAB IV')} dengan sub-bagian urut TEPAT: ${subsNum('bab4').join(', ')} — ${catatan4[vk] || 'sajikan hasil per sub-bagian lalu pembahasan dikaitkan teori Bab II.'}\n`;
-  const struktur5 = kuant
+  const struktur5 = tesisKuant
+    ? TESIS_BAB5
+    : kuant
     ? `Susun BAB V PENUTUP (kesimpulan menjawab rumusan masalah + saran praktis/metodologis). Sub-bagian urut: ${subsNum('bab5').join(', ')}${adaAgenda ? ' — Agenda Penelitian Lanjutan berisi arah penelitian berikutnya berbasis keterbatasan penelitian' : ''}.\n`
     : `Susun ${((v.bab5 && v.bab5.judul.toUpperCase()) || 'BAB V')} dengan sub-bagian urut: ${subsNum('bab5').join(', ')} — Simpulan menjawab rumusan masalah satu per satu; Saran praktis/teknis/akademis${adaAgenda ? '; Agenda Penelitian Lanjutan berisi arah penelitian berikutnya berbasis keterbatasan penelitian' : ''}.\n`;
   const s6 = subsNum('lampiran');
-  const strukturL = !kuant && s6.length
+  const strukturL = tesisKuant && s6.length
+    ? `Sub-bagian urut TEPAT: ${s6.join(', ')} — isi per sub-bagian:
+- 6.1 Kuesioner: salam pembuka + identitas penulis + judul lengkap + tujuan penelitian + jaminan kerahasiaan jawaban + penutup; bagian "Pertanyaan Penyaring (Screening Questions)" berisi 3 pertanyaan dengan opsi checkbox Ya/Tidak beserta logika lanjut/berhenti; bagian "Identitas Responden" (usia, jenis kelamin, pendidikan terakhir, pekerjaan/sektor, pendapatan — opsi checkbox); lalu KUESIONER UTAMA sub per variabel sesuai urutan judul: tiap variabel memuat definisi operasional singkat lalu butir pernyataan tiap indikator lengkap dengan kode item dan opsi "☐ Sangat Setuju (SS) — Skor 5, ☐ Setuju (S) — Skor 4, ☐ Kurang Setuju (KS) — Skor 3, ☐ Tidak Setuju (TS) — Skor 2, ☐ Sangat Tidak Setuju (STS) — Skor 1".
+- 6.2 Hasil Tabulasi Data Responden: tabel format tabulasi mentah (baris responden × kolom kode item) + contoh baris isian + petunjuk bahwa tabel diisi dari jawaban responden sesungguhnya.
+- 6.3 Hasil Deskriptif Jawaban Responden: tabel rekap nilai rata-rata, standar deviasi, dan persentase per variabel beserta kategori — angka KONSISTEN dengan Bab IV.
+- 6.4 Hasil Olah Data: langkah ringkas pengolahan data + tabel ringkasan output analisis + petunjuk untuk menempel output software asli.
+- 6.5 Hasil Similarity Turnitin: halaman placeholder JUJUR — judul lampiran + catatan "[Isi dengan laporan similarity Turnitin asli setelah pengecekan — jangan mengarang persentase]".
+- 6.6 Pengajuan Artikel Ilmiah: abstrak ringkas + informasi target jurnal/proceedings + status pengajuan sebagai placeholder bila belum ada.\n`
+    : !kuant && s6.length
     ? `Sub-bagian urut: ${s6.join(', ')} — tiap sub diisi instrumen penelitian NYATA sesuai labelnya (kisi-kisi, pedoman/lembar observasi-keahlian, pernyataan responden, lembar validasi) yang diturunkan dari kajian pustaka dan metode artikelmu, gunakan tabel Markdown bila membantu.\n`
     : '';
 
@@ -435,13 +513,17 @@ export function babPrompt(bab: string, p: any, refs: { doi: string; title: strin
   // (Bab I 33rb, Bab II 56rb, Bab III 41rb karakter; uji 6 Okt 2026). Tanpa target
   // eksplisit model menulis "cukup" dangkal (Bab III kita cuma 12rb / 29% paritas).
   const target1 = `TARGET KEDALAMAN (wajib — jangan berhenti sebelum tercapai): total BAB I minimal 25.000 karakter; sub pertama (latar belakang/pendahuluan) sendiri minimal 12.000 karakter dengan alur umum → khusus → fokus penelitian, tiap paragraf ada sitasi bila memakai angka/temuan; sub lain ditulis mendalam, bukan ringkasan.\n`;
-  const target2 = kuant
+  const target2 = tesisKuant
+    ? TESIS_TARGET2
+    : kuant
     ? `TARGET KEDALAMAN (wajib): total BAB II minimal 40.000 karakter; tiap konstruk/variabel pada 2.1 dibuka 5 tingkat, tiap tingkat 300–500 kata dengan penjelasan BERBEDA (dilarang mengulang kalimat sama); tabel 2.4 minimal 10 studi; tiap hipotesis bernomor H1, H2, … + 1 paragraf justifikasi teoretis.\n`
     : `TARGET KEDALAMAN (wajib): total BAB II minimal 35.000 karakter; tiap teori utama diuraikan rinci (definisi, dimensi, penerapan pada topik penelitianmu) — bukan ringkasan; tabel penelitian terdahulu tetap minimal 6 studi.\n`;
-  const target3 = kuant
+  const target3 = tesisKuant
+    ? TESIS_TARGET3
+    : kuant
     ? `TARGET KEDALAMAN (wajib): total BAB III minimal 30.000 karakter; sub Kuesioner bertingkat PER VARIABEL (3.4.1 X1, 3.4.2 X2, …): tiap variabel memuat definisi operasional, 4–6 indikator, dan contoh butir pernyataan skala Likert 1–5 (≥5 butir nyata per variabel); sub Teknik Analisis bertingkat per tahap (validitas → reliabilitas → asumsi klasik → regresi → uji t/F → R² → mediasi) dengan langkah + rumus lengkap (termasuk Slovin/Lemeshow bila ada populasi).\n`
     : `TARGET KEDALAMAN (wajib): total BAB III minimal 25.000 karakter; tiap sub diuraikan rinci sesuai catatan varian (instrumen, prosedur pengumpulan, analisis, keabsahan) — bukan ringkasan.\n`;
-  const target4 = `TARGET KEDALAMAN: 15.000–30.000 karakter — sajikan tiap sub mendalam (data/temuan + analisis), bukan ringkasan.\n`;
+  const target4 = tesisKuant ? TESIS_TARGET4 : `TARGET KEDALAMAN: 15.000–30.000 karakter — sajikan tiap sub mendalam (data/temuan + analisis), bukan ringkasan.\n`;
   const target5 = `TARGET KEDALAMAN: minimal 7.000 karakter — simpulan menjawab rumusan satu per satu, saran terperinci.\n`;
   const targetL = `TARGET KEDALAMAN: minimal 9.000 karakter — lembar lengkap per variabel/informan (bukan contoh singkat).\n`;
 
@@ -451,7 +533,7 @@ export function babPrompt(bab: string, p: any, refs: { doi: string; title: strin
     bab3: `${struktur3}${target3}${populasiNote}${desainNote}${softwareNote}Judul: karya berikut.\n${base}${ref}\nIkuti kaidah metodologi standar Indonesia.\n${scopeNote}${outlineNote}${SITASI}`,
     bab4: `${struktur4}${target4}${base}${ref}\nGunakan tabel Markdown bila perlu.\n${scopeNote}${outlineNote}${SITASI}`,
     bab5: `${struktur5}${target5}${base}${ref}\nRingkas dan tegas.\n${scopeNote}${outlineNote}${SITASI}`,
-    lampiran: `Susun LAMPIRAN skripsi (bab penunjang setelah Bab V) berisi instrumen penelitian.\n${targetL}${base}${ref}\n${strukturL}${strukturL ? '' : `Isinya diturunkan dari kajian pustaka dan metode artikelmu: ${p.metode === 'Kualitatif'
+    lampiran: `Susun LAMPIRAN ${p.jenis === 'disertasi' ? 'disertasi' : p.jenis === 'tesis' ? 'tesis' : 'skripsi'} (bab penunjang setelah Bab V).\n${targetL}${base}${ref}\n${strukturL}${strukturL ? '' : `Isinya diturunkan dari kajian pustaka dan metode artikelmu: ${p.metode === 'Kualitatif'
       ? 'kisi-kisi wawancara/pedoman wawancara, daftar informan, contoh transkrip, lembar observasi'
       : 'kisi-kisi kuisioner, daftar pernyataan per indikator skala Likert, contoh lembar jawaban responden'} serta Lembar Pernyataan/Afirasi. Susun per bagian bernomor 6.1, 6.2, dst. gunakan tabel Markdown bila membantu.\n`}${scopeNote}${outlineNote}${SITASI}`,
   };

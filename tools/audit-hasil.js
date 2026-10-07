@@ -12,6 +12,9 @@ const fs = require('fs');
 const path = require('path');
 
 const TARGETS = { bab1: 25000, bab2: 40000, bab3: 30000, bab4: 15000, bab5: 7000, lampiran: 9000 };
+// Tesis kuantitatif (struktur baru TEMPLATE TESIS): kuesioner pindah ke Lampiran,
+// jadi BAB III wajar lebih ramping — patokan diset ke tinggi template (26.821 kar).
+const TARGETS_TESIS_KUANT = { ...TARGETS, bab3: 25000 };
 const REF = { bab1: 33047, bab2: 55811, bab3: 41351, lampiran: 11954 };
 
 function env(name) {
@@ -44,6 +47,8 @@ const selesai = (kode) => { process.exitCode = kode; return; };
 
   const content = p.content || {};
   const babs = ['bab1', 'bab2', 'bab3', 'bab4', 'bab5', 'lampiran'];
+  // Struktur baku baru khusus tesis kuantitatif (TEMPLATE TESIS.docx) — cek menyesuaikan
+  const tesisKuant = p.jenis === 'tesis' && kuant;
 
   for (const bab of babs) {
     const t = String(content[bab] || '');
@@ -53,7 +58,7 @@ const selesai = (kode) => { process.exitCode = kode; return; };
       continue;
     }
     const n = t.length;
-    const target = TARGETS[bab];
+    const target = tesisKuant ? TARGETS_TESIS_KUANT[bab] : TARGETS[bab];
     const ref = REF[bab];
     cek(`${bab} panjang ≥ ${target.toLocaleString('id-ID')}`, n >= target,
       `${n.toLocaleString('id-ID')} kar (${Math.round((n / target) * 100)}% target${ref ? `, ${Math.round((n / ref) * 100)}% referensi` : ''})`);
@@ -68,7 +73,7 @@ const selesai = (kode) => { process.exitCode = kode; return; };
     // Struktur sub-bab
     const N = bab === 'lampiran' ? 6 : parseInt(bab.replace('bab', ''), 10);
     const subs = (t.match(new RegExp(`^${N}\\.\\d+\\s+\\S`, 'gm')) || []).length;
-    const minSubs = bab === 'lampiran' ? 2 : 3;
+    const minSubs = bab === 'lampiran' ? 2 : (tesisKuant && bab === 'bab4' ? 2 : 3);
     cek(`${bab} sub-bab ≥ ${minSubs}`, subs >= minSubs, `${subs} sub-bab terdeteksi`);
 
     // Daftar Pustaka Bab Ini
@@ -89,7 +94,7 @@ const selesai = (kode) => { process.exitCode = kode; return; };
   }
 
   // Cek khas varian kuantitatif
-  if (content.bab2 && kuant) {
+  if (content.bab2 && kuant && !tesisKuant) {
     const t = String(content.bab2);
     cek('bab2 tabel Penelitian Terdahulu (5 kolom)', /\|\s*No\s*\|\s*Nama \(Tahun\)\s*\|\s*Judul\s*\|\s*Hasil\s*\|\s*Gap\s*\|/.test(t), 'header tabel');
     cek('bab2 punya Kerangka Berpikir', /Kerangka Berpikir/i.test(t), 'sub 2.5');
@@ -97,12 +102,50 @@ const selesai = (kode) => { process.exitCode = kode; return; };
     const tingkat = (t.match(/^(2\.1\.\d+\.)+/gm) || []).length + (t.match(/^2\.1\.\d+\.\d+\s/gm) || []).length;
     cek('bab2 sub-sub 5-tingkat ≥ 10', tingkat >= 10, `${tingkat} sub-sub 2.1.x.y`);
   }
-  if (content.bab3 && kuant) {
+  if (content.bab3 && kuant && !tesisKuant) {
     const t = String(content.bab3);
     cek('bab3 tabel Definisi Operasional 7 kolom', /\|\s*Variabel\s*\|\s*Definisi Konseptual\s*\|/.test(t), 'header tabel');
     cek('bab3 Gantt (Kegiatan + bulan)', /\|\s*No\s*\|\s*Kegiatan\s*\|/.test(t) && /(Januari|Februari|Maret)/.test(t), 'tabel jadwal');
     const kues = (t.match(/^3\.4\.\d+(\.\d+)?\s+\S/gm) || []).length;
     cek('bab3 kuesioner per variabel ≥ 3 sub', kues >= 3, `${kues} sub 3.4.x`);
+  }
+
+  // Cek khas struktur baku baru tesis kuantitatif (TEMPLATE TESIS.docx)
+  if (content.bab2 && tesisKuant) {
+    const t = String(content.bab2);
+    cek('bab2 tabel Hasil Penelitian Relevan (6 kolom)', /\|\s*No\s*\|\s*Peneliti \(Tahun\)\s*\|\s*Judul Penelitian\s*\|\s*Persamaan\s*\|\s*Perbedaan\s*\|\s*Hasil Penelitian\s*\|/.test(t), 'header tabel');
+    cek('bab2 punya Kerangka Berpikir', /Kerangka Berpikir/i.test(t), 'sub 2.3');
+    cek('bab2 punya Hipotesis Penelitian', /Hipotesis Penelitian/i.test(t), 'sub 2.4');
+    const subsub = (t.match(/^2\.1\.\d+\.\d+\s+\S/gm) || []).length;
+    cek('bab2 sub-sub kajian per variabel ≥ 8', subsub >= 8, `${subsub} sub-sub 2.1.x.y`);
+    const sintesis = (t.match(/dapat disimpulkan/gi) || []).length;
+    cek('bab2 sintesis definisi ≥ 4', sintesis >= 4, `${sintesis} paragraf sintesis`);
+  }
+  if (content.bab3 && tesisKuant) {
+    const t = String(content.bab3);
+    const kisi = (t.match(/Dimensi\s*\|\s*Indikator\s*\|\s*No\.?\s*Item Pernyataan/g) || []).length;
+    cek('bab3 kisi-kisi per variabel ≥ 4 tabel', kisi >= 4, `${kisi} tabel kisi-kisi`);
+    cek('bab3 Gantt (Kegiatan + bulan)', /\|\s*No\s*\|\s*Kegiatan\s*\|/.test(t) && /(Januari|Februari|Maret)/.test(t), 'tabel jadwal di 3.1');
+    cek('bab3 skala Likert 5 kategori', /Sangat Setuju \(SS\)/.test(t) && /Sangat Tidak Setuju \(STS\)/.test(t), 'SS s.d. STS');
+    cek('bab3 penentuan sampel (Slovin/Purposive)', /Slovin|Purposive/i.test(t), 'rumus/teknik sampel');
+  }
+  if (content.bab4 && tesisKuant) {
+    const t = String(content.bab4);
+    cek('bab4 tabel uji hipotesis (Original Sample…)', /\|\s*Original Sample \(O\)\s*\|/.test(t) || /\|\s*Original Sample\s*\|/i.test(t), 'header tabel bootstrap/regresi');
+    cek('bab4 pembahasan per hipotesis', /Hasil pengujian hipotesis|Pengaruh\s+.{3,80}?\s+terhadap/i.test(t), 'pembahasan H1..Hn');
+    const angka41 = (t.match(/\b0,\d{3}\b/g) || []).length;
+    cek('bab4 memuat angka hasil analisis', angka41 >= 10, `${angka41} angka koefisien`);
+  }
+  if (content.bab5 && tesisKuant) {
+    const t = String(content.bab5);
+    cek('bab5 punya Implikasi Kebijakan', /Implikasi Kebijakan/i.test(t), 'sub 5.2');
+    cek('bab5 kesimpulan per rumusan', /kesimpulan dari penelitian ini|Berdasarkan perumusan masalah/i.test(t), 'pembuka 5.1');
+  }
+  if (content.lampiran && tesisKuant) {
+    const t = String(content.lampiran);
+    cek('lampiran punya kuesioner + screening', /penyaring|screening/i.test(t) && /Kuesioner/i.test(t), '6.1 Kuesioner');
+    cek('lampiran opsi Likert checkbox', /☐/.test(t), 'kotak pilihan responden');
+    cek('lampiran placeholder Turnitin jujur', /Turnitin/i.test(t) && !/persentase\s*:\s*\d+\s*%/i.test(t), 'tanpa angka similarity karangan');
   }
 
   // Ringkasan
