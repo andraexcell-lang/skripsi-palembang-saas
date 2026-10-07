@@ -36,13 +36,18 @@ function tabelTidakAda(err: any): boolean {
   return /Could not find the table|does not exist|42P01/i.test(String(err?.message || err || ''));
 }
 
+/** .single() pada 0 baris = bukan kegagalan, hanya "belum ada isinya". */
+function barisKosong(err: any): boolean {
+  return /Cannot coerce|PGRST116|no rows|0 rows/i.test(String(err?.message || err || ''));
+}
+
 export async function bacaSetting(key: string): Promise<any | null> {
   try {
     const db = supabaseAdmin || supabaseAnon;
     if (db) {
       const { data, error } = await db.from('app_settings').select('value').eq('key', key).single();
       if (!error && data && data.value !== undefined && data.value !== null) return data.value;
-      if (error && !tabelTidakAda(error)) console.warn('[settings] baca gagal:', error.message);
+      if (error && !tabelTidakAda(error) && !barisKosong(error)) console.warn('[settings] baca gagal:', error.message);
       // Tabel ada tapi baris kosong → auto-import dari file (sekali jalan)
       if (!error || !tabelTidakAda(error)) {
         const f = bacaFile();
