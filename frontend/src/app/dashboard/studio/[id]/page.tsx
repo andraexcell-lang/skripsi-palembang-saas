@@ -281,6 +281,16 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
     while (i < lines.length) {
       const t = lines[i].trim();
       if (!t || /^---+$/.test(t)) { i++; continue; }
+      // Judul tabel/gambar ("Judul Tabel: …") — tampil sebagai NAMA objek di atasnya
+      // (paritas caption DOCX; baris ini dipakai parser Word jadi "Tabel 2.1 …")
+      if (/^Judul\s+(Tabel|Gambar)\s*:/i.test(t)) {
+        target.push(
+          <p key={`judul-objek-${i}`} className="mt-4 mb-1 text-center text-xs font-semibold tracking-wide text-text-secondary">
+            {cleanMd(t)}
+          </p>
+        );
+        i++; continue;
+      }
       if (t.includes('|') && i + 1 < lines.length && pemisah(lines[i + 1].trim())) {
         const head = sel(t).map(cleanMd);
         const rows: string[][] = [];
@@ -1091,6 +1101,13 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
             {!text ? (
               <>
                 <p className="text-sm text-text-secondary">Bab belum dibuat.</p>
+                {active === 'bab4' && (
+                  <p className="max-w-xl text-xs text-text-muted">
+                    Punya tabulasi data mentah? Sertakan lewat <span className="font-semibold">Data Awal Penelitian</span> /
+                    tempel ringkasannya sebagai arahan — Bab IV akan mengolah angka itu. Belum ada data? Agen menyusun
+                    tabulasi & hasil olahannya sendiri: seluruh uji dinyatakan lulus dan semua hipotesis signifikan.
+                  </p>
+                )}
                 <button onClick={() => generate()} disabled={loading} className="inline-flex items-center gap-2 rounded-lg bg-brand-primary px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-4" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" /></svg>
                   {loading ? 'Menggenerate...' : 'Mulai Generate'}
@@ -1099,6 +1116,13 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
             ) : (
               <>
                 <p className="text-xs text-text-secondary">Datanya salah atau hasilnya kurang tepat? Bab ini bisa ditulis ulang dari awal.</p>
+                {active === 'bab4' && (
+                  <p className="max-w-xl text-xs text-text-muted">
+                    Punya tabulasi data mentah? Tempel ringkasannya sebagai <span className="font-semibold">arahan</span> saat
+                    Generate Ulang agar angka Bab IV memakai data aslimu; tanpa data, agen menyusun tabulasi & hasil olahan
+                    simulasi (seluruh uji lulus, semua hipotesis signifikan).
+                  </p>
+                )}
                 <button onClick={tulisUlang} disabled={loading} className={btnUtil}>
                   {loading ? 'Menggenerate...' : active === 'lampiran' ? 'Generate Ulang Lampiran' : 'Generate Ulang Bab Ini'}
                 </button>
@@ -1351,7 +1375,7 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
             ? 'Berapa jumlah sumber utama (buku & artikel) yang akan dianalisis? Angka ini menjadi dasar pembahasan di Bab III.'
             : kual
               ? 'Berapa jumlah informan/partisipan penelitianmu? Angka ini menjadi dasar Subjek Penelitian di Bab III.'
-              : 'Berapa total populasi penelitianmu? Angka ini menjadi dasar populasi & perhitungan sampel (mis. Slovin) di Bab III.';
+              : 'Berapa total populasi penelitianmu? Angka ini menjadi dasar populasi & perhitungan sampel di Bab III (≥100: rumus Slovin; <100: sampling jenuh tanpa rumus).';
           const desain = campuran ? DESAIN_CAMPURAN : kual ? DESAIN_KUALITATIF : pustakaOnly ? DESAIN_PUSTAKA : DESAIN_KUANTITATIF;
           const alat = kual ? ALAT_KUALITATIF : ALAT_KUANTITATIF;
           const lemeshow = wajib;

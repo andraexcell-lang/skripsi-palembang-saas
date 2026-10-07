@@ -318,11 +318,15 @@ function refBlock(refs: { doi: string; title: string; authors: string; year: str
     `\n${BUKU_TEKS}`;
 }
 
-const SITASI = `Aturan format: teks bersih — TANPA **bold**, tanpa ---, tanpa preamble seperti "Berikut adalah...". Markdown yang boleh hanya: (1) judul sub-bab bernomor pola "N.M Judul" (mis. "2.4 Penelitian Terdahulu") tanpa ** dan tanpa #; (2) TABEL markdown format standar — WAJIB pipe di awal dan di akhir SETIAP baris, termasuk baris pemisah, contoh:
+const SITASI = `Aturan format: teks bersih — TANPA **bold**, tanpa ---, tanpa preamble seperti "Berikut adalah...". Markdown yang boleh hanya: (1) judul sub-bab bernomor pola "N.M Judul" (mis. "2.4 Penelitian Terdahulu") — boleh bertingkat "N.M.K" dan "N.M.K.L" (maksimal 4 tingkat, mis. "2.1.1.1 Prestasi Kerja"), tanpa ** dan tanpa #; penomoran tiap tingkat WAJIB berurutan 1,2,3… tanpa melompat, tiap judul induk wajib punya minimal 2 anak, dan tiap anak wajib punya induk (dilarang nomor duplikat, lompat, atau yatim); (2) TABEL markdown format standar — WAJIB pipe di awal dan di akhir SETIAP baris, termasuk baris pemisah, contoh:
 | No | Nama (Tahun) | Judul | Hasil | Gap |
 |---|---|---|---|---|
 | 1 | ... | ... | ... | ... |
-(3) daftar bernomor "1." "2." "3." untuk identifikasi/rumusan/saran. JANGAN tulis caption "Tabel x.y" atau "Gambar x.y" — penomoran tabel & gambar dibuat otomatis oleh sistem. Tulis isi teks dengan huruf normal — JANGAN semua huruf kapital; judul artikel referensi ditulis dengan huruf normal (bukan HURUF BESAR semua). Bagan: satu kotak per baris, panah "↓" atau "→" di baris tersendiri. Langsung mulai dari judul bab. Wajib: (1) tulis dalam bahasa yang diminta, (2) bodynote sesuai gaya sitasi yang diminta di setiap sub-bab yang memakai teori/temuan, (3) akhiri dengan sub-bagian "Daftar Pustaka Bab Ini" berisi referensi di atas dalam format gaya sitasi yang diminta lengkap dengan link DOI yang bisa diklik. Untuk ARTIKEL JURNAL: hanya dari daftar referensi (jangan mengarang DOI/judul di luar daftar); untuk BUKU TEKS: hanya dari daftar buku atau teori klasik yang benar-benar ada. Jangan tulis kata "Ilustratif": tabel fenomena hanya boleh berisi data nyata bersumber, bila tidak ada maka hapus tabelnya.`;
+(3) daftar bernomor "1." "2." "3." untuk identifikasi/rumusan/saran. SEBELUM tiap tabel WAJIB tulis baris "Judul Tabel: <deskripsi isi tabel>" dan sebelum tiap bagan/gambar WAJIB tulis baris "Judul Gambar: <deskripsi>" — tanpa nomor di depannya; judul harus mencerminkan ISI objeknya (apa yang dibahas + siapa/periode/ukurannya) dan DILARANG sama persis dengan judul sub-babnya. JANGAN tulis caption "Tabel x.y" atau "Gambar x.y" langsung — penomoran tabel & gambar (termasuk Daftar Tabel/Gambar) dibuat otomatis oleh sistem. Rumus ditulis karakter biasa/Unicode (mis. "n = N/(1 + N·e²)", "Y = β₀ + β₁X + e", "r = Σ(x−x̄)(y−ȳ)/√…") — JANGAN format LaTeX ($…$, \\frac, \\sqrt, \\( … \\)); sisa LaTeX akan dibuang sistem sehingga angka/rumusnya jadi rusak. Tulis isi teks dengan huruf normal — JANGAN semua huruf kapital; judul artikel referensi ditulis dengan huruf normal (bukan HURUF BESAR semua). Bagan: satu kotak per baris, panah "↓" atau "→" di baris tersendiri. Langsung mulai dari judul bab. Jangan tulis kata "Ilustratif": tabel fenomena hanya boleh berisi data nyata bersumber, bila tidak ada maka hapus tabelnya.`;
+
+// Bagian sitasi/kutip — Bab V dikecualikan (permintaan owner: tanpa kutipan di Bab 5)
+const SITASI_KUTIP = `Wajib: (1) tulis dalam bahasa yang diminta, (2) bodynote sesuai gaya sitasi yang diminta di setiap sub-bab yang memakai teori/temuan, (3) akhiri dengan sub-bagian "Daftar Pustaka Bab Ini" berisi referensi di atas dalam format gaya sitasi yang diminta lengkap dengan link DOI yang bisa diklik. Untuk ARTIKEL JURNAL: hanya dari daftar referensi (jangan mengarang DOI/judul di luar daftar); untuk BUKU TEKS: hanya dari daftar buku atau teori klasik yang benar-benar ada.`;
+const SITASI_BAB5 = `BAB V TANPA KUTIPAN: JANGAN menulis bodynote/sitasi/tautan DOI apa pun, dan JANGAN menyertakan sub-bab "Daftar Pustaka Bab Ini" — kesimpulan, implikasi, dan saran murni diturunkan dari isi Bab I–IV. Wajib: (1) tulis dalam bahasa yang diminta, (2) ringkas dan tegas.`;
 
 // Pilihan interaktif studio (paritas referensi): bagan Bab II + input metodologi Bab III
 type Ekstra = { bagan?: 'kirim' | 'ai'; baganTeks?: string; populasi?: string; takDiketahui?: boolean; desain?: string; software?: string };
@@ -347,6 +351,7 @@ PANDUAN ISI:
   (b) "Analisis Statistik Deskriptif" — TABEL kategori jawaban (Rendah/Sedang/Tinggi beserta rentang nilai rata-rata berselisih 1,33) + TABEL nilai rata-rata tiap variabel beserta kategorinya + narasi interpretasi.
   (c) "Analisis Statistik Inferensial" mengikuti tepat tahapan yang kamu tetapkan pada Bab III. Jalur SEM-PLS/SmartPLS: TABEL outer loading tiap item (semua loading > 0,70) + narasi; TABEL AVE per variabel (≥ 0,5); TABEL akar kuadrat AVE; TABEL validitas diskriminan; TABEL cross loading; TABEL uji reliabilitas (Cronbach's Alpha + Composite Reliability > 0,7); TABEL R² dengan interpretasi kategori; TABEL F²; TABEL pengaruh langsung dengan PERSIS kolom "Original Sample (O) | Sample Mean (M) | Standard Deviation (STDEV) | T Statistics (|O/STDEV|) | P Values" untuk tiap jalur + narasi keputusan tiap hipotesis (t-hitung > 1,96 dan p < 0,05); TABEL pengaruh tidak langsung untuk jalur mediasi X → Z → Y + narasi keputusan serta klasifikasi pemediasian (parsial/penuh). Jalur regresi: uji validitas, uji reliabilitas, asumsi klasik, koefisien regresi, uji t, uji F, R², koefisien pengaruh langsung & tidak langsung.
 - 4.2 Pembahasan Hasil — buka tiap bagian dengan baris tersendiri pola "Pengaruh <X> terhadap <Z> Pada <objek>." untuk SETIAP hipotesis (urut H1, H2, ...; termasuk jalur mediasi). Tiap bagian 5 paragraf: (1) hasil empiris — angka Original Sample/beta, T-Statistics, P-Values + status signifikan (angka WAJIB sama persis dengan tabel di 4.1); (2) landasan teoretis dari Bab II dengan sitasi; (3) konteks faktual objek penelitian dikaitkan dengan data deskriptif bagian (a); (4) dukungan empiris minimal 2 sitasi penelitian terdahulu; (5) kalimat simpulan penutup.
+DATA & HASIL (wajib): Bila penulis sudah mengirim/mengunggah TABULASI DATA MENTAH, olah memakai angka NYATA dari tabulasi itu. Bila belum ada data, agen MENYIAPKAN SENDIRI tabulasi data mentah yang konsisten lebih dulu (n responden sesuai sampel Bab 3.2 × seluruh kode item kisi-kisi 3.3, angka wajar) lalu mengolahnya. Usahakan HASIL SELURUH UJI LULUS dan SELURUH hipotesis BERPENGARUH SIGNIFIKAN: jalur SEM-PLS — semua outer loading > 0,70, AVE ≥ 0,50, Cronbach's Alpha & Composite Reliability > 0,70, R² baik, setiap jalur t > 1,96 dengan p < 0,05; jalur regresi — seluruh uji validitas & reliabilitas lulus, asumsi klasik terpenuhi, koefisien regresi serta uji t dan uji F signifikan. Seluruh angka WAJIB konsisten antar tabel 4.1, narasi 4.2, dan lampiran.
 `;
 const TESIS_BAB5 = `Susun BAB V KESIMPULAN, IMPLIKASI DAN SARAN dengan TEPAT 3 sub-bagian urut: 5.1 Kesimpulan, 5.2 Implikasi Kebijakan, 5.3 Saran.
 PANDUAN ISI:
@@ -361,8 +366,63 @@ const TESIS_TARGET4 = `TARGET KEDALAMAN: 25.000–50.000 karakter — 4.1 memuat
 // Buang penanda tebal markdown — SITASI melarang **bold**, tapi model kadang tetap
 // menulisnya (emphases nama dimensi/indikator). Dibersihkan deterministik di semua
 // jalur simpan/stream supaya TOC, taskpane, DOCX, dan audit selalu bersih.
+// Sekaligus membuang sisa format LaTeX (item 5: rumus wajib karakter biasa).
+const LATEX_HURUF: Record<string, string> = {
+  alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', epsilon: 'ε', theta: 'θ', lambda: 'λ',
+  mu: 'μ', rho: 'ρ', sigma: 'σ', tau: 'τ', chi: 'χ', omega: 'ω', times: '×', cdot: '·',
+  pm: '±', leq: '≤', geq: '≥', neq: '≠', approx: '≈', sum: '∑', int: '∫', partial: '∂',
+};
 export const bersihTeks = (t: string): string =>
-  String(t).replace(/\*\*([\s\S]*?)\*\*/g, '$1').replace(/\*\*/g, '');
+  String(t)
+    .replace(/\*\*([\s\S]*?)\*\*/g, '$1').replace(/\*\*/g, '')
+    .replace(/\$\$?([^$\n]+?)\$\$?/g, (_m, a: string) => a)
+    .replace(/\\frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, (_m, a: string, b: string) => /[+\-×·*]/.test(b) ? `${a}/(${b})` : `${a}/${b}`)
+    .replace(/\\sqrt\s*\{([^{}]*)\}/g, '√$1')
+    .replace(/\\(?:left|right)\b\s*/g, '')
+    .replace(/\\[()[\]]/g, '')
+    .replace(/\\([a-zA-Z]+)/g, (_m, w: string) => LATEX_HURUF[w] || ` ${w} `);
+
+// Rapikan penomoran judul sub-bab (item 1): tiap tingkat berurutan 1,2,3… di bawah
+// induknya — memperbaiki nomor lompat, duplikat, dan anak yatim hasil tulis AI.
+// Idempoten; hanya menyentuh baris yang memang terbaca sebagai judul bernomor oleh
+// parser DOCX (pola & batas karakter sama persis dengan regex heading ekspor).
+export const rapikanPenomoran = (t: string): string => {
+  const lines = String(t).split('\n');
+  const sudah = new Set<string>();                 // nomor heading yang sudah sah
+  const anak = new Map<string, number>();          // induk → jumlah anak terpakai
+  const terakhir: Record<number, string> = {};     // tingkat → nomor terakhir (untuk re-parent)
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
+    const dt = raw.trim().replace(/\*\*/g, '');
+    if (!/^\d/.test(dt) || dt.includes('|')) continue;   // baris tabel/konten bukan judul
+    const m = dt.match(/^(\d+(?:\.\d+)+)\.?\s+(\S.*)$/);
+    if (!m || dt.length >= 130) continue;
+    const seg = m[1].split('.');
+    if (seg.length < 2 || seg.length > 4) continue;
+    if (seg.some((s) => +s > 60)) continue;        // bukan nomor sub-bab (mis. tanggal 1.1.2024)
+    const lvl = seg.length;
+    let induk = seg.slice(0, -1).join('.');
+    if (lvl > 2 && !sudah.has(induk)) {
+      // induk tak dikenal (yatim/loncat) → tempel ke heading terakhir terdalam yang sah,
+      // otomatis menurunkan tingkat bila induk antaranya juga belum ada
+      let ayah = terakhir[lvl - 1];
+      if (!ayah) { for (let l = lvl - 1; l >= 2 && !ayah; l--) ayah = terakhir[l]; }
+      if (!ayah) continue;                       // sama sekali tak ada induk — biarkan apa adanya
+      induk = ayah;
+    }
+    const n = (anak.get(induk) || 0) + 1;
+    anak.set(induk, n);
+    const baru = `${induk}.${n}`;
+    sudah.add(baru);
+    terakhir[lvl] = baru;
+    for (let l = lvl + 1; l <= 4; l++) delete terakhir[l];
+    if (baru !== m[1]) lines[i] = raw.replace(m[1], baru);
+  }
+  return lines.join('\n');
+};
+
+// Normalisasi penuh untuk konten bab UTUH (bukan potongan sub-bab!)
+export const normalisasiBab = (t: string): string => rapikanPenomoran(bersihTeks(t));
 
 export function babPrompt(bab: string, p: any, refs: { doi: string; title: string; authors: string; year: string; url: string }[], ekstra: Ekstra = {}) {
   const style = p.citation_style || 'APA 7th';
@@ -437,8 +497,11 @@ export function babPrompt(bab: string, p: any, refs: { doi: string; title: strin
   const populasiNote = (() => {
     if (!kuant) return ''; // rumus Slovin/Lemeshow khas survei kuantitatif
     if (ekstra.takDiketahui) return `Populasi: TOTAL populasi tidak diketahui — gunakan rumus Lemeshow untuk menentukan besar sampel.\n`;
-    if (ekstra.populasi) return `Populasi: ${ekstra.populasi} (besaran sesuai satuan objek pada judul) — hitung besar sampel dengan rumus Slovin, tingkat kesalahan (e) 5%.\n`;
-    return '';
+    const angka = parseInt(String(ekstra.populasi ?? '').replace(/\D/g, ''), 10);
+    // Sampel/populasi < 100 → sampling jenuh tanpa rumus (permintaan owner); ≥ 100 → Slovin
+    if (angka && angka < 100) return `Populasi/sampel: ${angka} — KURANG DARI 100: gunakan SAMPLING JENUH (sensus/census) — seluruh anggota populasi menjadi sampel, TANPA rumus; JANGAN memakai rumus Slovin. Sebutkan alasannya: populasi kecil sehingga seluruh anggota dapat diambil.\n`;
+    if (angka) return `Populasi: ${angka} (besaran sesuai satuan objek pada judul) — hitung besar sampel dengan rumus Slovin, tingkat kesalahan (e) 5%.\n`;
+    return `Sampel: bila penulis menyebut jumlah populasi/sampel KURANG DARI 100 → gunakan SAMPLING JENUH (seluruh populasi jadi sampel, tanpa rumus); bila 100 atau lebih → hitung besar sampel dengan rumus Slovin, tingkat kesalahan (e) 5%.\n`;
   })();
   const desainNote = ekstra.desain ? `Jenis/desain penelitian: ${ekstra.desain} — sebutkan dan kembangkan alasannya di ${(v.bab3 && (nomorSub('bab3', 'jenis_desain_penelitian') || (tesisKuant ? nomorSub('bab3', 'teknik_analisis') : ''))) || '3.1'}.\n` : '';
   const softwareNote = ekstra.software ? `Software analisis: ${ekstra.software} — sebutkan pada ${(v.bab3 && nomorSub('bab3', 'analisis_spss')) || (v.bab3 && nomorSub('bab3', 'teknik_analisis')) || '3.5'} Teknik Analisis Data.\n` : '';
@@ -463,7 +526,7 @@ export function babPrompt(bab: string, p: any, refs: { doi: string; title: strin
     ? `Struktur wajib BAB III (TEPAT 5 sub-bagian): ${subsNum('bab3').join(', ')}.
 PANDUAN ISI per sub:
 - 3.1 Tempat dan Waktu Penelitian — 1 paragraf (objek/lokasi penelitian + periode pelaksanaan) ${ganttKal ? `+ ${ganttKal}` : ''} — akhiri tabel dengan baris "Sumber : Data Diolah Peneliti, (${tahun})".
-- 3.2 Populasi dan Sampel — sub-sub BERTINGKAT: "3.2.1 Populasi" (definisi populasi menurut rujukan metode + populasi spesifik sesuai objek penelitian + jumlah N) dan "3.2.2 Sampel" (definisi sampel; rumus Slovin lengkap dengan keterangan simbol, perhitungan, sampai angka akhir dibulatkan ke atas; teknik Non-Probability Sampling dengan pendekatan Purposive Sampling; daftar kriteria inklusi bernomor; mekanisme pengumpulan daring dengan pertanyaan penyaring/screening agar sampel terjamin validnya).
+- 3.2 Populasi dan Sampel — sub-sub BERTINGKAT: "3.2.1 Populasi" (definisi populasi menurut rujukan metode + populasi spesifik sesuai objek penelitian + jumlah N) dan "3.2.2 Sampel" (definisi sampel; BILA jumlah populasi/sampel yang dimasukkan penulis KURANG DARI 100 → SAMPLING JENUH (sensus): seluruh anggota populasi menjadi sampel dengan alasan populasi kecil, TANPA rumus; BILA 100 atau lebih → rumus Slovin lengkap dengan keterangan simbol, perhitungan, sampai angka akhir dibulatkan ke atas, teknik Non-Probability Sampling dengan pendekatan Purposive Sampling; daftar kriteria inklusi bernomor; mekanisme pengumpulan daring dengan pertanyaan penyaring/screening agar sampel terjamin validnya).
 - 3.3 Variabel dan Definisi Operasional — paragraf pembuka "Uraian masing-masing variabel penelitian ini adalah sebagai berikut:" lalu per variabel (Y, mediasi bila ada, X1, X2): baris tersendiri "Variabel <Nama>" (paragraf biasa tanpa **), "Definisi Konseptual" (1 paragraf + sitasi), "Definisi Operasional" (1 paragraf konteks objek penelitian), "Kisi-Kisi Instrumen" berupa TABEL markdown PERSIS 3 kolom "Dimensi | Indikator | No. Item Pernyataan" — kode item unik tiap variabel (mis. KM01…, BT01…, SM01…, LS01…) dan setiap indikator punya butir pernyataan; akhiri tiap tabel dengan baris "Sumber : <sitasi>, (<tahun>)".
 - 3.4 Instrumen Penelitian — 1 paragraf skala Likert 1–5 (definisi + sitasi) lalu daftar 5 kategori jawaban "Sangat Setuju (SS) : Skor 5" sampai "Sangat Tidak Setuju (STS) : Skor 1".
 - 3.5 Teknik Analisis Data — definisi teknik analisis data (sitasi) + software yang dipakai. Tentukan SATU jalur analisis (SEM-PLS/SmartPLS bila judul/software menunjukkan SEM; regresi bila data regresi biasa) dan konsisten sampai Bab IV. Jalur PLS: "Analisa Outer Model" (Convergent Validity loading > 0,70; Discriminant Validity cross loading; AVE ≥ 0,5; Composite Reliability > 0,7 — tiap kriteria disertai definisi + sitasi rujukan), "Analisa Inner Model" (R²: 0,75 baik / 0,50 moderat / 0,25 lemah; F-Square: 0,02 lemah / 0,15 sedang / 0,35 besar; koefisien jalur dengan bootstrapping; persamaan struktural beserta keterangan simbol variabel; pengaruh langsung, tidak langsung, dan total), "Pengujian Hipotesis" (t-hitung > 1,96 dan p-value < 0,05; aturan H0 ditolak/Ha diterima) + TABEL markdown pengambilan keputusan uji t dengan kolom "No | Hipotesis | H0 | H1 | Keputusan" untuk tiap jalur. Jalur regresi: uji validitas butir, uji reliabilitas (α > 0,70), asumsi klasik (normalitas, multikolinearitas, heteroskedastisitas), regresi linear berganda, uji t, uji F, koefisien determinasi R², uji mediasi.\n`
@@ -499,12 +562,12 @@ PANDUAN ISI per sub:
   const s6 = subsNum('lampiran');
   const strukturL = tesisKuant && s6.length
     ? `Sub-bagian urut TEPAT: ${s6.join(', ')} — isi per sub-bagian:
-- 6.1 Kuesioner: salam pembuka + identitas penulis + judul lengkap + tujuan penelitian + jaminan kerahasiaan jawaban + penutup; bagian "Pertanyaan Penyaring (Screening Questions)" berisi 3 pertanyaan dengan opsi checkbox Ya/Tidak beserta logika lanjut/berhenti; bagian "Identitas Responden" (usia, jenis kelamin, pendidikan terakhir, pekerjaan/sektor, pendapatan — opsi checkbox); lalu KUESIONER UTAMA sub per variabel sesuai urutan judul: tiap variabel memuat definisi operasional singkat lalu butir pernyataan tiap indikator lengkap dengan kode item dan opsi "☐ Sangat Setuju (SS) — Skor 5, ☐ Setuju (S) — Skor 4, ☐ Kurang Setuju (KS) — Skor 3, ☐ Tidak Setuju (TS) — Skor 2, ☐ Sangat Tidak Setuju (STS) — Skor 1".
-- 6.2 Hasil Tabulasi Data Responden: tabel format tabulasi mentah (baris responden × kolom kode item) + contoh baris isian + petunjuk bahwa tabel diisi dari jawaban responden sesungguhnya.
-- 6.3 Hasil Deskriptif Jawaban Responden: tabel rekap nilai rata-rata, standar deviasi, dan persentase per variabel beserta kategori — angka KONSISTEN dengan Bab IV.
-- 6.4 Hasil Olah Data: langkah ringkas pengolahan data + tabel ringkasan output analisis + petunjuk untuk menempel output software asli.
-- 6.5 Hasil Similarity Turnitin: halaman placeholder JUJUR — judul lampiran + catatan "[Isi dengan laporan similarity Turnitin asli setelah pengecekan — jangan mengarang persentase]".
-- 6.6 Pengajuan Artikel Ilmiah: abstrak ringkas + informasi target jurnal/proceedings + status pengajuan sebagai placeholder bila belum ada.\n`
+- 6.1 Kuesioner: salam pembuka + identitas penulis + judul lengkap + tujuan penelitian + jaminan kerahasiaan jawaban + penutup; bagian "Pertanyaan Penyaring (Screening Questions)" berisi 3 pertanyaan dengan opsi checkbox Ya/Tidak beserta logika lanjut/berhenti; bagian "Identitas Responden" (usia, jenis kelamin, pendidikan terakhir, pekerjaan/sektor, pendapatan — opsi checkbox); lalu KUESIONER UTAMA sub per variabel sesuai urutan judul: tiap variabel memuat definisi operasional singkat lalu butir pernyataan tiap indikator lengkap dengan kode item dan opsi "☐ Sangat Setuju (SS) — Skor 5, ☐ Setuju (S) — Skor 4, ☐ Kurang Setuju (KS) — Skor 3, ☐ Tidak Setuju (TS) — Skor 2, ☐ Sangat Tidak Setuju (STS) — Skor 1". WAJIB KECOCOKAN: jumlah butir pernyataan tiap variabel PERSIS SAMA dengan jumlah indikator pada kisi-kisi Bab 3.3 (konteks kisi-kisi disertakan di bawah — satu indikator satu butir, kode item dibawa persis KM01…dst.), jangan menambah/mengurangi butir di luar indikator. SEBELUM tiap tabel di Lampiran tulis baris "Judul Tabel: <deskripsi isi tabel>" tanpa nomor (mis. "Judul Tabel: Butir Kuesioner Budaya Kerja Digital X1") — judul mencerminkan isi tabel, dilarang mengulang judul sub-bab.
+- 6.2 Hasil Tabulasi Data Responden: KOSONG — hanya judul sub-bab lalu satu baris penanda "[Diisi setelah data responden terkumpul]" tanpa tabel apa pun.
+- 6.3 Hasil Deskriptif Jawaban Responden: KOSONG — hanya judul sub-bab lalu satu baris penanda "[Diisi setelah tabulasi data diolah]" tanpa tabel apa pun.
+- 6.4 Hasil Olah Data: KOSONG — hanya judul sub-bab lalu satu baris penanda "[Diisi setelah hasil olah software tersedia]" tanpa tabel apa pun.
+- 6.5 Hasil Similarity Turnitin: KOSONG — hanya judul sub-bab lalu catatan "[Isi dengan laporan similarity Turnitin asli setelah pengecekan — jangan mengarang persentase]".
+- 6.6 Pengajuan Artikel Ilmiah: KOSONG — hanya judul sub-bab lalu baris penanda "[Diisi setelah artikel dikirim ke jurnal]".\n`
     : !kuant && s6.length
     ? `Sub-bagian urut: ${s6.join(', ')} — tiap sub diisi instrumen penelitian NYATA sesuai labelnya (kisi-kisi, pedoman/lembar observasi-keahlian, pernyataan responden, lembar validasi) yang diturunkan dari kajian pustaka dan metode artikelmu, gunakan tabel Markdown bila membantu.\n`
     : '';
@@ -525,17 +588,27 @@ PANDUAN ISI per sub:
     : `TARGET KEDALAMAN (wajib): total BAB III minimal 25.000 karakter; tiap sub diuraikan rinci sesuai catatan varian (instrumen, prosedur pengumpulan, analisis, keabsahan) — bukan ringkasan.\n`;
   const target4 = tesisKuant ? TESIS_TARGET4 : `TARGET KEDALAMAN: 15.000–30.000 karakter — sajikan tiap sub mendalam (data/temuan + analisis), bukan ringkasan.\n`;
   const target5 = `TARGET KEDALAMAN: minimal 7.000 karakter — simpulan menjawab rumusan satu per satu, saran terperinci.\n`;
-  const targetL = `TARGET KEDALAMAN: minimal 9.000 karakter — lembar lengkap per variabel/informan (bukan contoh singkat).\n`;
+  const targetL = `TARGET KEDALAMAN: minimal 9.000 karakter — dipenuhi oleh 6.1 Kuesioner yang LEMBAR LENGKAP seluruh variabel (bukan contoh singkat); 6.2–6.6 cukup judul sub-bab + baris penanda kosong.\n`;
+  // Konteks kisi-kisi Bab 3.3 → jamin kecocokan butir kuesioner = jumlah indikator (item 8)
+  const kisiKonteks = (() => {
+    if (bab !== 'lampiran') return '';
+    const b3 = String(p?.content?.bab3 || '');
+    const mul = b3.search(/^3\.3\s+\S/m);
+    if (mul < 0) return '';
+    const sisa = b3.slice(mul);
+    const akhir = sisa.search(/^3\.4\s+\S/m);
+    return (akhir > 0 ? sisa.slice(0, akhir) : sisa).slice(0, 9000);
+  })();
 
   const map: Record<string, string> = {
-    bab1: `${struktur1}${target1}Judul: karya berikut.\n${base}${ref}\n${wajib}${fenomena}Tulis akademik formal Indonesia, siap tempel ke Word.\n${scopeNote}${outlineNote}${SITASI}`,
-    bab2: `${struktur2}${target2}${baganNote}Judul: karya berikut.\n${base}${ref}\n${scopeNote}${outlineNote}${SITASI}`,
-    bab3: `${struktur3}${target3}${populasiNote}${desainNote}${softwareNote}Judul: karya berikut.\n${base}${ref}\nIkuti kaidah metodologi standar Indonesia.\n${scopeNote}${outlineNote}${SITASI}`,
-    bab4: `${struktur4}${target4}${base}${ref}\nGunakan tabel Markdown bila perlu.\n${scopeNote}${outlineNote}${SITASI}`,
-    bab5: `${struktur5}${target5}${base}${ref}\nRingkas dan tegas.\n${scopeNote}${outlineNote}${SITASI}`,
-    lampiran: `Susun LAMPIRAN ${p.jenis === 'disertasi' ? 'disertasi' : p.jenis === 'tesis' ? 'tesis' : 'skripsi'} (bab penunjang setelah Bab V).\n${targetL}${base}${ref}\n${strukturL}${strukturL ? '' : `Isinya diturunkan dari kajian pustaka dan metode artikelmu: ${p.metode === 'Kualitatif'
+    bab1: `${struktur1}${target1}Judul: karya berikut.\n${base}${ref}\n${wajib}${fenomena}Tulis akademik formal Indonesia, siap tempel ke Word.\n${scopeNote}${outlineNote}${SITASI}${SITASI_KUTIP}`,
+    bab2: `${struktur2}${target2}${baganNote}Judul: karya berikut.\n${base}${ref}\n${scopeNote}${outlineNote}${SITASI}${SITASI_KUTIP}`,
+    bab3: `${struktur3}${target3}${populasiNote}${desainNote}${softwareNote}Judul: karya berikut.\n${base}${ref}\nIkuti kaidah metodologi standar Indonesia.\n${scopeNote}${outlineNote}${SITASI}${SITASI_KUTIP}`,
+    bab4: `${struktur4}${target4}${base}${ref}\nGunakan tabel Markdown bila perlu.\n${scopeNote}${outlineNote}${SITASI}${SITASI_KUTIP}`,
+    bab5: `${struktur5}${target5}${base}${ref}\n${scopeNote}${outlineNote}${SITASI}${SITASI_BAB5}`,
+    lampiran: `Susun LAMPIRAN ${p.jenis === 'disertasi' ? 'disertasi' : p.jenis === 'tesis' ? 'tesis' : 'skripsi'} (bab penunjang setelah Bab V).\n${targetL}${base}${ref}\n${strukturL}${kisiKonteks ? `KONTEKS WAJIB — KISI-KISI DARI BAB 3.3 (jumlah butir & kode item di Lampiran 6.1 WAJIB persis mengikuti indikator di sini):\n${kisiKonteks}\n` : ''}${strukturL ? '' : `Isinya diturunkan dari kajian pustaka dan metode artikelmu: ${p.metode === 'Kualitatif'
       ? 'kisi-kisi wawancara/pedoman wawancara, daftar informan, contoh transkrip, lembar observasi'
-      : 'kisi-kisi kuisioner, daftar pernyataan per indikator skala Likert, contoh lembar jawaban responden'} serta Lembar Pernyataan/Afirasi. Susun per bagian bernomor 6.1, 6.2, dst. gunakan tabel Markdown bila membantu.\n`}${scopeNote}${outlineNote}${SITASI}`,
+      : 'kisi-kisi kuisioner, daftar pernyataan per indikator skala Likert, contoh lembar jawaban responden'} serta Lembar Pernyataan/Afirasi. Susun per bagian bernomor 6.1, 6.2, dst. gunakan tabel Markdown bila membantu.\n`}${scopeNote}${outlineNote}${SITASI}${SITASI_KUTIP}`,
   };
   return map[bab] || map.bab1;
 }
@@ -589,7 +662,7 @@ router.post('/:id/generate-bab', requireAuthOrKey, async (req: AuthRequest, res)
     const refs = await refsUntuk(p);
     let text: string;
     try {
-      text = bersihTeks(await generateContent(babPrompt(bab, p, refs)));
+      text = normalisasiBab(await generateContent(babPrompt(bab, p, refs)));
     } catch (e: any) {
       const { addCredits } = await import('../services/credits.service');
       await addCredits(req.userId!, cost, `refund:${id}:${bab}-gagal`).catch(() => {});
@@ -654,7 +727,7 @@ router.post('/:id/generate-bab-stream', requireAuthOrKey, async (req: AuthReques
       send('error', { error: e.message || 'Gagal generate' });
       return res.end();
     }
-    const content = { ...(p.content || {}), [bab]: bersihTeks(full) };
+    const content = { ...(p.content || {}), [bab]: normalisasiBab(full) };
     await db().from('projects').update({ content, updated_at: new Date().toISOString() }).eq('id', id);
     send('done', { cost });
     res.end();
@@ -819,7 +892,9 @@ router.patch('/:id/content', requireAuthOrKey, async (req: AuthRequest, res) => 
     if (!key || typeof text !== 'string') return res.status(400).json({ error: 'key dan text wajib' });
     const { data: p, error } = await db().from('projects').select('content').eq('id', id).eq('user_id', req.userId!).single();
     if (error || !p) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
-    const content = { ...(p.content || {}), [key]: text.slice(0, 60000) };
+    // Bab utuh dinormalisasi (buang **/LaTeX + rapikan nomor sub-bab); potongan "bab:sub" tidak
+    const isi = key.includes(':') ? text : normalisasiBab(text);
+    const content = { ...(p.content || {}), [key]: isi.slice(0, 60000) };
     const { error: e2 } = await db().from('projects').update({ content, updated_at: new Date().toISOString() }).eq('id', id);
     if (e2) throw new Error(e2.message);
     res.json({ ok: true });
@@ -1087,7 +1162,7 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
       const { before = 0, ...runOpts } = opts;
       return new Paragraph({
         alignment: AlignmentType.CENTER,
-        spacing: { before, after: 0, line: 360 },
+        spacing: { before, after: 0, line: 480 },
         children: [new TextRun({ text, font: TNR, size: 24, ...runOpts })],
       });
     };
@@ -1151,7 +1226,8 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
       return out;
     };
 
-    // Paragraf biasa (rata kanan-kiri, spasi 1.5, indent 1 cm) + hyperlink URL/DOI
+    // Paragraf biasa (rata kanan-kiri, spasi 2, indent 1 cm) + hyperlink URL/DOI
+    // — baris "Sumber :" (tabel/gambar) & "Judul …" ikut spasi 1 (permintaan owner)
     const P = (text: string, opts: any = {}) => {
       const parts = String(text).split(/(https?:\/\/[^\s)<]+|(?:https?:\/\/)?doi\.org\/[^\s)<]+)/g);
       const runs: any[] = [];
@@ -1164,10 +1240,11 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
           runs.push(...runsTeks(seg));
         }
       }
+      const sumber = /^\s*(Sumber|Judul (Tabel|Gambar))\s*:/i.test(String(text));
       C.push(new Paragraph({
-        alignment: AlignmentType.JUSTIFIED,
-        spacing: { line: 360 },
-        indent: opts.hang ? { left: 720, hanging: 720 } : { firstLine: 720 },
+        alignment: sumber ? AlignmentType.LEFT : AlignmentType.JUSTIFIED,
+        spacing: { line: sumber ? 240 : 480 },
+        indent: sumber ? undefined : (opts.hang ? { left: 720, hanging: 720 } : { firstLine: 720 }),
         children: runs,
       }));
     };
@@ -1362,23 +1439,32 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
         const b = no.split('.');
         return b.length >= 3 ? `L${b.slice(1).join('.')}  ${t}` : `Lampiran ${b[1] || ''}  ${t}`;
       };
-      // Caption tabel/gambar per bab: "Tabel 2.1 Penelitian Terdahulu" — center, bold,
-      // di ATAS objek + field SEQ (paritas referensi; menghidupkan Daftar Tabel/Gambar)
+      // Caption tabel/gambar per bab: "Tabel 2.1 <Judul Tabel: …>" — center, bold,
+      // di ATAS objek + field SEQ (paritas referensi; menghidupkan Daftar Tabel/Gambar).
+      // Teks judul diambil dari baris "Judul Tabel:/Gambar:" buatan AI (item 2) dengan
+      // fallback judul sub-bab; lampiran memakai nomor "Tabel L<n>" (pola L1.x referensi).
       let noBab = 0, nTabel = 0, nGambar = 0, judulAktif = '';
+      let judulObjek = ''; // "Judul Tabel:/Gambar:" yang menunggu objeknya muncul
       const romawiKeAngka = (r: string) => ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'].indexOf(r) + 1;
-      const caption = (label: 'Tabel' | 'Gambar', n: number) => {
-        // tanpa nomor bab (pustaka) ATAU isi lampiran → tanpa caption (paritas referensi)
-        if (!noBab || lampiran) return;
+      const caption = (label: 'Tabel' | 'Gambar', n: number, judul?: string) => {
+        // tanpa nomor bab (pustaka) → tanpa caption; lampiran tetap → "Tabel L<n>"
+        if (!noBab && !lampiran) return;
         C.push(new Paragraph({
           alignment: AlignmentType.CENTER,
-          spacing: { before: 120, after: 60, line: 360 },
+          spacing: { before: 120, after: 60, line: 240 }, // judul tabel = spasi 1
           children: [
-            new TextRun({ text: `${label} ${noBab}.`, font: TNR, size: 24, bold: true }),
+            new TextRun({ text: lampiran ? `${label} L` : `${label} ${noBab}.`, font: TNR, size: 24, bold: true }),
             new SimpleField(`SEQ ${label} \\s 1`, String(n)),
-            new TextRun({ text: judulAktif ? ` ${judulAktif}` : '', font: TNR, size: 24, bold: true }),
+            new TextRun({ text: judul ? ` ${judul}` : '', font: TNR, size: 24, bold: true }),
           ],
         }));
       };
+      // Judul objek tertunda tapi objeknya tak kunjung datang → keluarkan sebagai paragraf biasa
+      const flushJudul = () => { if (judulObjek) { P(judulObjek); judulObjek = ''; } };
+      // Label tanpa nomor (paritas template): TEBAL hitam, tanpa nomor, tidak ikut TOC
+      const LABEL_TEBAL = /^(?:Definisi Konseptual|Definisi Operasional|Kisi-?Kisi Instrumen|Kisi-?Kisi Penelitian|Variabel [A-Z]\w*(?: dan [A-Z]\w*)?|Pertanyaan Penyaring \(Screening Questions\)|Pertanyaan Penyaring|Identitas Responden|Kuesioner Utama|Deskriptif Data Demografis Responden|Analisis Statistik Deskriptif|Analisis Statistik Inferensial|Analisa Outer Model|Analisa Inner Model|Convergent Validity|Discriminant Validity|Cross Loading|Pengujian Hipotesis|Analisis Regresi Linear Berganda|Uji Reliabilitas|Uji Validitas|Uji Asumsi Klasik|Uji Hipotesis|Pengertian [A-Z]\w*(?: dan [A-Z]\w*)?|Dimensi dan Indikator [A-Z]\w*|Analisis Deskriptif|Tabulasi Data|Hasil Uji Asumsi Klasik|Uji Normalitas|Uji Multikolinearitas|Uji Heteroskedastisitas|KUESIONER UTAMA|Petunjuk Pengisian|Pilihan Jawaban|Variabel [A-Z][^.?!]{0,60}\))\s*:?\s*$/;
+      const LABEL_HURUF = /^\([a-e]\)\s+[A-Z][^.?!]{2,90}$/;
+      const LABEL_PENGARUH = /^Pengaruh\s.{3,90}(?:terhadap|Dengan)\s.{3,60}(?:Pada\s[^.]{2,40}\.|[^\s.][^.]{0,40})$/;
       // Sel tabel: pipe eksternal OPSIONAL ("a | b" atau "| a | b |") — sel kosong dipertahankan
       const selTabel = (s: string) => {
         const t = String(s || '').trim().replace(/^\|/, '').replace(/\|$/, '');
@@ -1389,11 +1475,12 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
         // AI kadang menulis ":--" (2 strip) — ikuti kelonggaran parser lama: minimal 1 strip
         return p.length >= 2 && p.every((c) => /^:?-+:?$/.test(c));
       };
-      // Baris pendek kandidat blok bagan (untuk deteksi ↓/→)
+      // Baris pendek kandidat blok bagan (untuk deteksi ↓/→) — baris judul objek &
+      // baris "Sumber :" tidak boleh tertelan jadi kotak bagan
       const pendek = (idx: number) => {
         const l = (lines[idx] || '').trim();
         return !!l && l.length <= 72
-          && !/^(#{1,6}\s|BAB\s+[IVX]|\d+\.\d+\s|DAFTAR |LAMPIRAN\b|\|)/i.test(l.replace(/\*\*/g, ''));
+          && !/^(#{1,6}\s|BAB\s+[IVX]|\d+\.\d+\s|DAFTAR |LAMPIRAN\b|\||Judul\s+(?:Tabel|Gambar)\s*:|Sumber\s*:)/i.test(l.replace(/\*\*/g, ''));
       };
       let prevList = false; // baris sebelumnya bagian daftar → blok sama (nomor tidak restart)
       const pushNum = (teks: string, lvl: number) => {
@@ -1401,7 +1488,7 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
         C.push(new Paragraph({
           numbering: { reference: `daftar-num-${blokNum}`, level: lvl },
           alignment: AlignmentType.JUSTIFIED,
-          spacing: { line: 360 },
+          spacing: { line: 480 },
           children: runsTeks(teks),
         }));
         prevList = true;
@@ -1414,6 +1501,14 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
         if (!line || /^-{3,}$/.test(line)) { i++; continue; }
         // deteksi pola tanpa ** — judul sub-bab yang AI tulis bold tetap jadi heading
         const dt = line.replace(/\*\*/g, '');
+
+        // Baris judul objek buatan AI (item 2): "Judul Tabel: …" / "Judul Gambar: …"
+        // → menunggu objek (tabel/bagan) berikutnya sebagai teks caption
+        const mj = line.match(/^Judul\s+(Tabel|Gambar)\s*:\s*(.{2,160})$/i);
+        if (mj) { judulObjek = mj[2].trim(); i++; prevList = false; continue; }
+        // Judul tertunda tapi objek berikutnya bukan tabel/bagan → keluarkan sebagai paragraf biasa
+        if (judulObjek && !(dt.includes('|') && i + 1 < lines.length && barisPemisah(lines[i + 1]))
+          && !(pendek(i) && pendek(i + 1))) flushJudul();
 
         // Bagan (kerangka berpikir): run baris pendek berisi panah → PNG + caption
         if (pendek(i) && pendek(i + 1)) {
@@ -1429,7 +1524,8 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
             const gbr = await gambarDiagram(kandidat);
             if (gbr) {
               nGambar++;
-              caption('Gambar', nGambar);
+              caption('Gambar', nGambar, judulObjek || judulAktif);
+              judulObjek = '';
               C.push(new Paragraph({
                 alignment: AlignmentType.CENTER,
                 spacing: { before: 60, after: 120 },
@@ -1452,7 +1548,8 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
           }
           const jJudul = cols.findIndex((c) => /judul/i.test(c));
           nTabel++;
-          caption('Tabel', nTabel);
+          caption('Tabel', nTabel, judulObjek || judulAktif);
+          judulObjek = '';
           C.push(new Table({
             width: { size: 100, type: WidthType.PERCENTAGE },
             borders: tblBorders,
@@ -1517,7 +1614,7 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
           i++; prevList = false; continue;
         }
 
-        // Sub-bab bernomor: 1.1 → H2 (ikut TOC 1-2), 1.1.1 → H3, 1.1.1.1 → H4 — persis hierarki referensi
+        // Sub-bab bernomor: 1.1 → H2, 1.1.1 → H3, 1.1.1.1 → H4 (maks 4 tingkat) — ikut TOC 1-3
         // dt: nomor sub-bab yang dibold AI ("**6.1. Judul**") tetap terdeteksi — perbaikan penomoran
         const mn = dt.match(/^(\d+(?:\.\d+)+)\.?\s+(\S.*)$/);
         if (mn && dt.length < 130) {
@@ -1539,7 +1636,7 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
             C.push(new Paragraph({
               numbering: { reference: 'daftar-bullet', level: lvl },
               alignment: AlignmentType.JUSTIFIED,
-              spacing: { line: 360 },
+              spacing: { line: 480 },
               children: runsTeks(isi),
             }));
             prevList = true;
@@ -1547,11 +1644,11 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
           i++; continue;
         }
 
-        // Rumus pendek → ditengahkan spasi tunggal (referensi menampilkan rumus sebagai gambar)
+        // Rumus pendek → ditengahkan spasi 2 (semua tulisan spasi 2 kecuali elemen tabel/gambar)
         if (line.length < 70 && /^[A-Za-z][A-Za-z0-9²³]{0,3}\s*=\s*\S/.test(line)) {
           C.push(new Paragraph({
             alignment: AlignmentType.CENTER,
-            spacing: { line: 240 },
+            spacing: { line: 480 },
             children: [new TextRun({ text: line.replace(/\*\*/g, ''), font: TNR, size: 24 })],
           }));
           i++; prevList = false; continue;
@@ -1559,6 +1656,16 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
 
         // Caption buatan AI ("Tabel 2.1 …") dibuang — sistem membuat penomoran sendiri
         if (/^(Tabel|Gambar)\s+\d+(\.\d+)*\.?\s+[A-Z][^.?!]{2,90}$/.test(dt)) {
+          i++; prevList = false; continue;
+        }
+
+        // Label tanpa nomor → paragraf TEBAL (paritas template; tanpa TOC)
+        if (LABEL_TEBAL.test(dt) || LABEL_HURUF.test(dt) || LABEL_PENGARUH.test(dt)) {
+          C.push(new Paragraph({
+            alignment: AlignmentType.LEFT,
+            spacing: { line: 480 },
+            children: runsTeks(dt, { bold: true }),
+          }));
           i++; prevList = false; continue;
         }
 
@@ -1649,7 +1756,7 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
     const tocHint = () => C.push(new Paragraph({ children: [new TextRun({ text: CATATAN_FIELD, font: TNR, italics: true, color: '808080', size: 24 })] }));
 
     H(1, 'DAFTAR ISI');
-    C.push(new TableOfContents('Daftar Isi', { hyperlink: true, headingStyleRange: '1-2', beginDirty: true }));
+    C.push(new TableOfContents('Daftar Isi', { hyperlink: true, headingStyleRange: '1-3', beginDirty: true }));
     tocHint();
     pushFront();
 
@@ -1720,26 +1827,26 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
         default: {
           document: {
             run: { font: TNR, size: 24 },
-            // docDefaults referensi: spasi 1.5, before/after 0 — membuat TOC & paragraf tanpa
-            // spacing eksplisit ikut 1.5 (TOC jadi renggang seperti referensi)
-            paragraph: { spacing: { before: 0, after: 0, line: 360 } },
+            // docDefaults: spasi 2 untuk SEMUA tulisan (permintaan owner) — TOC & paragraf
+            // tanpa spacing eksplisit ikut 2 spasi; elemen tabel/caption/Sumber = spasi 1
+            paragraph: { spacing: { before: 0, after: 0, line: 480 } },
           },
         },
         paragraphStyles: [
-          // Persis gaya efektif referensi (set kedua): hitam bold, H1 14pt center + caps,
-          // H2/3/4 12pt left, semua line 360
+          // Gaya heading ala referensi: hitam bold, H1 14pt center + caps, H2/3/4 12pt left,
+          // semua line 2 spasi (kaidah "2 spasi untuk semua tulisan")
           { id: 'Heading1', name: 'Heading 1', basedOn: 'Normal', next: 'Normal', quickFormat: true,
             run: { font: TNR, bold: true, size: 28, color: '000000', allCaps: true },
-            paragraph: { alignment: AlignmentType.CENTER, spacing: { before: 240, after: 240, line: 360 } } },
+            paragraph: { alignment: AlignmentType.CENTER, spacing: { before: 240, after: 240, line: 480 } } },
           { id: 'Heading2', name: 'Heading 2', basedOn: 'Normal', next: 'Normal', quickFormat: true,
             run: { font: TNR, bold: true, size: 24, color: '000000' },
-            paragraph: { alignment: AlignmentType.LEFT, spacing: { before: 120, after: 60, line: 360 } } },
+            paragraph: { alignment: AlignmentType.LEFT, spacing: { before: 120, after: 60, line: 480 } } },
           { id: 'Heading3', name: 'Heading 3', basedOn: 'Normal', next: 'Normal', quickFormat: true,
             run: { font: TNR, bold: true, size: 24, color: '000000' },
-            paragraph: { alignment: AlignmentType.LEFT, spacing: { before: 60, after: 60, line: 360 } } },
+            paragraph: { alignment: AlignmentType.LEFT, spacing: { before: 60, after: 60, line: 480 } } },
           { id: 'Heading4', name: 'Heading 4', basedOn: 'Normal', next: 'Normal', quickFormat: true,
             run: { font: TNR, bold: true, size: 24, color: '000000' },
-            paragraph: { alignment: AlignmentType.LEFT, spacing: { before: 60, after: 60, line: 360 } } },
+            paragraph: { alignment: AlignmentType.LEFT, spacing: { before: 60, after: 60, line: 480 } } },
         ],
       },
       numbering: {
@@ -2153,7 +2260,7 @@ router.post('/:id/perkaya', requireAuthOrKey, async (req: AuthRequest, res) => {
       if (!gratis && plan !== 'admin') await addCreditsRefund(req.userId!, 'perkaya', `refund:${id}:perkaya-kosong`);
       return res.status(502).json({ error: 'Hasil kosong. Kreditmu dikembalikan.' });
     }
-    const baru = gantiBagian(teks, re, `${isiLama}\n\n${isiBersih}`);
+    const baru = normalisasiBab(gantiBagian(teks, re, `${isiLama}\n\n${isiBersih}`) || '');
     if (!baru) {
       if (!gratis && plan !== 'admin') await addCreditsRefund(req.userId!, 'perkaya', `refund:${id}:perkaya-gagal`);
       return res.status(502).json({ error: 'Gagal menyisipkan tambahan. Kreditmu dikembalikan.' });
@@ -2175,9 +2282,11 @@ router.post('/:id/sub-bab/hapus', requireAuthOrKey, async (req: AuthRequest, res
     if (error || !pr) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
     const teks = String((pr.content || {})[bab] || '');
     if (!teks) return res.status(400).json({ error: 'Bab ini belum digenerate.' });
-    const baru = hapusBagian(teks, reJudulSub(judul));
-    if (baru === null) return res.status(404).json({ error: `Sub-bab "${judul}" tidak ditemukan di naskah.` });
-    if (!baru.trim()) return res.status(400).json({ error: 'Tidak bisa menghapus sub-bab terakhir di bab ini. Hapus seluruh babnya lewat Generate Ulang.' });
+    const baru0 = hapusBagian(teks, reJudulSub(judul));
+    if (baru0 === null) return res.status(404).json({ error: `Sub-bab "${judul}" tidak ditemukan di naskah.` });
+    if (!baru0.trim()) return res.status(400).json({ error: 'Tidak bisa menghapus sub-bab terakhir di bab ini. Hapus seluruh babnya lewat Generate Ulang.' });
+    // Rapikan ulang nomor sub-bab — menghapus anak membuat nomor lompat (3.1, 3.3, …)
+    const baru = normalisasiBab(baru0);
     await db().from('projects').update({ content: { ...pr.content, [bab]: baru }, updated_at: new Date().toISOString() }).eq('id', id);
     res.json({ ok: true, content: baru });
   } catch (e: any) { res.status(500).json({ error: e.message }); }

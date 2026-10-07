@@ -13,6 +13,13 @@ import docsRoutes from './routes/docs.routes';
 
 dotenv.config();
 
+// Pertahanan: library pihak ketiga (mis. promise stream SDK Gemini saat parse gagal)
+// bisa melempar unhandledRejection — tanpa penjaga ini SELURUH server mati dan semua
+// permintaan pengguna putus. Cukup catat, jangan matikan proses.
+process.on('unhandledRejection', (alasan) => {
+  console.error('[process] unhandledRejection (ditahan, server tetap jalan):', alasan);
+});
+
 const app = express();
 const port = process.env.PORT || 5000;
 

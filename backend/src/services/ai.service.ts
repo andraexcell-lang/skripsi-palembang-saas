@@ -107,6 +107,10 @@ export const generateContentStream = async function* (prompt: string): AsyncGene
       jendela(model).push(Date.now());
       mulai = MODELS.indexOf(model);
       const stream = await bukaStream(model, prompt);
+      // Promise `response` SDK menolak saat stream gagal parse — bila tak dipegang,
+      // Node melempar unhandledRejection dan MEMBUNUH proses server. Tangkap di sini
+      // (await asli tetap menolak → error tetap terbaca pada jalur utama).
+      (stream.response as Promise<unknown>).catch(() => {});
       console.log(`[ai] stream via ${model}`);
       for await (const chunk of stream.stream) {
         const t = chunk.text();

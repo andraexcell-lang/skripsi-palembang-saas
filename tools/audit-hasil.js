@@ -69,6 +69,56 @@ const selesai = (kode) => { process.exitCode = kode; return; };
     const caption = (t.match(/^(Tabel|Gambar)\s+\d+[.,]\d+/gm) || []).length;
     cek(`${bab} tanpa caption "Tabel x.y"`, caption === 0, `${caption} caption`);
     cek(`${bab} tanpa "Ilustratif"`, !/Ilustratif/.test(t), 'kata terlarang');
+    // Rumus wajib karakter biasa — tanpa LaTeX (item 5)
+    const latex = (t.match(/\$[^$\n]+\$|\\frac\s*\{|\\sqrt\s*\{|\\begin\{|\\\(|\\\[|\\(?:alpha|beta|gamma|delta|epsilon|theta|lambda|mu|rho|sigma|omega|times|cdot|frac|sqrt|begin|end|left|right)\b/g) || []).length;
+    cek(`${bab} tanpa format LaTeX`, latex === 0, latex ? `${latex} pola LaTeX` : 'bersih');
+
+    // Kaidah penomoran hierarkis (item 1): berurutan per induk, tanpa lompat/yatim/duplikat
+    const nomorJudul = [...t.matchAll(/^(\d+(?:\.\d+)+)\.?\s+\S/gm)].map((m) => m[1]);
+    {
+      const uniq = new Set(nomorJudul);
+      const dup = nomorJudul.length - uniq.size;
+      const per = {};
+      let lompat = 0, yatim = 0;
+      for (const j of nomorJudul) {
+        const s = j.split('.');
+        const induk = s.slice(0, -1).join('.');
+        if (s.length > 2 && !uniq.has(induk)) { yatim++; continue; }
+        per[induk] = (per[induk] || 0) + 1;
+        if (+s[s.length - 1] !== per[induk]) lompat++;
+      }
+      cek(`${bab} penomoran sub-bab urut (tanpa lompat/yatim/duplikat)`, dup === 0 && lompat === 0 && yatim === 0,
+        `${nomorJudul.length} judul · dup:${dup} lompat:${lompat} yatim:${yatim}`);
+    }
+
+    // Nama tabel (item 2): baris "Judul Tabel:" sebelum tiap tabel + judul ≠ judul sub-bab
+    const bl = t.split('\n');
+    const pemisah = (s) => {
+      const c = String(s || '').trim().replace(/^\|/, '').replace(/\|$/, '').split('|');
+      return c.length >= 2 && c.every((x) => /^:?-+:?$/.test(x.trim()));
+    };
+    let nTabel = 0, nBerjudul = 0, nKembar = 0, jAktif = '';
+    for (let i2 = 0; i2 < bl.length; i2++) {
+      const dt2 = bl[i2].trim();
+      const mh2 = dt2.replace(/\*\*/g, '').match(/^(\d+(?:\.\d+)+)\.?\s+(\S.*)$/);
+      if (mh2 && dt2.length < 130 && mh2[1].split('.').length <= 2) jAktif = mh2[2].trim();
+      if (dt2.includes('|') && i2 + 1 < bl.length && pemisah(bl[i2 + 1])) {
+        nTabel++;
+        let j = i2 - 1;
+        while (j >= 0 && !bl[j].trim()) j--;
+        const mj2 = j >= 0 ? bl[j].trim().match(/^Judul\s+Tabel\s*:\s*(.+)$/i) : null;
+        if (mj2) {
+          nBerjudul++;
+          const rapi = (s) => s.trim().toLowerCase().replace(/\s+/g, ' ');
+          if (rapi(mj2[1]) === rapi(jAktif)) nKembar++;
+        }
+      }
+    }
+    if (nTabel > 0) {
+      if (nBerjudul > 0) cek(`${bab} semua tabel punya baris "Judul Tabel:"`, nBerjudul === nTabel, `${nBerjudul}/${nTabel} tabel`);
+      else cek(`${bab} tabel punya nama (baris "Judul Tabel:")`, false, `${nTabel} tabel — konten format lama (regen utk format baru)`, 'WARN');
+      cek(`${bab} judul tabel tak mengulang judul sub-bab`, nKembar === 0, `${nKembar} judul kembar sub-bab`);
+    }
 
     // Struktur sub-bab
     const N = bab === 'lampiran' ? 6 : parseInt(bab.replace('bab', ''), 10);
@@ -76,13 +126,19 @@ const selesai = (kode) => { process.exitCode = kode; return; };
     const minSubs = bab === 'lampiran' ? 2 : (tesisKuant && bab === 'bab4' ? 2 : 3);
     cek(`${bab} sub-bab ≥ ${minSubs}`, subs >= minSubs, `${subs} sub-bab terdeteksi`);
 
-    // Daftar Pustaka Bab Ini
+    // Daftar Pustaka Bab Ini — Bab V WAJIB tanpa kutipan (permintaan owner, item 7)
     const adaDapus = /daftar pustaka bab ini/i.test(t);
-    cek(`${bab} punya "Daftar Pustaka Bab Ini"`, adaDapus, adaDapus ? 'ada' : 'hilang');
-    if (adaDapus) {
-      const barisDapus = t.slice(t.search(/daftar pustaka bab ini/i));
-      const entri = (barisDapus.match(/\((19|20)\d{2}[a-z]?\)\./g) || []).length;
-      cek(`${bab} pustaka ≥ 8 entri`, entri >= 8, `${entri} entri`);
+    if (bab === 'bab5') {
+      const doi5 = (t.match(/https:\/\/doi\.org\//g) || []).length;
+      cek('bab5 TANPA "Daftar Pustaka Bab Ini"', !adaDapus, adaDapus ? 'masih ada dapus' : 'tanpa dapus ✓');
+      cek('bab5 TANPA kutipan/tautan DOI', doi5 === 0, `${doi5} tautan DOI`);
+    } else {
+      cek(`${bab} punya "Daftar Pustaka Bab Ini"`, adaDapus, adaDapus ? 'ada' : 'hilang');
+      if (adaDapus) {
+        const barisDapus = t.slice(t.search(/daftar pustaka bab ini/i));
+        const entri = (barisDapus.match(/\((19|20)\d{2}[a-z]?\)\./g) || []).length;
+        cek(`${bab} pustaka ≥ 8 entri`, entri >= 8, `${entri} entri`);
+      }
     }
 
     // Kualitas DOI
@@ -127,7 +183,7 @@ const selesai = (kode) => { process.exitCode = kode; return; };
     cek('bab3 kisi-kisi per variabel ≥ 4 tabel', kisi >= 4, `${kisi} tabel kisi-kisi`);
     cek('bab3 Gantt (Kegiatan + bulan)', /\|\s*No\s*\|\s*Kegiatan\s*\|/.test(t) && /(Januari|Februari|Maret)/.test(t), 'tabel jadwal di 3.1');
     cek('bab3 skala Likert 5 kategori', /Sangat Setuju \(SS\)/.test(t) && /Sangat Tidak Setuju \(STS\)/.test(t), 'SS s.d. STS');
-    cek('bab3 penentuan sampel (Slovin/Purposive)', /Slovin|Purposive/i.test(t), 'rumus/teknik sampel');
+    cek('bab3 penentuan sampel (Slovin/Sampling Jenuh/Purposive)', /Slovin|Sampling Jenuh|Sensus|Purposive/i.test(t), 'rumus/teknik sampel');
   }
   if (content.bab4 && tesisKuant) {
     const t = String(content.bab4);
@@ -146,6 +202,18 @@ const selesai = (kode) => { process.exitCode = kode; return; };
     cek('lampiran punya kuesioner + screening', /penyaring|screening/i.test(t) && /Kuesioner/i.test(t), '6.1 Kuesioner');
     cek('lampiran opsi Likert checkbox', /☐/.test(t), 'kotak pilihan responden');
     cek('lampiran placeholder Turnitin jujur', /Turnitin/i.test(t) && !/persentase\s*:\s*\d+\s*%/i.test(t), 'tanpa angka similarity karangan');
+    // Butir kuesioner = indikator kisi-kisi Bab 3.3 (item 8) — dibandingkan lewat kode item
+    const kode = (s) => [...new Set(String(s).match(/\b[A-Z]{2}\d{2}\b/g) || [])].sort();
+    const k3 = kode(content.bab3 || '');
+    if (k3.length) {
+      const kL = kode(t);
+      const hilang = k3.filter((k) => !kL.includes(k));
+      const lebih = kL.filter((k) => !k3.includes(k));
+      cek('lampiran butir = indikator Bab3.3 (kode item cocok)', !hilang.length && !lebih.length,
+        hilang.length ? `hilang di lampiran: ${hilang.slice(0, 8).join(', ')}`
+          : lebih.length ? `kode lebih di lampiran: ${lebih.slice(0, 8).join(', ')}`
+            : `${k3.length} kode cocok`);
+    }
   }
 
   // Ringkasan
