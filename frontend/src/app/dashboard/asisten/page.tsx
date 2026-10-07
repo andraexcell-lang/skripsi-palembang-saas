@@ -90,6 +90,15 @@ export default function AsistenPage() {
     setPanelBuka(false);
   }
 
+  // hapus satu sesi dari riwayat (paritas: daftar + buka + hapus)
+  function hapusSesi(id: string) {
+    setRiwayat((prev) => prev.filter((s) => s.id !== id));
+    if (aktifIdRef.current === id) {
+      aktifIdRef.current = null;
+      setAktifId(null);
+    }
+  }
+
   // dropdown perintah: terbila saat diawali "/" tanpa spasi (referensi),
   // tertutup otomatis setelah memilih ("/judul " punya spasi)
   const perintahTerbuka = input.startsWith('/') && !input.includes(' ');
@@ -205,19 +214,27 @@ export default function AsistenPage() {
               <p className="px-4 py-6 text-center text-sm text-text-muted">Belum ada percakapan tersimpan…</p>
             ) : (
               riwayat.map((s) => (
-                <button
+                <div
                   key={s.id}
-                  onClick={() => bukaSesi(s)}
-                  className={`block w-full border-b border-border-subtle px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-bg-surface-hover ${
+                  className={`flex items-center border-b border-border-subtle transition-colors last:border-b-0 hover:bg-bg-surface-hover ${
                     s.id === aktifId ? 'bg-brand-primary/5' : ''
                   }`}
                 >
-                  <p className="truncate text-sm text-text-primary">{judulSesi(s)}</p>
-                  <p className="mt-0.5 text-xs text-text-muted">
-                    {s.messages.length} pesan ·{' '}
-                    {new Date(s.waktu).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                </button>
+                  <button onClick={() => bukaSesi(s)} className="min-w-0 flex-1 px-4 py-3 text-left">
+                    <p className="truncate text-sm text-text-primary">{judulSesi(s)}</p>
+                    <p className="mt-0.5 text-xs text-text-muted">
+                      {s.messages.length} pesan ·{' '}
+                      {new Date(s.waktu).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </button>
+                  <button
+                    onClick={() => hapusSesi(s.id)}
+                    aria-label="Hapus riwayat"
+                    className="mr-3 shrink-0 rounded px-2 py-1 text-xs font-bold text-text-muted transition-colors hover:bg-accent-red/10 hover:text-danger"
+                  >
+                    Hapus
+                  </button>
+                </div>
               ))
             )}
           </div>
