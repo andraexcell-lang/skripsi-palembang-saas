@@ -248,6 +248,29 @@ Playwright 1.63 + Firefox 155 (build v1543) di Windows, skrip **`tools/ff-smoke.
 
 **Verifikasi build 7 Okt**: `next build` (34 halaman) + `tsc` backend lolos; uji browser lokal (backend lokal + frontend lokal) di 2 halaman yang diubah — nol error JavaScript (hanya 401 sesi uji yang memang tanpa token).
 
+## Peningkatan mutu hasil generate — SELESAI 7 Okt 2026
+
+**Temuan audit awal** (proyek `200b68f5`, judul SAMA dengan uji referensi mantrariset): Bab I 23.485 kar (71% referensi), Bab II 26.798 (48%), Bab III 11.920 (29%); pustaka cuma **6 entri** (Crossref dengan query judul-penuh → sampah preprint OSF, tanpa buku teks); konten berhenti **alami** (`finish=STOP`, bukan terpotong) → model menulis dangkal karena prompt tak punya target kedalaman.
+
+**Perubahan kode**:
+1. **`ai.service.ts`** — `maxOutputTokens: 32768` (fallback otomatis tanpa konfigurasi kalau model menolak) + log `finish=` + `out=`/`total` token tiap request → potongan `MAX_TOKENS` kini terdeteksi (uji: ketiga bab `finish=STOP`).
+2. **Referensi kaya** (`refsUntuk()` di projects.routes) — kata kunci judul (STOP-list boilerplate akademik) → **Crossref (10) + OpenAlex (6, dengan venue & abstrak)**, merge + dedupe maks 12. `refBlock` dua bagian: jurnal wajib dari daftar (DOI hanya di sini) + **blok 8 buku teks kanonik NYATA** (Sugiyono 2019, Ghozali 2018, Hair 2019, Creswell 2018, Miles & Huberman 2014, Moleong 2017, Rahmat 2015, Sekaran & Bougie 2016) + teori klasik tanpa DOI (Maslow/Herzberg/Likert) — paritas referensi yang membebaskan buku dari filter tahun. `SITASI` diselaraskan; semua query judul-penuh lain (tab Referensi, pustaka global 40 entri, karil, artikel, ekspor RIS) ganti `kataKunci()`.
+3. **`TARGET KEDALAMAN` per bab** di `babPrompt` (varian-aware): Bab I ≥25.000 kar (sub pertama ≥12.000), Bab II ≥40.000 (5-tingkat 300–500 kata/tingkat; kuantitatif: tabel ≥10 studi + hipotesis berjustifikasi), Bab III ≥30.000 (kuesioner per variabel ≥5 butir Likert + analisis per tahap berumus), Bab IV 15–30rb, Bab V ≥7rb, Lampiran ≥9rb.
+4. **`bersihTeks()`** — strip `**bold**` deterministik di semua jalur simpan & stream model (model tetap nekat menulis emphases); konten lama proyek uji dibersihkan (178 pasang `**`). Ekspor DOCX sudah menanganinya: `*italic*` → italic sungguhan (pustaka APA), `**` → teks biasa.
+
+**Hasil uji ulang** (3 kredit bab + lampiran gratis, ±4 menit, `gemini-2.5-flash`, nol potongan):
+
+| Bab | Sebelum | Sesudah | Referensi | % paritas |
+|---|---|---|---|---|
+| Bab I | 23.485 | **33.374** | 33.047 | **101%** |
+| Bab II | 26.798 | **84.856** | 55.811 | **152%** |
+| Bab III | 11.920 | **34.407** | 41.351 | 83% |
+| Lampiran | 10.031 | **19.352** | 11.954 | **162%** |
+
+**Audit otomatis** `node tools/audit-hasil.js <project-id>` (nol kuota AI): 41 cek — panjang vs target & referensi, sub-bab, tabel khas (5-kolom terdahulu, definisi operasional 7 kolom, Gantt, 5-tingkat, kuesioner per variabel), larangan format, DOI valid, pustaka ≥8 entri, peringatan preprint. **Baseline 30/45 (11 gagal) → sekarang 39/41, 0 gagal, 0 peringatan** (2 SKIP = bab4/5 dikunci tahap proposal). Kualitas terverifikasi: bab2 108 paragraf **0 duplikat**; pustaka 31 entri berisi teori klasik nyata (Adams 1965, Bandura 1986, Blau 1964, Bakker & Demerouti 2007, Campbell 1993) + jurnal SINTA; struktur `3.4.1.1–.4` kuesioner per variabel = pola mantrariset.
+
+**Runner uji tanpa browser** `node tools/gen-uji.js <project-id> <bab1|…|lampiran> [--studi=10]` — env `UJI_EMAIL`/`UJI_PASS` + backend lokal; `?ulang=1` = 1 kredit (lampiran gratis). *Catatan*: regenerasi E2E baru dijalankan pada varian **kuantitatif (tesis proposal)**; varian lain menunggu uji serupa agar hemat kuota free tier (prompt target umum & varian-aware).
+
 ## Tunda (butuh owner)
 
 1. Project Supabase BARU (kunci bersih) + ulangi 5 migrasi + update env Railway/Vercel/lokal

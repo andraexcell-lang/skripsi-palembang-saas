@@ -252,20 +252,71 @@ export async function crossrefTop(query: string, rows = 6, minYear?: number | nu
   } catch { return []; }
 }
 
-function refBlock(refs: { doi: string; title: string; authors: string; year: string; url: string }[]) {
-  if (!refs.length) return ' (tidak ada referensi eksternal tersedia — gunakan teori standar bila perlu).';
-  return '\nDAFTAR REFERENSI WAJIB (gunakan untuk bodynote + Daftar Pustaka, format APA 7th, URL bisa diklik):\n' +
-    refs.map((r, i) => `${i + 1}. ${r.authors} (${r.year}). ${r.title}. https://doi.org/${r.doi}`).join('\n');
+// Kata kunci dari judul: buang kata kerja akademik generik. Query judul-penuh ke
+// Crossref/OpenAlex sering meleset (preprint sampah, mis. OSF) — topik lebih presisi.
+const STOP = new Set(['pengaruh', 'terhadap', 'melalui', 'antara', 'hubungan', 'peranan', 'peran', 'model', 'kajian', 'analisis', 'studi', 'kasus', 'dan', 'di', 'dalam', 'pada', 'untuk', 'dengan', 'serta', 'the', 'of', 'on', 'in', 'using', 'toward', 'towards', 'effect', 'relationship', 'between', 'through', 'and', 'to', 'for', 'a', 'an']);
+export function kataKunci(judul: string): string {
+  return String(judul).replace(/\([^)]*\)/g, ' ').split(/\s+/)
+    .filter((w) => w && !STOP.has(w.toLowerCase().replace(/[^a-z]/g, '')))
+    .join(' ')
+    .slice(0, 180);
+}
+
+// Referensi prompt: Crossref (DOI) + OpenAlex (venue + abstrak → ulasan pustaka
+// lebih berbobot karena model tahu isi artikelnya), digabung + dedupe, maks 12.
+export async function refsUntuk(p: any, n = 10): Promise<{ doi: string; title: string; authors: string; year: string; url: string; venue?: string; abstract?: string }[]> {
+  const q = kataKunci(p.judul);
+  const lang = p.ref_origin === 'id' || p.ref_origin === 'en' ? p.ref_origin : null;
+  const [cr, oa] = await Promise.all([
+    crossrefTop(q, n, p.min_year),
+    openalexTop(q, Math.max(4, Math.ceil(n / 2)), p.min_year, lang),
+  ]);
+  const seen = new Set<string>();
+  const out: any[] = [];
+  for (const r of [...cr, ...oa.items]) {
+    const k = String(r.doi || r.title || '').toLowerCase();
+    if (!k || seen.has(k)) continue;
+    seen.add(k); out.push(r);
+    if (out.length >= 12) break;
+  }
+  return out;
+}
+
+// Buku teks NYATA (metodologi & teori umum) — paritas referensi yang membebaskan
+// buku teori/metodologi dari filter tahun. Tanpa DOI; jurnal tetap wajib dari daftar.
+const BUKU_TEKS = `
+BUKU TEKS NYATA (boleh disitasi bila relevan — tanpa DOI, penerbit boleh disingkat):
+1. Sugiyono (2019). Metode Penelitian Kuantitatif, Kualitatif, dan R&D. Alfabeta.
+2. Ghozali, I. (2018). Aplikasi Analisis Multivariate dengan Program IBM SPSS 25. Universitas Diponegoro.
+3. Hair, J. F., Black, W. C., Babin, B. J., & Anderson, R. E. (2019). Multivariate Data Analysis (8th ed.). Cengage.
+4. Creswell, J. W., & Creswell, J. D. (2018). Research Design: Qualitative, Quantitative, and Mixed Methods Approaches (5th ed.). SAGE.
+5. Miles, M. B., & Huberman, A. M. (2014). Qualitative Data Analysis: A Methods Sourcebook (3rd ed.). SAGE.
+6. Moleong, L. J. (2017). Metodologi Penelitian Kualitatif. Remaja Rosdakarya.
+7. Rahmat, J. (2015). Psikologi Komunikasi. Remaja Rosdakarya.
+8. Sekaran, U., & Bougie, R. (2016). Research Methods for Business (7th ed.). Wiley.
+Boleh juga menyitasi teori klasik yang sudah umum & benar (mis. Maslow 1943, Herzberg 1959, Likert 1932, Slovin) TANPA DOI — tetapi ARTIKEL JURNAL wajib memakai daftar referensi di atas; jangan mengarang DOI atau judul jurnal di luar daftar.`;
+
+function refBlock(refs: { doi: string; title: string; authors: string; year: string; url: string; venue?: string; abstract?: string }[]) {
+  if (!refs.length) return `\n (tidak ada referensi eksternal tersedia — gunakan buku teks & teori standar yang benar-benar ada).${BUKU_TEKS}`;
+  return '\nDAFTAR REFERENSI JURNAL WAJIB (untuk bodynote + Daftar Pustaka, format APA 7th, URL bisa diklik — hanya artikel di bawah yang boleh punya DOI):\n' +
+    refs.map((r, i) => `${i + 1}. ${r.authors} (${r.year}). ${r.title}.${r.venue ? ` ${r.venue}.` : ''} https://doi.org/${r.doi}${r.abstract ? `\n   Abstrak: ${r.abstract}` : ''}`).join('\n') +
+    `\n${BUKU_TEKS}`;
 }
 
 const SITASI = `Aturan format: teks bersih — TANPA **bold**, tanpa ---, tanpa preamble seperti "Berikut adalah...". Markdown yang boleh hanya: (1) judul sub-bab bernomor pola "N.M Judul" (mis. "2.4 Penelitian Terdahulu") tanpa ** dan tanpa #; (2) TABEL markdown format standar — WAJIB pipe di awal dan di akhir SETIAP baris, termasuk baris pemisah, contoh:
 | No | Nama (Tahun) | Judul | Hasil | Gap |
 |---|---|---|---|---|
 | 1 | ... | ... | ... | ... |
-(3) daftar bernomor "1." "2." "3." untuk identifikasi/rumusan/saran. JANGAN tulis caption "Tabel x.y" atau "Gambar x.y" — penomoran tabel & gambar dibuat otomatis oleh sistem. Tulis isi teks dengan huruf normal — JANGAN semua huruf kapital; judul artikel referensi ditulis dengan huruf normal (bukan HURUF BESAR semua). Bagan: satu kotak per baris, panah "↓" atau "→" di baris tersendiri. Langsung mulai dari judul bab. Wajib: (1) tulis dalam bahasa yang diminta, (2) bodynote sesuai gaya sitasi yang diminta di setiap sub-bab yang memakai teori/temuan, (3) akhiri dengan sub-bagian "Daftar Pustaka Bab Ini" berisi referensi di atas dalam format gaya sitasi yang diminta lengkap dengan link DOI yang bisa diklik. Jangan mengarang DOI/judul di luar daftar. Jangan tulis kata "Ilustratif": tabel fenomena hanya boleh berisi data nyata bersumber, bila tidak ada maka hapus tabelnya.`;
+(3) daftar bernomor "1." "2." "3." untuk identifikasi/rumusan/saran. JANGAN tulis caption "Tabel x.y" atau "Gambar x.y" — penomoran tabel & gambar dibuat otomatis oleh sistem. Tulis isi teks dengan huruf normal — JANGAN semua huruf kapital; judul artikel referensi ditulis dengan huruf normal (bukan HURUF BESAR semua). Bagan: satu kotak per baris, panah "↓" atau "→" di baris tersendiri. Langsung mulai dari judul bab. Wajib: (1) tulis dalam bahasa yang diminta, (2) bodynote sesuai gaya sitasi yang diminta di setiap sub-bab yang memakai teori/temuan, (3) akhiri dengan sub-bagian "Daftar Pustaka Bab Ini" berisi referensi di atas dalam format gaya sitasi yang diminta lengkap dengan link DOI yang bisa diklik. Untuk ARTIKEL JURNAL: hanya dari daftar referensi (jangan mengarang DOI/judul di luar daftar); untuk BUKU TEKS: hanya dari daftar buku atau teori klasik yang benar-benar ada. Jangan tulis kata "Ilustratif": tabel fenomena hanya boleh berisi data nyata bersumber, bila tidak ada maka hapus tabelnya.`;
 
 // Pilihan interaktif studio (paritas referensi): bagan Bab II + input metodologi Bab III
-type Ekstra = { bagan?: string; baganTeks?: string; populasi?: string; takDiketahui?: boolean; desain?: string; software?: string };
+type Ekstra = { bagan?: 'kirim' | 'ai'; baganTeks?: string; populasi?: string; takDiketahui?: boolean; desain?: string; software?: string };
+
+// Buang penanda tebal markdown — SITASI melarang **bold**, tapi model kadang tetap
+// menulisnya (emphases nama dimensi/indikator). Dibersihkan deterministik di semua
+// jalur simpan/stream supaya TOC, taskpane, DOCX, dan audit selalu bersih.
+export const bersihTeks = (t: string): string =>
+  String(t).replace(/\*\*([\s\S]*?)\*\*/g, '$1').replace(/\*\*/g, '');
 
 export function babPrompt(bab: string, p: any, refs: { doi: string; title: string; authors: string; year: string; url: string }[], ekstra: Ekstra = {}) {
   const style = p.citation_style || 'APA 7th';
@@ -380,13 +431,27 @@ export function babPrompt(bab: string, p: any, refs: { doi: string; title: strin
     ? `Sub-bagian urut: ${s6.join(', ')} — tiap sub diisi instrumen penelitian NYATA sesuai labelnya (kisi-kisi, pedoman/lembar observasi-keahlian, pernyataan responden, lembar validasi) yang diturunkan dari kajian pustaka dan metode artikelmu, gunakan tabel Markdown bila membantu.\n`
     : '';
 
+  // TARGET KEDALAMAN — patokan panjang dari hasil terukur referensi mantrariset
+  // (Bab I 33rb, Bab II 56rb, Bab III 41rb karakter; uji 6 Okt 2026). Tanpa target
+  // eksplisit model menulis "cukup" dangkal (Bab III kita cuma 12rb / 29% paritas).
+  const target1 = `TARGET KEDALAMAN (wajib — jangan berhenti sebelum tercapai): total BAB I minimal 25.000 karakter; sub pertama (latar belakang/pendahuluan) sendiri minimal 12.000 karakter dengan alur umum → khusus → fokus penelitian, tiap paragraf ada sitasi bila memakai angka/temuan; sub lain ditulis mendalam, bukan ringkasan.\n`;
+  const target2 = kuant
+    ? `TARGET KEDALAMAN (wajib): total BAB II minimal 40.000 karakter; tiap konstruk/variabel pada 2.1 dibuka 5 tingkat, tiap tingkat 300–500 kata dengan penjelasan BERBEDA (dilarang mengulang kalimat sama); tabel 2.4 minimal 10 studi; tiap hipotesis bernomor H1, H2, … + 1 paragraf justifikasi teoretis.\n`
+    : `TARGET KEDALAMAN (wajib): total BAB II minimal 35.000 karakter; tiap teori utama diuraikan rinci (definisi, dimensi, penerapan pada topik penelitianmu) — bukan ringkasan; tabel penelitian terdahulu tetap minimal 6 studi.\n`;
+  const target3 = kuant
+    ? `TARGET KEDALAMAN (wajib): total BAB III minimal 30.000 karakter; sub Kuesioner bertingkat PER VARIABEL (3.4.1 X1, 3.4.2 X2, …): tiap variabel memuat definisi operasional, 4–6 indikator, dan contoh butir pernyataan skala Likert 1–5 (≥5 butir nyata per variabel); sub Teknik Analisis bertingkat per tahap (validitas → reliabilitas → asumsi klasik → regresi → uji t/F → R² → mediasi) dengan langkah + rumus lengkap (termasuk Slovin/Lemeshow bila ada populasi).\n`
+    : `TARGET KEDALAMAN (wajib): total BAB III minimal 25.000 karakter; tiap sub diuraikan rinci sesuai catatan varian (instrumen, prosedur pengumpulan, analisis, keabsahan) — bukan ringkasan.\n`;
+  const target4 = `TARGET KEDALAMAN: 15.000–30.000 karakter — sajikan tiap sub mendalam (data/temuan + analisis), bukan ringkasan.\n`;
+  const target5 = `TARGET KEDALAMAN: minimal 7.000 karakter — simpulan menjawab rumusan satu per satu, saran terperinci.\n`;
+  const targetL = `TARGET KEDALAMAN: minimal 9.000 karakter — lembar lengkap per variabel/informan (bukan contoh singkat).\n`;
+
   const map: Record<string, string> = {
-    bab1: `${struktur1}Judul: karya berikut.\n${base}${ref}\n${wajib}${fenomena}Tulis akademik formal Indonesia, siap tempel ke Word.\n${scopeNote}${outlineNote}${SITASI}`,
-    bab2: `${struktur2}${baganNote}Judul: karya berikut.\n${base}${ref}\n${scopeNote}${outlineNote}${SITASI}`,
-    bab3: `${struktur3}${populasiNote}${desainNote}${softwareNote}Judul: karya berikut.\n${base}${ref}\nIkuti kaidah metodologi standar Indonesia.\n${scopeNote}${outlineNote}${SITASI}`,
-    bab4: `${struktur4}${base}${ref}\nGunakan tabel Markdown bila perlu.\n${scopeNote}${outlineNote}${SITASI}`,
-    bab5: `${struktur5}${base}${ref}\nRingkas dan tegas.\n${scopeNote}${outlineNote}${SITASI}`,
-    lampiran: `Susun LAMPIRAN skripsi (bab penunjang setelah Bab V) berisi instrumen penelitian.\n${base}${ref}\n${strukturL}${strukturL ? '' : `Isinya diturunkan dari kajian pustaka dan metode artikelmu: ${p.metode === 'Kualitatif'
+    bab1: `${struktur1}${target1}Judul: karya berikut.\n${base}${ref}\n${wajib}${fenomena}Tulis akademik formal Indonesia, siap tempel ke Word.\n${scopeNote}${outlineNote}${SITASI}`,
+    bab2: `${struktur2}${target2}${baganNote}Judul: karya berikut.\n${base}${ref}\n${scopeNote}${outlineNote}${SITASI}`,
+    bab3: `${struktur3}${target3}${populasiNote}${desainNote}${softwareNote}Judul: karya berikut.\n${base}${ref}\nIkuti kaidah metodologi standar Indonesia.\n${scopeNote}${outlineNote}${SITASI}`,
+    bab4: `${struktur4}${target4}${base}${ref}\nGunakan tabel Markdown bila perlu.\n${scopeNote}${outlineNote}${SITASI}`,
+    bab5: `${struktur5}${target5}${base}${ref}\nRingkas dan tegas.\n${scopeNote}${outlineNote}${SITASI}`,
+    lampiran: `Susun LAMPIRAN skripsi (bab penunjang setelah Bab V) berisi instrumen penelitian.\n${targetL}${base}${ref}\n${strukturL}${strukturL ? '' : `Isinya diturunkan dari kajian pustaka dan metode artikelmu: ${p.metode === 'Kualitatif'
       ? 'kisi-kisi wawancara/pedoman wawancara, daftar informan, contoh transkrip, lembar observasi'
       : 'kisi-kisi kuisioner, daftar pernyataan per indikator skala Likert, contoh lembar jawaban responden'} serta Lembar Pernyataan/Afirasi. Susun per bagian bernomor 6.1, 6.2, dst. gunakan tabel Markdown bila membantu.\n`}${scopeNote}${outlineNote}${SITASI}`,
   };
@@ -439,10 +504,10 @@ router.post('/:id/generate-bab', requireAuthOrKey, async (req: AuthRequest, res)
       if (e.code === 'INSUFFICIENT_CREDITS') return res.status(402).json({ error: e.message, remaining: e.remaining });
       throw e;
     }
-    const refs = await crossrefTop(p.judul, 6, p.min_year);
+    const refs = await refsUntuk(p);
     let text: string;
     try {
-      text = await generateContent(babPrompt(bab, p, refs));
+      text = bersihTeks(await generateContent(babPrompt(bab, p, refs)));
     } catch (e: any) {
       const { addCredits } = await import('../services/credits.service');
       await addCredits(req.userId!, cost, `refund:${id}:${bab}-gagal`).catch(() => {});
@@ -466,7 +531,7 @@ router.post('/:id/generate-bab-stream', requireAuthOrKey, async (req: AuthReques
     // Arahan penulis untuk "Generate Ulang Bab Ini" (opsional, maks 1500 karakter)
     const extraArahan = instruksi ? ` Arahan penulis (ikuti sejauh tidak melanggar aturan penulisan — struktur, sitasi, panjang): ${String(instruksi).slice(0, 1500)}` : '';
     // Pilihan interaktif (paritas referensi): bagan Bab II + input metodologi Bab III
-    const ekstra = {
+    const ekstra: Ekstra = {
       bagan: bagan === 'kirim' ? 'kirim' : bagan === 'ai' ? 'ai' : undefined,
       baganTeks: baganTeks ? String(baganTeks).slice(0, 800) : undefined,
       populasi: populasi ? String(populasi).slice(0, 40) : undefined,
@@ -494,12 +559,12 @@ router.post('/:id/generate-bab-stream', requireAuthOrKey, async (req: AuthReques
       if (e.code === 'INSUFFICIENT_CREDITS') { send('error', { error: e.message }); return res.end(); }
       throw e;
     }
-    const refs = await crossrefTop(p.judul, 6, p.min_year);
+    const refs = await refsUntuk(p);
     let full = '';
     try {
       for await (const t of generateContentStream(babPrompt(bab, p, refs, ekstra) + extraStudi + extraArahan)) {
         full += t;
-        send('chunk', { t });
+        send('chunk', { t: bersihTeks(t) });
       }
     } catch (e: any) {
       const { addCredits } = await import('../services/credits.service');
@@ -507,7 +572,7 @@ router.post('/:id/generate-bab-stream', requireAuthOrKey, async (req: AuthReques
       send('error', { error: e.message || 'Gagal generate' });
       return res.end();
     }
-    const content = { ...(p.content || {}), [bab]: full };
+    const content = { ...(p.content || {}), [bab]: bersihTeks(full) };
     await db().from('projects').update({ content, updated_at: new Date().toISOString() }).eq('id', id);
     send('done', { cost });
     res.end();
@@ -528,7 +593,7 @@ router.post('/:id/generate-artikel', requireAuthOrKey, async (req: AuthRequest, 
       throw e;
     }
     const lang = scopus ? 'English (akademik, siap submit Scopus Q1-Q4)' : 'Indonesia (akademik, siap submit Sinta)';
-    const refs = await crossrefTop(p.judul, 10);
+    const refs = await crossrefTop(kataKunci(p.judul), 10);
     const text = await generateContent(
       `Susun artikel jurnal lengkap berbahasa ${lang} dengan struktur: Judul, Abstrak + kata kunci, Pendahuluan, Metode, Hasil & Pembahasan, Kesimpulan, Daftar Pustaka (APA, gunakan referensi nyata di bawah + bodynote di tiap bagian). Judul: ${p.judul}. Metode: ${p.metode}.${refBlock(refs)}\nJangan mengarang DOI/judul di luar daftar. Tulis siap submit.`
     );
@@ -548,7 +613,7 @@ router.get('/:id/references', requireAuthOrKey, async (req: AuthRequest, res) =>
     const { data: p, error } = await db().from('projects').select('judul,min_year,identitas').eq('id', String(req.params.id)).eq('user_id', req.userId!).single();
     if (error || !p) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
     const custom = Array.isArray(p.identitas?.refs) ? p.identitas.refs : [];
-    res.json({ items: [...custom, ...(await crossrefTop(p.judul, 20, p.min_year))] });
+    res.json({ items: [...custom, ...(await crossrefTop(kataKunci(p.judul), 20, p.min_year))] });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
@@ -724,9 +789,9 @@ router.post('/:id/generate-subbab', requireAuthOrKey, async (req: AuthRequest, r
     const text = await generateContent(
       `Susun sub-bab "${sub}" dari ${(outlineFor(p)[bab] || {}).bab || bab} untuk karya berikut. Judul: ${p.judul}. Metode: ${p.metode}. Bahasa: ${p.language || 'Indonesia'}. Gaya sitasi: ${p.citation_style || 'APA 7th'}.\n${refBlock(refs)}\nTulis 300-600 kata akademik dengan bodynote bila memakai teori. Jangan mengarang DOI.`
     );
-    const content = { ...(p.content || {}), [key]: text };
+    const content = { ...(p.content || {}), [key]: bersihTeks(text) };
     await d.from('projects').update({ content, updated_at: new Date().toISOString() }).eq('id', id);
-    res.json({ text, cost });
+    res.json({ text: bersihTeks(text), cost });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
@@ -768,7 +833,7 @@ router.post('/:id/generate-subbab-stream', requireAuthOrKey, async (req: AuthReq
     try {
       for await (const t of generateContentStream(prompt)) {
         full += t;
-        send('chunk', { t });
+        send('chunk', { t: bersihTeks(t) });
       }
     } catch (e: any) {
       const { addCredits } = await import('../services/credits.service');
@@ -776,7 +841,7 @@ router.post('/:id/generate-subbab-stream', requireAuthOrKey, async (req: AuthReq
       send('error', { error: e.message || 'Gagal generate' });
       return res.end();
     }
-    const content = { ...(p.content || {}), [key]: full };
+    const content = { ...(p.content || {}), [key]: bersihTeks(full) };
     await d.from('projects').update({ content, updated_at: new Date().toISOString() }).eq('id', id);
     send('done', { cost });
     res.end();
@@ -893,7 +958,7 @@ router.post('/:id/generate-karil', requireAuthOrKey, async (req: AuthRequest, re
       if (e.code === 'INSUFFICIENT_CREDITS') return res.status(402).json({ error: e.message, remaining: e.remaining });
       throw e;
     }
-    const refs = await crossrefTop(pr.judul, 10, pr.min_year);
+    const refs = await crossrefTop(kataKunci(pr.judul), 10, pr.min_year);
     const text = await generateContent(
       `Susun KARYA ILMIAH UT (MKWI4560) berbahasa Indonesia, sistematika: Judul, Identitas (Nama/NIM/UPBJJ), Abstrak 150-200 kata + 3-5 kata kunci abjad, Pendahuluan, Metode, Hasil dan Pembahasan, Simpulan dan Saran, Daftar Pustaka APA (min 10 sumber, 5 jurnal 5 tahun terakhir). Penulis: mahasiswa pertama. Judul: ${pr.judul}.\n${refs.map((r, i) => `${i + 1}. ${r.authors} (${r.year}). ${r.title}. https://doi.org/${r.doi}`).join('\n')}\nJangan mengarang DOI.`
     );
@@ -1540,7 +1605,7 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
     // Daftar Pustaka: unggahan user dulu, lalu Crossref by judul
     const custom: any[] = Array.isArray(ident.refs) ? ident.refs : [];
     let refs: any[] = [];
-    try { refs = [...custom, ...(await crossrefTop(judul, 40, pr.min_year))]; } catch { refs = custom; }
+    try { refs = [...custom, ...(await crossrefTop(kataKunci(judul), 40, pr.min_year))]; } catch { refs = custom; }
     if (refs.length) {
       H(1, 'DAFTAR PUSTAKA');
       for (const r of refs) {
@@ -1884,7 +1949,7 @@ router.post('/:id/cek-sitasi', requireAuthOrKey, async (req: AuthRequest, res) =
 
     // 2) Cocokkan dengan Daftar Pustaka proyek (unggahan + Crossref by judul)
     const custom = Array.isArray(pr.identitas?.refs) ? pr.identitas.refs : [];
-    const refs = [...custom, ...(await crossrefTop(pr.judul, 20, pr.min_year))];
+    const refs = [...custom, ...(await crossrefTop(kataKunci(pr.judul), 20, pr.min_year))];
     const nurut = (s: string) => String(s || '').toLowerCase().replace(/[^\p{L}\s]/gu, '');
     const kata = (s: string) => nurut(s).split(/\s+/).filter(Boolean);
     const cocokRef = (penulis: string, tahun: string) => {

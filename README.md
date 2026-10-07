@@ -56,6 +56,11 @@ maupun build lokal:
   Playwright (`tools/ff-smoke.js`) — nol error console, responsif, tema gelap,
   §3.18 & kartu University lolos. **Safari**: mustahil di Windows, uji manual
   di perangkat Apple (lihat PROJECT_STATUS); output Tailwind → risiko rendah.
+- **Mutu hasil generate** — target kedalaman per bab + referensi kaya
+  (Crossref + OpenAlex + buku teks kanonik) + `maxOutputTokens` 32rb;
+  lolos audit **39/41, 0 gagal** (`node tools/audit-hasil.js <project-id>`).
+  Regenerasi bab tanpa browser: `node tools/gen-uji.js <project-id> <bab>`
+  (env `UJI_EMAIL`/`UJI_PASS`, backend lokal; `?ulang=1` = 1 kredit).
 
 ## Deploy
 

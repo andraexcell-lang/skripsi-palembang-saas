@@ -71,6 +71,32 @@ function bisaCobaLagi(err: any): boolean {
   return /429|quota|RESOURCE_EXHAUSTED|503|overload|high demand|too many requests|not found|NOT_FOUND|is not supported/i.test(msg);
 }
 
+// Batas output per request: bab panjang (Bab II target 40rb+ karakter ≈ 12rb token)
+// butuh ruang jauh di atas default 8rb — kalau model tidak mendukung nilai ini,
+// kita ulangi TANPA konfigurasi (fallback) supaya tetap jalan.
+const MAX_OUT = 32768;
+
+function catatHasil(model: string, resp: any) {
+  try {
+    const fin = resp?.candidates?.[0]?.finishReason || '?';
+    const u = resp?.usageMetadata || {};
+    console.log(`[ai] ${model} finish=${fin} out=${u.candidatesTokenCount ?? '-'} total=${u.totalTokenCount ?? '-'}`);
+    if (fin === 'MAX_TOKENS') console.warn(`[ai] PERHATIAN: output ${model} POTONG di MAX_TOKENS — periksa target prompt/batas output`);
+  } catch { /* logging saja */ }
+}
+
+async function bukaStream(model: string, prompt: string) {
+  try {
+    return await genAI.getGenerativeModel({ model, generationConfig: { maxOutputTokens: MAX_OUT } }).generateContentStream(prompt);
+  } catch (e: any) {
+    if (/maxOutputTokens|invalid[_ ]?argument/i.test(String(e?.message || ''))) {
+      console.warn(`[ai] ${model} menolak maxOutputTokens=${MAX_OUT} — ulang tanpa konfigurasi`);
+      return await genAI.getGenerativeModel({ model }).generateContentStream(prompt);
+    }
+    throw e;
+  }
+}
+
 export const generateContentStream = async function* (prompt: string): AsyncGenerator<string> {
   let last: any;
   for (let i = 0; i < MODELS.length * 2; i++) {
@@ -80,13 +106,13 @@ export const generateContentStream = async function* (prompt: string): AsyncGene
     try {
       jendela(model).push(Date.now());
       mulai = MODELS.indexOf(model);
-      const m = genAI.getGenerativeModel({ model });
-      const stream = await m.generateContentStream(prompt);
+      const stream = await bukaStream(model, prompt);
       console.log(`[ai] stream via ${model}`);
       for await (const chunk of stream.stream) {
         const t = chunk.text();
         if (t) { sudah = true; yield t; }
       }
+      catatHasil(model, await stream.response);
       return;
     } catch (error: any) {
       last = error;
@@ -108,12 +134,24 @@ export const generateContent = async (prompt: string, retries = 2): Promise<stri
     try {
       jendela(model).push(Date.now());
       mulai = MODELS.indexOf(model);
-      const m = genAI.getGenerativeModel({ model });
+      const m = genAI.getGenerativeModel({ model, generationConfig: { maxOutputTokens: MAX_OUT } });
       const result = await m.generateContent(prompt);
       const response = await result.response;
       console.log(`[ai] via ${model}`);
+      catatHasil(model, response);
       return response.text();
     } catch (error: any) {
+      // Nilai maxOutputTokens ditolak model ini → coba ulang tanpa konfigurasi
+      if (/maxOutputTokens|invalid[_ ]?argument/i.test(String(error?.message || '')) && retries > 0) {
+        try {
+          const m = genAI.getGenerativeModel({ model });
+          const result = await m.generateContent(prompt);
+          const response = await result.response;
+          console.log(`[ai] via ${model} (tanpa batas output)`);
+          catatHasil(model, response);
+          return response.text();
+        } catch (e2: any) { last = e2; catatGagal(model, e2); await sleep(300); continue; }
+      }
       last = error;
       catatGagal(model, error);
       if (!bisaCobaLagi(error)) break;
