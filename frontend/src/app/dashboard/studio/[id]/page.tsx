@@ -275,6 +275,9 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
     const bagian: { raw: string; anak: any[] }[] = [];
     let target: any[] = awal;
     let i = 0;
+    // Baris "BAB …" baru tampil → baris HURUF BESAR berikutnya ("PENDAHULUAN")
+    // adalah NAMA BAB — ikut judul (tebal rata tengah), persis ekspor DOCX.
+    let baruBab = false;
     // Tabel markdown: pipe eksternal opsional + sel kosong dipertahankan —
     // parser identik dengan ekspor DOCX (proyek "No | Nama (Tahun) | …" tampil sebagai tabel juga)
     const sel = (s: string) => s.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim());
@@ -288,6 +291,7 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
       // Judul tabel/gambar ("Judul Tabel: …") — tampil sebagai NAMA objek di atasnya
       // (paritas caption DOCX; baris ini dipakai parser Word jadi "Tabel 2.1 …")
       if (/^Judul\s+(Tabel|Gambar)\s*:/i.test(t)) {
+        baruBab = false;
         target.push(
           <p key={`judul-objek-${i}`} className="mt-4 mb-1 text-center text-xs font-semibold tracking-wide text-text-secondary">
             {cleanMd(t)}
@@ -296,6 +300,7 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
         i++; continue;
       }
       if (t.includes('|') && i + 1 < lines.length && pemisah(lines[i + 1].trim())) {
+        baruBab = false;
         const head = sel(t).map(cleanMd);
         const rows: string[][] = [];
         i += 2;
@@ -312,14 +317,24 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
         );
         continue;
       }
-      if (/^(BAB [IVX]+|DAFTAR PUSTAKA|ABSTRAK|ABSTRACT|KATA PENGANTAR|DAFTAR ISI|DAFTAR TABEL|LEMBAR .*)$/i.test(cleanMd(t))) {
-        target.push(<h3 key={i} className="text-center font-bold text-base mt-6 mb-3">{cleanMd(t)}</h3>);
-      } else if (/^\d+\.\d+\.?\s+\S/.test(cleanMd(t))) {
+      const dt = cleanMd(t);
+      if (dt.length < 160 && /^(BAB\s+[IVX0-9]+(\s+.*)?|DAFTAR PUSTAKA|ABSTRAK|ABSTRACT|KATA PENGANTAR|DAFTAR ISI|DAFTAR TABEL|LEMBAR .*)$/i.test(dt)) {
+        // Judul bab: "BAB I" ATAU "BAB II TINJAUAN PUSTAKA" → tebal rata tengah
+        // (sebelumnya hanya "BAB X" murni yang match — judul satubar dianggap paragraf)
+        target.push(<h3 key={i} className="text-center font-bold text-base mt-6 mb-3">{dt}</h3>);
+        baruBab = /^BAB\s+[IVX0-9]+/i.test(dt);
+      } else if (baruBab && !/^\d/.test(dt) && dt.length < 80 && dt === dt.toUpperCase() && /[A-Z]{3,}/.test(dt)) {
+        // Nama bab dua baris ("BAB I" ⏎ "PENDAHULUAN") → judul kedua, tebal rata tengah
+        target.push(<h3 key={`bab-nama-${i}`} className="text-center font-bold text-base mt-0 mb-3">{dt}</h3>);
+        baruBab = false;
+      } else if (/^\d+\.\d+\.?\s+\S/.test(dt)) {
         // Sub-bab baru (boleh "1.1 Judul" atau "1.1. Judul") → kelompok sendiri untuk kontrol Perkaya / Hapus
-        bagian.push({ raw: cleanMd(t), anak: [] });
+        baruBab = false;
+        bagian.push({ raw: dt, anak: [] });
         target = bagian[bagian.length - 1].anak;
       } else if (editIdx === i) {
         // Editor inline (paritas referensi): textarea + petunjuk Markdown, simpan saat blur
+        baruBab = false;
         target.push(
           <div key={`edit-${i}`} className="mb-3">
             <textarea
@@ -339,6 +354,7 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
       } else {
         // `idx` ditangkap per-iterasi: `i` adalah variabel loop yang nilainya berubah
         // setelah renderDoc selesai, sehingga penutup (closure) tak boleh memakai `i` langsung.
+        baruBab = false;
         const idx = i;
         target.push(
           <p
