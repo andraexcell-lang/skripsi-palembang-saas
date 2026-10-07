@@ -8,6 +8,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 // Saat satu model habis kita pindah ke model berikutnya, jadi kapasitas harian
 // menjadi gabungan seluruh model di daftar ini (bukan cuma 20 request).
 // Urutan: kualitas dulu, model lite di belakang.
+// PEMILIHAN PRIORITAS KETAT (keputusan owner 8 Okt): selalu cek dari entri paling
+// atas — utama dipakai selama ada kuota, begitu kuota reset (00:00 UTC) otomatis
+// kembali ke utama; lite/model lain hanya dipakai saat atas diblokir.
 // Daftar ini = DEFAULT; nilai sebenarnya bisa diubah lewat Dashboard Admin
 // (app_settings 'ai_models') — lihat muatPengaturanModel() di bawah.
 export const MODELS = [
@@ -34,7 +37,7 @@ export type EntriModel = {
 };
 
 let daftarEntri: EntriModel[] = MODELS.map((id) => ({ id, provider: "gemini", aktif: true }));
-let mulai = 0; // index entri terakhir yang berhasil (dipakai duluan)
+let mulai = 0; // index entri terakhir yang dicoba — hanya untuk status Dashboard Admin
 
 export const daftarModel = () => daftarEntri;
 const entriAktif = () => daftarEntri.filter((e) => e.aktif !== false);
@@ -112,9 +115,10 @@ function pilihEntri(): { entri: EntriModel; tunggu: number } {
   const arr = entriAktif();
   if (!arr.length) throw new Error("Tidak ada model aktif — atur daftar model di Dashboard Admin.");
   const now = Date.now();
-  // 1) entri bebas: tidak diblokir dan ruang RPM-nya masih ada
+  // 1) entri bebas: PRIORITAS KETAT dari urutan atas — tak diblokir & ruang RPM masih ada.
+  //    (Dulu mulai dari entri terakhir yang dipakai → setelah reset, utama tak kembali sendiri.)
   for (let n = 0; n < arr.length; n++) {
-    const e = arr[(mulai + n) % arr.length];
+    const e = arr[n];
     if ((blok[kunci(e)] || 0) > now) continue;
     if (jendela(kunci(e)).length < MAX_RPM) return { entri: e, tunggu: 0 };
   }
