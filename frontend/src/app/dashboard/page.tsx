@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import DashboardSearch from './search';
 import { supabase } from '@/lib/supabase';
 import { apiGet } from '@/lib/api';
+import { useFitur, terapkanFlags } from '@/lib/fitur';
 
 /** Isi dengan link Grup WA kita sendiri bila sudah ada. */
 const GRUP_WA = 'https://chat.whatsapp.com/JFKzEThZQzDGwZKkMcxLq6';
@@ -36,12 +37,12 @@ const IcWa = () => (
 
 /* ---------- kartu karya ---------- */
 const KARYA = [
-  { label: 'Skripsi', desc: 'S1 · Bab 1–5 lengkap', href: '/dashboard/proyek/buat?jenis=skripsi', wrap: 'bg-brand-primary/10 text-brand-primary', dot: 'bg-brand-primary', Icon: IcCap },
-  { label: 'Tesis', desc: 'S2 · Analisis mendalam', href: '/dashboard/proyek/buat?jenis=tesis', wrap: 'bg-accent-purple/10 text-accent-purple', dot: 'bg-accent-purple', Icon: IcBook },
-  { label: 'Disertasi', desc: 'S3 · Kebaruan penelitian', href: '/dashboard/proyek/buat?jenis=disertasi', wrap: 'bg-violet-600/10 text-violet-600 dark:bg-violet-500/15 dark:text-violet-300', dot: 'bg-violet-600 dark:bg-violet-500', Icon: IcAward },
-  { label: 'Artikel Sinta', desc: 'Jurnal terakreditasi', href: '/dashboard/artikel-sinta', wrap: 'bg-amber-500/10 text-amber-600 dark:text-amber-400', dot: 'bg-amber-500', Icon: IcFile },
-  { label: 'Artikel Scopus', desc: 'Jurnal internasional', href: '/dashboard/artikel-scopus', wrap: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400', dot: 'bg-emerald-500', Icon: IcGlobe },
-  { label: 'Karil UT', desc: 'Artikel Karya Ilmiah UT', href: '/dashboard/karil', wrap: 'bg-accent-teal/10 text-accent-teal', dot: 'bg-accent-teal', Icon: IcBook },
+  { label: 'Skripsi', desc: 'S1 · Bab 1–5 lengkap', href: '/dashboard/proyek/buat?jenis=skripsi', fitur: 'proyek', wrap: 'bg-brand-primary/10 text-brand-primary', dot: 'bg-brand-primary', Icon: IcCap },
+  { label: 'Tesis', desc: 'S2 · Analisis mendalam', href: '/dashboard/proyek/buat?jenis=tesis', fitur: 'proyek', wrap: 'bg-accent-purple/10 text-accent-purple', dot: 'bg-accent-purple', Icon: IcBook },
+  { label: 'Disertasi', desc: 'S3 · Kebaruan penelitian', href: '/dashboard/proyek/buat?jenis=disertasi', fitur: 'proyek', wrap: 'bg-violet-600/10 text-violet-600 dark:bg-violet-500/15 dark:text-violet-300', dot: 'bg-violet-600 dark:bg-violet-500', Icon: IcAward },
+  { label: 'Artikel Sinta', desc: 'Jurnal terakreditasi', href: '/dashboard/artikel-sinta', fitur: 'artikel-sinta', wrap: 'bg-amber-500/10 text-amber-600 dark:text-amber-400', dot: 'bg-amber-500', Icon: IcFile },
+  { label: 'Artikel Scopus', desc: 'Jurnal internasional', href: '/dashboard/artikel-scopus', fitur: 'artikel-scopus', wrap: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400', dot: 'bg-emerald-500', Icon: IcGlobe },
+  { label: 'Karil UT', desc: 'Artikel Karya Ilmiah UT', href: '/dashboard/karil', fitur: 'karil', wrap: 'bg-accent-teal/10 text-accent-teal', dot: 'bg-accent-teal', Icon: IcBook },
 ];
 
 const NAMA_JENIS: Record<string, string> = {
@@ -74,6 +75,10 @@ export default function DashboardIndex() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifs, setNotifs] = useState<any[]>([]);
+  const flags = useFitur();
+
+  // Sembunyikan kartu/panel fitur yang dimatikan admin (slug = data-fitur)
+  useEffect(() => { terapkanFlags(flags); }, [flags]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -298,7 +303,7 @@ export default function DashboardIndex() {
         </div>
 
         {/* Mulai buat karya */}
-        <div>
+        <div data-fitur="proyek">
           <div className="mb-2 flex items-center justify-between gap-2">
             <h2 className="text-[15px] font-bold text-text-primary">Mulai buat karya</h2>
             <Link href="/dashboard/proyek" className="flex shrink-0 items-center gap-1 text-xs font-semibold text-text-secondary hover:text-brand-primary">
@@ -310,7 +315,7 @@ export default function DashboardIndex() {
 
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-6">
             {KARYA.map((k) => (
-              <Link key={k.label} href={k.href}>
+              <Link key={k.label} href={k.href} data-fitur={k.fitur}>
                 <div className="flex h-full items-center gap-2 rounded-xl border-2 border-border-subtle bg-bg-surface p-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.06),0_3px_8px_rgba(15,23,42,0.05)] transition-colors hover:border-brand-primary">
                   <span className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${k.wrap}`}>
                     <span className={`grid size-5 shrink-0 place-items-center rounded-full text-white ${k.dot}`}><k.Icon /></span>
@@ -326,7 +331,7 @@ export default function DashboardIndex() {
         </div>
 
         {/* Proyek terakhir */}
-        <div className="rounded-xl border border-border-subtle bg-bg-surface">
+        <div className="rounded-xl border border-border-subtle bg-bg-surface" data-fitur="proyek">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle px-4 py-3">
             <h2 className="text-[15px] font-bold text-text-primary">Proyek terakhir</h2>
             <div className="flex items-center gap-1 rounded-lg bg-bg-base p-0.5">

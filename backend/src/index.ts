@@ -10,6 +10,9 @@ import apikeysRoutes from './routes/apikeys.routes';
 import affiliateRoutes from './routes/affiliate.routes';
 import wordRoutes from './routes/word.routes';
 import docsRoutes from './routes/docs.routes';
+import adminRoutes from './routes/admin.routes';
+import flagsRoutes from './routes/flags.routes';
+import { muatPengaturanModel } from './services/ai.service';
 
 dotenv.config();
 
@@ -37,6 +40,8 @@ app.use('/api/keys', apikeysRoutes);
 app.use('/api/affiliate', affiliateRoutes);
 app.use('/api/word', wordRoutes);
 app.use('/api/docs', docsRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/flags', flagsRoutes); // publik: on/off fitur untuk sidebar
 
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', message: 'MantraRiset Backend is running' });
@@ -54,4 +59,6 @@ app.use((err: any, req: any, res: any, next: any) => {
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
+  // Muat daftar model dari Dashboard Admin (app_settings 'ai_models'); gagal = pakai default
+  void muatPengaturanModel();
 });

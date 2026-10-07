@@ -67,6 +67,17 @@ export async function apiPatch(path: string, body: any) {
   return json;
 }
 
+export async function apiPut(path: string, body: any) {
+  const res = await fetch(`${API}${path}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiError(json.error || `PUT ${path} gagal (${res.status})`, res.status, json);
+  return json;
+}
+
 export async function apiPostStream(path: string, body: any, onText: (t: string) => void): Promise<{ cost: number; cached?: boolean }> {
   const res = await fetch(`${API}${path}`, {
     method: 'POST',
