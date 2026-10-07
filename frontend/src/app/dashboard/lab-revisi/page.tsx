@@ -2,6 +2,7 @@
 
 import { aiGenerate, apiGet, apiUpload } from "@/lib/api";
 import Link from "next/link";
+import EmptyState, { IcLab } from "@/components/EmptyState";
 
 import { useEffect, useState } from "react";
 
@@ -139,13 +140,8 @@ export default function LabRevisiPage() {
 
         {tab === "web" && (
           proyek.length === 0 ? (
-            <div className="bg-bg-surface border border-border-subtle rounded-xl p-16 flex flex-col items-center justify-center text-center">
-              <p className="text-text-secondary text-sm max-w-lg mb-8">
-                Belum ada proyek yang bisa direvisi. Buat & generate proyekmu dulu di Studio, atau pakai tab "File dari Luar".
-              </p>
-              <Link href="/dashboard/proyek/buat" className="bg-brand-primary text-white px-6 py-2.5 rounded-lg text-sm font-bold">
-                Buat Proyek
-              </Link>
+            <div className="bg-bg-surface border border-border-subtle rounded-xl">
+              <EmptyState ikon={<IcLab />} teks="Belum ada proyek yang bisa direvisi…" aksi="Ke Studio" href="/dashboard/proyek" />
             </div>
           ) : (
             <div className="space-y-6">

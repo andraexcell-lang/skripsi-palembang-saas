@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { aiGenerate, apiGet, apiPost } from '@/lib/api';
+import EmptyState, { IcDok } from '@/components/EmptyState';
 
 export default function AIWriterPage() {
   const [docs, setDocs] = useState<any[]>([]);
@@ -108,6 +109,13 @@ export default function AIWriterPage() {
         ))}
       </div>
       <div className="flex-1 p-6 max-w-3xl mx-auto w-full space-y-3 overflow-y-auto">
+        {!id ? (
+          /* Empty state paritas: ikon dokumen + teks referensi + tombol biru */
+          <div className="flex h-full items-center justify-center">
+            <EmptyState ikon={<IcDok />} teks="Ruang menulis bebas dengan sitasi otomatis…" aksi="Buat Dokumen Pertama" onClick={newDoc} />
+          </div>
+        ) : (
+          <>
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Judul dokumen" className="w-full bg-transparent text-xl font-bold text-text-primary focus:outline-none" />
         <div className="text-xs text-text-muted">{savedAt ? `Tersimpan otomatis ${savedAt}` : id ? 'Mengetik otomatis tersimpan...' : 'Buat/buka dokumen dulu.'}</div>
         <textarea value={materi} onChange={(e) => setMateri(e.target.value)} rows={18} placeholder="Tulis atau tempel teks. Blok kalimat → Tambah Sitasi." className="w-full bg-bg-surface border border-border-subtle rounded-xl p-4 text-sm text-text-primary min-h-[300px]" />
@@ -118,6 +126,8 @@ export default function AIWriterPage() {
           <button onClick={() => save(false)} className="border border-border-strong px-4 py-2 rounded-lg text-sm font-bold">Simpan</button>
           {id && <button onClick={hapus} className="text-accent-red px-3 py-2 rounded-lg text-sm">Hapus</button>}
         </div>
+          </>
+        )}
       </div>
     </div>
   );

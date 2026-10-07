@@ -151,7 +151,7 @@ export default function DashboardIndex() {
                     <div className="border-b border-border-subtle px-4 py-2.5 text-sm font-semibold text-text-primary">Notifikasi</div>
                     <div className="max-h-96 overflow-y-auto">
                       {notifs.length === 0 ? (
-                        <p className="p-4 text-center text-xs text-text-secondary">Belum ada notifikasi.</p>
+                        <p className="p-4 text-center text-xs text-text-muted">Belum ada notifikasi.</p>
                       ) : notifs.slice(0, 20).map((n: any, i: number) => (
                         <div key={n.id || i} className="border-b border-border-subtle px-4 py-3 last:border-0">
                           <p className="text-sm font-semibold text-text-primary">

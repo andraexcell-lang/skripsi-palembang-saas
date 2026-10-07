@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import UserChip from "@/components/UserChip";
 import ThemeToggle from "@/components/ThemeToggle";
 import CreditBadge from "@/components/CreditBadge";
+import { IcChat } from "@/components/EmptyState";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -245,6 +246,18 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         {children}
       </main>
+
+      {/* FAB paritas (§"Floating action buttons"): "Buka asisten" 48px biru-600,
+          radius penuh, kanan bawah. Disembunyikan di halaman asisten (redundan). */}
+      {pathname !== '/dashboard/asisten' && (
+        <Link
+          href="/dashboard/asisten"
+          aria-label="Buka asisten"
+          className="fixed bottom-6 right-6 z-20 flex size-12 items-center justify-center rounded-full bg-brand-primary text-white shadow-lg transition-colors hover:bg-brand-primary-hover"
+        >
+          <IcChat />
+        </Link>
+      )}
     </div>
   );
 }

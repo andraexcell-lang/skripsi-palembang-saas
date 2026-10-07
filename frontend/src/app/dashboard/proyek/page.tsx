@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiGet } from '@/lib/api';
+import EmptyState, { IcFolder } from '@/components/EmptyState';
 
 export default function ProyekListPage() {
   const [items, setItems] = useState<any[]>([]);
@@ -20,7 +21,9 @@ export default function ProyekListPage() {
           <Link href="/dashboard/proyek/buat" className="bg-brand-primary text-white px-5 py-2.5 rounded-lg text-sm font-bold">+ Buat Proyek</Link>
         </div>
         {err && <p className="text-sm text-accent-red">{err}</p>}
-        {items.length === 0 && !err && <p className="text-sm text-text-muted">Belum ada proyek. Buat yang pertama.</p>}
+        {items.length === 0 && !err && (
+          <EmptyState ikon={<IcFolder />} teks="Belum ada proyek. Buat yang pertama." aksi="Buat Proyek" href="/dashboard/proyek/buat" />
+        )}
         {items.map((p: any) => (
           <Link key={p.id} href={`/dashboard/studio/${p.id}`} className="block bg-bg-surface border border-border-subtle rounded-xl p-4 hover:border-brand-primary">
             <div className="font-bold text-text-primary text-sm">{p.judul}</div>
