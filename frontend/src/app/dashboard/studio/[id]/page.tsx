@@ -597,7 +597,7 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
       `Tulis ulang ${a}${r ? ' dengan arahanmu' : ' dari awal'}? ` +
       (r ? `Arahanmu: "${r.slice(0, 180)}${r.length > 180 ? '…' : ''}" ` : '') +
       `• Isi ${a} yang sekarang akan DITULIS ULANG, termasuk bagian yang sudah kamu sunting manual — suntinganmu akan hilang. ` +
-      `• Dikenakan ${proyek?.jenis === 'tesis' ? 8 : 10} kredit. ` +
+      `• Dikenakan ${active === 'lampiran' ? 'GRATIS — Lampiran tidak memotong kredit' : '1 kredit'}. ` +
       (r
         ? `• Arahanmu diikuti sejauh tidak melanggar aturan penulisan (struktur, sitasi, panjang). `
         : `• Kalau kamu mengulang karena datanya salah, perbaiki dulu data di pengaturan proyek — kalau tidak, hasilnya akan sama saja. `) +
@@ -924,7 +924,7 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
             <p className="hidden truncate text-sm font-semibold text-text-secondary xl:block">{proyek?.judul}</p>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:ml-auto lg:flex lg:flex-wrap lg:items-center">
               {text && (
-                <button onClick={downloadWord} className={btnChip} title="Unduh naskah (.docx)"><Ico n="download" /> {proyek?.tahap === 'proposal' ? 'Unduh Proposal' : 'Unduh Word'}</button>
+                <button onClick={downloadWord} className={`${btnChip} col-span-2`} title="Unduh naskah (.docx)"><Ico n="download" /> {proyek?.tahap === 'proposal' ? 'Unduh Proposal' : 'Unduh Word'}</button>
               )}
               <button onClick={downloadRis} className={btnChip} title="Unduh Daftar Pustaka (.ris) — siap impor ke Mendeley/Zotero"><Ico n="download" /> RIS</button>
               <Link href="/dashboard/plagiasi" className={`${btnChip} inline-flex`} title="Cek Plagiasi"><Ico n="shield" /> Cek Plagiasi</Link>

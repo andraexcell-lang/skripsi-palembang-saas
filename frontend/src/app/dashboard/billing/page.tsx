@@ -20,6 +20,12 @@ const FITUR_MAHASISWA = [
 ];
 const FITUR_PROFESOR = [...FITUR_MAHASISWA, 'Tesis / Disertasi', 'Cek referensi', 'Ubah skripsi + artikel', 'AI Writer', 'Artikel Scopus / SINTA'];
 
+// Keputusan owner: kartu University TANPA harga (teks harga referensi kabur &
+// kontak resmi belum ada). "Hubungi Tim Kami" diarahkan ke Grup WA kita
+// (referensi menunjuk /kontak yang tidak ada di situs ini).
+const GRUP_WA = 'https://chat.whatsapp.com/JFKzEThZQzDGwZKkMcxLq6';
+const UNIVERSITY = [20, 50, 100];
+
 export default function BillingPage() {
   const [pkgs, setPkgs] = useState<Pkg[]>([]);
   const [trx, setTrx] = useState<any[]>([]);
@@ -137,6 +143,32 @@ export default function BillingPage() {
               </div>
             </div>
           ))}
+          {/* Paritas §3.20: kartu University (20/50/100 akun) — tanpa harga,
+              tombol "Hubungi Tim Kami" → Grup WA (keputusan owner) */}
+          <div className="mb-6">
+            <div className="text-xs font-bold uppercase tracking-wider text-text-muted mb-3">Paket University</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {UNIVERSITY.map((n) => (
+                <div key={n} className="bg-bg-surface border border-border-subtle rounded-xl p-6 flex flex-col hover:border-brand-primary transition-colors">
+                  <div className="flex items-center justify-end mb-2 min-h-[18px]" />
+                  <div className="text-[10px] font-bold text-text-muted uppercase">University</div>
+                  <div className="text-xl font-bold text-text-primary">{n} Akun</div>
+                  <div className="text-sm text-text-secondary mb-3">Untuk kampus &amp; lembaga — hubungi tim kami untuk penawaran harga</div>
+                  <ul className="space-y-1.5 mb-4 text-xs text-text-secondary">
+                    {FITUR_PROFESOR.map((f) => (
+                      <li key={f} className="flex items-start gap-2">
+                        <svg className="shrink-0 mt-0.5 text-success" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="mt-auto space-y-2">
+                    <a href={GRUP_WA} target="_blank" rel="noopener noreferrer" className="w-full inline-flex items-center justify-center bg-brand-primary text-white font-bold text-xs py-3 rounded-lg">Hubungi Tim Kami</a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
           {!ready ? (
             <p className="text-sm text-text-muted">Memuat paket…</p>
           ) : pkgs.length === 0 && (

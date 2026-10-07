@@ -474,7 +474,9 @@ router.post('/:id/generate-bab-stream', requireAuthOrKey, async (req: AuthReques
       desain: desain ? String(desain).slice(0, 80) : undefined,
       software: software ? String(software).slice(0, 40) : undefined,
     };
-    const cost = biayaBab(p, bab);
+    // Tulis-ulang (Generate Ulang Bab, ?ulang=1) = 1 kredit — paritas referensi
+    // (keputusan owner #2). Kecuali bab yang memang gratis (Lampiran) tetap 0.
+    const cost = req.query.ulang === '1' ? (biayaBab(p, bab) === 0 ? 0 : 1) : biayaBab(p, bab);
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
