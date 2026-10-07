@@ -19,13 +19,76 @@ const QUICK = [
 
 type M = { role: 'user' | 'ai'; text: string };
 
+// Panel Riwayat percakapan (paritas referensi §3.23):
+// panel 320px kanan atas, header "Riwayat percakapan" + ×,
+// empty state "Belum ada percakapan tersimpan…", simpan di localStorage
+type Sesi = { id: string; waktu: number; messages: M[] };
+const KEY_RIWAYAT = 'sp-riwayat-asisten';
+const MAKS_SESI = 50;
+
+function judulSesi(s: Sesi) {
+  const pertama = s.messages.find((m) => m.role === 'user');
+  return (pertama?.text || 'Percakapan baru').slice(0, 60);
+}
+
 export default function AsistenPage() {
   const [chat, setChat] = useState<M[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [needsTopup, setNeedsTopup] = useState(false);
+  const [riwayat, setRiwayat] = useState<Sesi[]>([]);
+  const [aktifId, setAktifId] = useState<string | null>(null);
+  const [panelBuka, setPanelBuka] = useState(false);
+  const [riwayatSiap, setRiwayatSiap] = useState(false);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  // ref sinkron: dipakai simpanSesi agar pesan user & balasan AI dalam
+  // satu kirim() masuk ke sesi yang sama (state aktifId terlambat 1 render)
+  const aktifIdRef = useRef<string | null>(null);
+
+  // muat riwayat dari localStorage (hanya di klien, setelah mount)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(KEY_RIWAYAT);
+      if (raw) {
+        const data = JSON.parse(raw);
+        if (Array.isArray(data)) setRiwayat(data);
+      }
+    } catch {
+      /* rusak → abaikan */
+    }
+    setRiwayatSiap(true);
+  }, []);
+
+  // simpan perubahan riwayat (dimulai setelah muat agar tak menimpa data lama)
+  useEffect(() => {
+    if (!riwayatSiap) return;
+    try {
+      localStorage.setItem(KEY_RIWAYAT, JSON.stringify(riwayat));
+    } catch {
+      /* penuh → abaikan */
+    }
+  }, [riwayat, riwayatSiap]);
+
+  // upsert sesi aktif dari percakapan berjalan
+  function simpanSesi(messages: M[]) {
+    if (messages.length === 0) return;
+    const id = aktifIdRef.current || `sesi-${Date.now()}`;
+    if (!aktifIdRef.current) {
+      aktifIdRef.current = id;
+      setAktifId(id);
+    }
+    setRiwayat((prev) => [{ id, waktu: Date.now(), messages }, ...prev.filter((s) => s.id !== id)].slice(0, MAKS_SESI));
+  }
+
+  // buka sesi lama dari panel
+  function bukaSesi(s: Sesi) {
+    setChat(s.messages);
+    aktifIdRef.current = s.id;
+    setAktifId(s.id);
+    setNeedsTopup(false);
+    setPanelBuka(false);
+  }
 
   // dropdown perintah: terbila saat diawali "/" tanpa spasi (referensi),
   // tertutup otomatis setelah memilih ("/judul " punya spasi)
@@ -61,6 +124,8 @@ export default function AsistenPage() {
     setChat([]);
     setInput('');
     setNeedsTopup(false);
+    aktifIdRef.current = null;
+    setAktifId(null);
     taRef.current?.focus();
   }
 
@@ -71,6 +136,7 @@ export default function AsistenPage() {
     setNeedsTopup(false);
     const next: M[] = [...chat, { role: 'user', text: q }];
     setChat(next);
+    simpanSesi(next);
     setLoading(true);
     try {
       const ctx = next.slice(-6).map((m) => `${m.role}: ${m.text}`).join('\n');
@@ -78,27 +144,85 @@ export default function AsistenPage() {
         `Kamu AI asisten skripsi "Skripsi Palembang". Jawab ringkas, akademik, Indonesia. Bila diminta judul, beri 10 judul bernomor. Perintah cepat bila pesan diawali slash: /judul <tema> → tanyakan metode penelitian lalu berikan 10 judul bernomor; /skripsi, /tesis, /disertasi → pandu membuat proyek baru sesuai jenjang dari judul yang sudah dimiliki; /sinta, /scopus → pandu membuat artikel jurnal sesuai indeksnya; /parafrase → parafrase teks yang dikirim user; /ppt → pandu mengunggah skripsi/proposal menjadi PPT; /cari artikel → pandu mencari artikel jurnal; /kelayakan judul → nilai kelayakan judul dengan skor, kekuatan, dan celah (gratis). Bila topik besar tanpa perintah, arahkan ke /judul atau /skripsi.\n\nRiwayat:\n${ctx}\n\nPesan: ${q}`,
         'chat'
       );
-      setChat([...next, { role: 'ai', text: data.result }]);
+      const balasan: M[] = [...next, { role: 'ai', text: data.result }];
+      setChat(balasan);
+      simpanSesi(balasan);
     } catch (e: any) {
       if (isInsufficientCredits(e)) setNeedsTopup(true);
-      setChat([...next, { role: 'ai', text: 'Error: ' + e.message }]);
+      const galat: M[] = [...next, { role: 'ai', text: 'Error: ' + e.message }];
+      setChat(galat);
+      simpanSesi(galat);
     }
     setLoading(false);
   }
 
   return (
-    <div className="flex flex-col h-full bg-bg-base">
+    <div className="relative flex flex-col h-full bg-bg-base">
       <header className="h-16 flex items-center justify-between px-8 border-b border-border-subtle bg-bg-base">
         <div className="font-bold text-brand-primary">AI Skripsi Palembang</div>
-        {chat.length > 0 && (
+        <div className="flex items-center gap-2">
+          {chat.length > 0 && (
+            <button
+              onClick={percakapanBaru}
+              className="text-xs font-bold text-brand-primary border border-border-subtle rounded-lg px-3 py-1.5 hover:border-brand-primary transition-colors"
+            >
+              Percakapan baru
+            </button>
+          )}
           <button
-            onClick={percakapanBaru}
-            className="text-xs font-bold text-brand-primary border border-border-subtle rounded-lg px-3 py-1.5 hover:border-brand-primary transition-colors"
+            onClick={() => setPanelBuka((v) => !v)}
+            aria-expanded={panelBuka}
+            aria-haspopup="dialog"
+            className={`w-[94px] h-8 text-xs font-bold rounded-lg border transition-colors ${
+              panelBuka
+                ? 'bg-brand-primary text-white border-brand-primary'
+                : 'text-brand-primary border-border-subtle hover:border-brand-primary'
+            }`}
           >
-            Percakapan baru
+            Riwayat
           </button>
-        )}
+        </div>
       </header>
+      {/* Panel Riwayat percakapan (paritas: 320px, kanan atas) */}
+      {panelBuka && (
+        <div
+          role="dialog"
+          aria-label="Riwayat percakapan"
+          className="absolute right-4 top-16 z-20 w-80 overflow-hidden rounded-xl border border-border-subtle bg-bg-surface shadow-xl"
+        >
+          <div className="flex h-11 items-center justify-between border-b border-border-subtle px-4">
+            <h2 className="text-sm font-bold text-text-primary">Riwayat percakapan</h2>
+            <button
+              onClick={() => setPanelBuka(false)}
+              aria-label="Tutup"
+              className="w-6 h-6 leading-none text-lg text-text-muted hover:text-text-primary"
+            >
+              ×
+            </button>
+          </div>
+          <div className="max-h-80 overflow-y-auto">
+            {riwayat.length === 0 ? (
+              <p className="px-4 py-6 text-center text-sm text-text-muted">Belum ada percakapan tersimpan…</p>
+            ) : (
+              riwayat.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => bukaSesi(s)}
+                  className={`block w-full border-b border-border-subtle px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-bg-surface-hover ${
+                    s.id === aktifId ? 'bg-brand-primary/5' : ''
+                  }`}
+                >
+                  <p className="truncate text-sm text-text-primary">{judulSesi(s)}</p>
+                  <p className="mt-0.5 text-xs text-text-muted">
+                    {s.messages.length} pesan ·{' '}
+                    {new Date(s.waktu).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
       <div ref={scrollRef} className="flex-1 flex flex-col items-center p-8 max-w-3xl mx-auto w-full overflow-y-auto">
         {chat.length === 0 && (
           <>
