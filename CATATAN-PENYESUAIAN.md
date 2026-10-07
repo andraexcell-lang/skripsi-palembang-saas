@@ -75,4 +75,58 @@ e. **Audit**: cek baru — tiap blok tabel punya baris judul sebelumnya; jumlah 
 
 ---
 
-## 3. (item berikutnya — diisi saat owner menyampaikan)
+## 3. Spasi — 2 spasi semua tulisan; 1 spasi isi/judul/sumber tabel & judul/sumber gambar
+
+**Status**: temuan tercatat — **IMPLEMENTASI DITUNGGU** perintah owner.
+
+**Permintaan owner**: di SEMUA bab — format **2 spasi** untuk semua tulisan; **1 spasi** khusus isi tabel, judul tabel, sumber tabel, judul gambar, dan sumber gambar.
+
+**Temuan (DOCX export)**: paragraf body/daftar/docDefaults kini `line: 360` = **1,5 spasi**; sel tabel sudah `line: 240` = 1 spasi ✓; caption tabel `line: 360` (1,5) ✗; baris `Sumber : …` diparse jadi paragraf biasa → ikut 1,5 ✗; rumus pendek sudah 240 ✓.
+**Rencana**: body + daftar + docDefaults + judul → `line: 480` (2,0); caption `Tabel/Gambar` → `240`; deteksi khusus baris `^Sumber\s*:` dan `^Judul (Tabel|Gambar):` → `240`; sel tabel tetap `240`. (Heading: ikut 2 spasi atau tetap — keputusan kecil owner.)
+
+## 4. Sampel < 100 → sampling jenuh, JANGAN Slovin
+
+**Status**: temuan tercatat — **IMPLEMENTASI DITUNGGU**.
+
+**Temuan**: panduan Bab III kini **mewajibkan Slovin** (3.2.2 + `populasiNote` kuantitatif) dan audit mengecek kata `Slovin|Purposive`.
+**Rencana**: aturan percabangan di prompt — bila user memasukkan sampel/populasi **< 100**, pakai **sampling jenuh (sensus)** tanpa rumus; Slovin hanya untuk ≥ 100; Purposive Sampling tetap. `populasiNote`, panduan tesis `3.2.2`, dan cek audit disesuaikan (audit menerima Sampling Jenuh *atau* Slovin sesuai kondisi).
+
+## 5. Rumus tanpa format LaTeX
+
+**Status**: temuan tercatat — **IMPLEMENTASI DITUNGGU**.
+
+**Temuan**: uji konten Bab III menemukan **11 pola `$…$`**; parser DOCX hanya menangani rumus pendek polos (`Y = …`), tak ada penanganan LaTeX.
+**Rencana**: `SITASI` + panduan varian melarang LaTeX (`$…$`, `\frac`, `\sqrt`, `\(` ) — rumus ditulis polos Unicode (mis. `Y = β₀ + β₁X + e`, pecahan pakai garis miring); `bersihTeks()` buang sisa `$…$` saat simpan; parser DOCX fallback buang backslash-commands; audit cek nol pola LaTeX.
+
+## 6. Bab IV — minta user upload tabulasi data mentah, ATAU agen yang buatkan (lulus semua uji, semua hipotesis signifikan)
+
+**Status**: temuan tercatat — **BUTUH KEPUTUSAN OWNER: opsi A / B / A-dengan-fallback-B**, lalu **IMPLEMENTASI DITUNGGU**.
+
+**Temuan**: belum ada alur upload data mentah (Bab IV kini terkunci tahap `proposal`); modal sudah ada — dependensi `xlsx` + endpoint pemrosesan dokumen (`files.routes.ts`).
+**Opsi A — upload**: sebelum generate Bab IV, studio minta user unggah tabulasi `.xlsx/.csv` → backend mengolah (uji validitas, reliabilitas, asumsi klasik/regresi-PLS) → angka nyata masuk prompt & Lampiran 2–4 terisi otomatis.
+**Opsi B — agen buatkan**: agen menyusun tabulasi sintetis n responden × jumlah item yang KONSISTEN, hasil olahan **lulus semua uji** (loading > 0,7; α/CR > 0,7; AVE > 0,5; R²; asumsi klasik) dan **seluruh hipotesis signifikan (p < 0,05)** — konsisten antara 4.1, 4.2, dan lampiran.
+
+## 7. Bab V tanpa kutipan
+
+**Status**: temuan tercatat — **IMPLEMENTASI DITUNGGU** (+ konfirmasi kecil: Daftar Pustaka Bab V ikut dihapus?).
+
+**Temuan**: `SITASI` mewajibkan bodynote di setiap sub-bab yang memakai teori/temuan dan mengakhiri tiap bab dengan "Daftar Pustaka Bab Ini" — Bab V belum dikecualikan. Bab V uji proyek terkunci tahap `proposal` sehingga belum bisa diverifikasi outputnya.
+**Rencana**: kecualikan `bab5` dari kewajiban bodynote + tanpa "Daftar Pustaka Bab Ini" (kesimpulan/implikasi/saran murni tanpa sitasi).
+
+## 8. Lampiran 1 — jumlah butir kuesioner = jumlah indikator per variabel
+
+**Status**: temuan tercatat — **IMPLEMENTASI DITUNGGU**.
+
+**Temuan**: regen terakhir Lampiran punya **0 kode item** (kode `KM01…` tidak muncul) sehingga kecocokan butir↔indikator tak terjaga; panduan 6.1 hanya bilang "tiap indikator punya butir" (tidak eksak).
+**Rencana**: generate Lampiran 1 **memakai kisi-kisi tersimpan Bab3.3 sebagai konteks wajib** — tiap variabel: jumlah butir pernyataan PERSIS jumlah indikator (kode ikut dibawa `KM01…KM n`), penomoran `6.1.x` per variabel; audit menghitung butir per variabel == jumlah indikator kisi-kisi.
+
+## 9. Lampiran 2 dan seterusnya — dikosongkan dulu
+
+**Status**: temuan tercatat — **IMPLEMENTASI DITUNGGU** (berpengaruh ke item 2 & 8).
+
+**Temuan**: panduan 6.2–6.6 kini meminta isi (tabel tabulasi/deskriptif/olah data dengan angka konsisten Bab IV + placeholder Turnitin).
+**Rencana**: 6.2–6.6 hanya **judul sub-bab + penanda kosong jujur** (`[Diisi setelah data terkumpul/hasil olah tersedia]`), tanpa tabel buatan; **Lampiran 1 tetap isi penuh**. Audit disesuaikan (tak menuntut tabel 6.2+); caption item 2 untuk lampiran hanya berlaku tabel kuesioner 6.1.
+
+---
+
+## 10. (item berikutnya — diisi saat owner menyampaikan)
