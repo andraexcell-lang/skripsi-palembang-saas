@@ -65,6 +65,13 @@ const rapikanPenomoran = (t) => {
   return lines.join('\n');
 };
 
+// Normalisasi penuh konten bab (salinan persis backend — projects.routes.ts):
+// "<br>" di baris NON-tabel dipecah jadi baris baru; baris tabel (ada "|")
+// dipertahankan agar markdown sel tetap satu baris.
+const normalisasiBab = (t) => rapikanPenomoran(bersihTeks(
+  String(t || '').split('\n').map((b) => (b.includes('|') ? b : b.replace(/<br\s*\/?>/gi, '\n'))).join('\n'),
+));
+
 const KUNCI = ['bab1', 'bab2', 'bab3', 'bab4', 'bab5', 'lampiran', 'abstrak'];
 
 async function main() {
@@ -85,7 +92,7 @@ async function main() {
   for (const k of KUNCI) {
     const t = content[k];
     if (!t || typeof t !== 'string') continue;
-    const baru = rapikanPenomoran(bersihTeks(t));
+    const baru = normalisasiBab(t);
     if (baru === t) { console.log(`${k}: sudah normal`); continue; }
     adaPerubahan = true;
     const bl = String(t).split('\n'), bb = baru.split('\n');
@@ -114,4 +121,4 @@ async function main() {
 }
 
 if (require.main === module) main().catch((e) => { console.error('FATAL:', e); process.exit(1); });
-module.exports = { bersihTeks, rapikanPenomoran };
+module.exports = { bersihTeks, rapikanPenomoran, normalisasiBab };

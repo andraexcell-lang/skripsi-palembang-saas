@@ -2,7 +2,7 @@
  *   node tools/uji-normalisasi.js
  * Fungsi diambil dari tools/normalkan-konten.js (salinan persis backend).
  */
-const { bersihTeks, rapikanPenomoran } = require('./normalkan-konten');
+const { bersihTeks, rapikanPenomoran, normalisasiBab } = require('./normalkan-konten');
 
 let gagal = 0;
 const eq = (nama, hasil, harap) => {
@@ -70,6 +70,23 @@ eq('command Yunani → karakter Unicode', bersihTeks('\\beta_1 dan \\alpha'), '�
 eq('kurung LaTeX dibuang', bersihTeks('hasil (\\( x + 1 \\)) akhir'), 'hasil ( x + 1 ) akhir');
 eq('spasi sel tabel utuh (tak dirapikan)', bersihTeks('| 1   | Judul |'), '| 1   | Judul |');
 eq('persen/dolar biasa tak tersentuh', bersihTeks('anggaran naik 5% menjadi $100'), 'anggaran naik 5% menjadi $100');
+
+/* —— normalisasiBab (item 7: kode <br> tak boleh tampil) —— */
+eq('br di baris non-tabel → baris baru',
+  normalisasiBab('Isi pertama<br>Isi kedua'),
+  'Isi pertama\nIsi kedua');
+
+eq('<br/> dan <br /> juga dipecah',
+  normalisasiBab('A<br/>B<br />C'),
+  'A\nB\nC');
+
+eq('br dalam baris tabel tetap dipertahankan (satu baris sel)',
+  normalisasiBab('| 1 | X1<br>• X2 |\n|---|---|\n| 2 | Z |'),
+  '| 1 | X1<br>• X2 |\n|---|---|\n| 2 | Z |');
+
+eq('normalisasiBab idempoten',
+  (() => { const a = normalisasiBab('A<br>B\n\n1.1 X\n\n1.3 Y'); return normalisasiBab(a); })(),
+  normalisasiBab('A<br>B\n\n1.1 X\n\n1.3 Y'));
 
 console.log('');
 console.log(gagal ? `=== ${gagal} GAGAL ===` : '=== SEMUA LULUS ===');

@@ -323,7 +323,7 @@ const SITASI = `Aturan format: teks bersih — TANPA **bold**, tanpa ---, tanpa 
 | No | Nama (Tahun) | Judul | Hasil | Gap |
 |---|---|---|---|---|
 | 1 | ... | ... | ... | ... |
-(3) daftar bernomor "1." "2." "3." untuk identifikasi/rumusan/saran. SEBELUM tiap tabel WAJIB tulis baris "Judul Tabel: <deskripsi isi tabel>" dan sebelum tiap bagan/gambar WAJIB tulis baris "Judul Gambar: <deskripsi>" — tanpa nomor di depannya; judul harus mencerminkan ISI objeknya (apa yang dibahas + siapa/periode/ukurannya) dan DILARANG sama persis dengan judul sub-babnya. JANGAN tulis caption "Tabel x.y" atau "Gambar x.y" langsung — penomoran tabel & gambar (termasuk Daftar Tabel/Gambar) dibuat otomatis oleh sistem. Rumus ditulis karakter biasa/Unicode (mis. "n = N/(1 + N·e²)", "Y = β₀ + β₁X + e", "r = Σ(x−x̄)(y−ȳ)/√…") — JANGAN format LaTeX ($…$, \\frac, \\sqrt, \\( … \\)); sisa LaTeX akan dibuang sistem sehingga angka/rumusnya jadi rusak. Tulis isi teks dengan huruf normal — JANGAN semua huruf kapital; judul artikel referensi ditulis dengan huruf normal (bukan HURUF BESAR semua). Bagan: satu kotak per baris, panah "↓" atau "→" di baris tersendiri. Langsung mulai dari judul bab. Jangan tulis kata "Ilustratif": tabel fenomena hanya boleh berisi data nyata bersumber, bila tidak ada maka hapus tabelnya.`;
+(3) daftar bernomor BERTINGKAT — hierarki wajib: tingkat 1 pakai "1." "2." "3."; tingkat 2 (di bawah tingkat 1) pakai "a." "b." "c."; tingkat 3 pakai "1)." "2)."; tingkat 4 pakai "a)." "b).". Tiap butir satu baris, indentasi 4 spasi per tingkat, penomoran tiap tingkat berurutan tanpa melompat; DILARANG memakai bullet "-", "*", atau "•" untuk daftar (semua daftar tetap bernomor); dalam SEL tabel gunakan pemisah " • " pada SATU baris (bukan baris baru); JANGAN menulis "<br>", "<br/>", atau tag HTML apa pun. SEBELUM tiap tabel WAJIB tulis baris "Judul Tabel: <deskripsi isi tabel>", dan SETELAH tiap tabel WAJIB tulis baris "Sumber: <sumber data/rujukan>" tepat di baris berikutnya tanpa jarak kosong; sebelum tiap bagan/gambar WAJIB tulis baris "Judul Gambar: <deskripsi>" — tanpa nomor di depannya; judul harus mencerminkan ISI objeknya (apa yang dibahas + siapa/periode/ukurannya) dan DILARANG sama persis dengan judul sub-babnya. JANGAN tulis caption "Tabel x.y" atau "Gambar x.y" langsung — penomoran tabel & gambar (termasuk Daftar Tabel/Gambar) dibuat otomatis oleh sistem. Rumus ditulis karakter biasa/Unicode (mis. "n = N/(1 + N·e²)", "Y = β₀ + β₁X + e", "r = Σ(x−x̄)(y−ȳ)/√…") — JANGAN format LaTeX ($…$, \\frac, \\sqrt, \\( … \\)); sisa LaTeX akan dibuang sistem sehingga angka/rumusnya jadi rusak. Tulis isi teks dengan huruf normal — JANGAN semua huruf kapital; judul artikel referensi ditulis dengan huruf normal (bukan HURUF BESAR semua). Bagan: satu kotak per baris, panah "↓" atau "→" di baris tersendiri. Langsung mulai dari judul bab. Jangan tulis kata "Ilustratif": tabel fenomena hanya boleh berisi data nyata bersumber, bila tidak ada maka hapus tabelnya.`;
 
 // Bagian sitasi/kutip — Bab V dikecualikan (permintaan owner: tanpa kutipan di Bab 5)
 const SITASI_KUTIP = `Wajib: (1) tulis dalam bahasa yang diminta, (2) bodynote sesuai gaya sitasi yang diminta di setiap sub-bab yang memakai teori/temuan, (3) akhiri dengan sub-bagian "Daftar Pustaka Bab Ini" berisi referensi di atas dalam format gaya sitasi yang diminta lengkap dengan link DOI yang bisa diklik. Untuk ARTIKEL JURNAL: hanya dari daftar referensi (jangan mengarang DOI/judul di luar daftar); untuk BUKU TEKS: hanya dari daftar buku atau teori klasik yang benar-benar ada.`;
@@ -335,15 +335,16 @@ type Ekstra = { bagan?: 'kirim' | 'ai'; baganTeks?: string; populasi?: string; t
 /* ===== PROMPT STRUKTUR BAKU BARU KHUSUS TESIS KUANTITATIF =====
    Diterjemahkan dari instruksi "INSTRUKSI UNTUK PROMPT" + contoh isi pada
    TEMPLATE TESIS.docx (pemilik template = format baku yang diminta owner). */
-const TESIS_BAB2 = `Struktur wajib BAB II (TEPAT 4 sub-bagian): 2.1 Kajian Pustaka, 2.2 Hasil Penelitian Yang Relevan, 2.3 Kerangka Berpikir, 2.4 Hipotesis Penelitian.
+const TESIS_BAB2 = `Sumber & keabsahan rujukan (wajib untuk seluruh BAB II): artikel yang disitasi harus NYATA — terbit di jurnal terindeks SINTA (S1–S4), Scopus, atau Web of Science, ATAU jurnal internasional bereputasi; buku rujukan harus penerbit terakreditasi/terindeks. Bila daftar referensi berisi tahun < 2023, JANGAN dipakai untuk Bab II (kecuali teori klasik yang sudah umum & universal). DILARANG mengarang nama jurnal, tahun, DOI, atau tautan apa pun. Bila teori klasik (Maslow, Herzberg, Taylor, dll.) dibutuhkan, cukup sebutkan nama ahli & tahunnya di teks tanpa menempelkannya ke jurnal modern mana pun.
+Struktur wajib BAB II (TEPAT 4 sub-bagian): 2.1 Kajian Pustaka, 2.2 Hasil Penelitian Yang Relevan, 2.3 Kerangka Berpikir, 2.4 Hipotesis Penelitian.
 PANDUAN ISI per sub (urutan wajib diikuti):
 - 2.1 Kajian Pustaka — untuk SETIAP variabel dalam judul dengan urutan: variabel dependen (Y) dulu, lalu variabel mediasi/moderasi (bila ada), lalu X1, X2. Tiap variabel menjadi sub-bab "2.1.x <Nama Variabel>" yang berisi sub-sub BERTINGKAT bernomor:
   • "2.1.x.1 Pengertian <variabel>" = 10 definisi dari literatur yang BERBEDA-beda (sitasi lengkap tiap definisi), ditutup 1 paragraf sintesis berpola "Berdasarkan uraian beberapa definisi di atas, maka dapat disimpulkan bahwa ...".
   • Variabel dependen diberi sub tambahan "2.1.x.2 Faktor-Faktor yang Memengaruhi <variabel>" (4–6 faktor, uraian + sitasi).
-  • "2.1.x.n Dimensi dan Indikator <variabel>" = jabarkan 3–4 dimensi; tiap dimensi diberi uraian lalu indikatornya sebagai daftar bernomor; ditutup 1 paragraf sintesis operasional berpola "Secara operasional <nama ahli> (<tahun>) menyebutkan bahwa <variabel> dapat diukur melalui dimensi ...".
-- 2.2 Hasil Penelitian Yang Relevan — 1 paragraf pengantar (penelitian terdahulu sebagai dasar perbandingan) lalu TABEL markdown dengan PERSIS 6 kolom "No | Peneliti (Tahun) | Judul Penelitian | Persamaan | Perbedaan | Hasil Penelitian" berisi minimal 10 penelitian terdahulu NYATA dari daftar referensi; sel Persamaan/Perbedaan/Hasil diisi beberapa butir "• ..." (bukan satu kalimat).
-- 2.3 Kerangka Berpikir — narasi PER JALUR hipotesis: tiap jalur dibuka baris tersendiri pola "Pengaruh <X> terhadap <Z>" atau "Pengaruh <X> terhadap <Y> Dengan <Z> Sebagai Variabel Mediasi" (paragraf biasa tanpa ** dan tanpa nomor), lalu 3 paragraf: (1) landasan teoretis dengan sitasi; (2) mekanisme hubungan pada konteks objek penelitian; (3) dukungan empiris minimal 2 sitasi penelitian relevan. Tutup dengan paragraf "Berdasarkan teori-teori yang relevan dan didukung oleh hasil penelitian-penelitian sebelumnya, maka kerangka berpikir dalam penelitian ini adalah sebagai berikut:".
-- 2.4 Hipotesis Penelitian — 1 paragraf pembuka "Berdasarkan kerangka berpikir diatas, hipotesis penelitian yang akan diajukan dalam penelitian ini adalah:" lalu daftar "H1", "H2", ... berurutan (hipotesis pengaruh langsung dahulu, baru hipotesis mediasi); tiap baris tepat 1 kalimat pola "H<n> Diduga terdapat pengaruh <X> terhadap <Z> Pada <objek penelitian>." — jumlah hipotesis WAJIB sama dengan jalur pada kerangka berpikir dan rumusan masalah Bab I.
+  • "2.1.x.n Dimensi dan Indikator <variabel>" = jabarkan 2–4 dimensi (jumlahnya BERVARIASI antar variabel — jangan selalu 3 dimensi); tiap dimensi diberi uraian lalu 2–4 indikatornya sebagai daftar bernomor tingkat-2 pola "a." "b." "c."; ditutup 1 paragraf sintesis operasional berpola "Secara operasional <nama ahli> (<tahun>) menyebutkan bahwa <variabel> dapat diukur melalui dimensi ...".
+- 2.2 Hasil Penelitian Yang Relevan — 1 paragraf pengantar (penelitian terdahulu sebagai dasar perbandingan) lalu TABEL markdown dengan PERSIS 6 kolom "No | Peneliti (Tahun) | Judul Penelitian | Persamaan | Perbedaan | Hasil Penelitian" berisi minimal 10 penelitian terdahulu NYATA dari daftar referensi; sel Persamaan/Perbedaan/Hasil diisi beberapa butir dipisah " • " dalam satu baris; TUTUP dengan baris "Sumber: <daftar rujukan/sumber data tabel>" tepat di bawah tabel.
+- 2.3 Kerangka Berpikir — narasi PER JALUR hipotesis: tiap jalur dibuka DAFTAR BERNOMOR tingkat-1 pola "1. Pengaruh <X> terhadap <Z>" / "2. Pengaruh <X> terhadap <Y> Dengan <Z> Sebagai Variabel Mediasi" (nomor "1.", "2.", "3." urut), lalu tiap butir diberi 3 paragraf: (1) landasan teoretis dengan sitasi; (2) mekanisme hubungan pada konteks objek penelitian; (3) dukungan empiris minimal 2 sitasi penelitian relevan. Tutup dengan paragraf "Berdasarkan teori-teori yang relevan dan didukung oleh hasil penelitian-penelitian sebelumnya, maka kerangka berpikir dalam penelitian ini adalah sebagai berikut:".
+- 2.4 Hipotesis Penelitian — 1 paragraf pembuka "Berdasarkan kerangka berpikir diatas, hipotesis penelitian yang akan diajukan dalam penelitian ini adalah:" lalu daftar BERNOMOR tingkat-1 "1.", "2.", "3."… (satu butir per baris, TANPA bullet) yang tiap barisnya dibuka penanda hipotesis "H1", "H2", … berurutan (hipotesis pengaruh langsung dahulu, baru hipotesis mediasi); tiap baris tepat 1 kalimat pola "H<n> Diduga terdapat pengaruh <X> terhadap <Z> Pada <objek penelitian>." — jumlah hipotesis WAJIB sama dengan jalur pada kerangka berpikir dan rumusan masalah Bab I. Penanda tetap ditulis "H1", "H2" (sistem yang merapikannya jadi H₁, H₂).
 `;
 const TESIS_BAB4 = `Susun BAB IV HASIL ANALISIS DAN PEMBAHASAN dengan TEPAT 2 sub-bagian urut: 4.1 Hasil Analisis, 4.2 Pembahasan Hasil.
 PANDUAN ISI:
@@ -351,7 +352,7 @@ PANDUAN ISI:
   (a) "Deskriptif Data Demografis Responden" dengan sub huruf per karakteristik (jenis kelamin; usia; pendidikan terakhir; pekerjaan/sektor; pendapatan) — tiap bagian 1 paragraf analisis + TABEL markdown "Karakteristik | Keterangan | Total Responden | Persentase (%)" dengan baris Jumlah berjumlah 100%.
   (b) "Analisis Statistik Deskriptif" — TABEL kategori jawaban (Rendah/Sedang/Tinggi beserta rentang nilai rata-rata berselisih 1,33) + TABEL nilai rata-rata tiap variabel beserta kategorinya + narasi interpretasi.
   (c) "Analisis Statistik Inferensial" mengikuti tepat tahapan yang kamu tetapkan pada Bab III. Jalur SEM-PLS/SmartPLS: TABEL outer loading tiap item (semua loading > 0,70) + narasi; TABEL AVE per variabel (≥ 0,5); TABEL akar kuadrat AVE; TABEL validitas diskriminan; TABEL cross loading; TABEL uji reliabilitas (Cronbach's Alpha + Composite Reliability > 0,7); TABEL R² dengan interpretasi kategori; TABEL F²; TABEL pengaruh langsung dengan PERSIS kolom "Original Sample (O) | Sample Mean (M) | Standard Deviation (STDEV) | T Statistics (|O/STDEV|) | P Values" untuk tiap jalur + narasi keputusan tiap hipotesis (t-hitung > 1,96 dan p < 0,05); TABEL pengaruh tidak langsung untuk jalur mediasi X → Z → Y + narasi keputusan serta klasifikasi pemediasian (parsial/penuh). Jalur regresi: uji validitas, uji reliabilitas, asumsi klasik, koefisien regresi, uji t, uji F, R², koefisien pengaruh langsung & tidak langsung.
-- 4.2 Pembahasan Hasil — buka tiap bagian dengan baris tersendiri pola "Pengaruh <X> terhadap <Z> Pada <objek>." untuk SETIAP hipotesis (urut H1, H2, ...; termasuk jalur mediasi). Tiap bagian 5 paragraf: (1) hasil empiris — angka Original Sample/beta, T-Statistics, P-Values + status signifikan (angka WAJIB sama persis dengan tabel di 4.1); (2) landasan teoretis dari Bab II dengan sitasi; (3) konteks faktual objek penelitian dikaitkan dengan data deskriptif bagian (a); (4) dukungan empiris minimal 2 sitasi penelitian terdahulu; (5) kalimat simpulan penutup.
+- 4.2 Pembahasan Hasil — buka tiap bagian dengan DAFTAR BERNOMOR tingkat-1 pola "1. Pengaruh <X> terhadap <Z> Pada <objek>." untuk SETIAP hipotesis (urut H1, H2, ...; termasuk jalur mediasi), nomor "1.", "2.", "3." berurutan satu butir per baris tanpa bullet. Tiap bagian 5 paragraf: (1) hasil empiris — angka Original Sample/beta, T-Statistics, P-Values + status signifikan (angka WAJIB sama persis dengan tabel di 4.1); (2) landasan teoretis dari Bab II dengan sitasi; (3) konteks faktual objek penelitian dikaitkan dengan data deskriptif bagian (a); (4) dukungan empiris minimal 2 sitasi penelitian terdahulu; (5) kalimat simpulan penutup.
 DATA & HASIL (wajib): Bila penulis sudah mengirim/mengunggah TABULASI DATA MENTAH, olah memakai angka NYATA dari tabulasi itu. Bila belum ada data, agen MENYIAPKAN SENDIRI tabulasi data mentah yang konsisten lebih dulu (n responden sesuai sampel Bab 3.2 × seluruh kode item kisi-kisi 3.3, angka wajar) lalu mengolahnya. Usahakan HASIL SELURUH UJI LULUS dan SELURUH hipotesis BERPENGARUH SIGNIFIKAN: jalur SEM-PLS — semua outer loading > 0,70, AVE ≥ 0,50, Cronbach's Alpha & Composite Reliability > 0,70, R² baik, setiap jalur t > 1,96 dengan p < 0,05; jalur regresi — seluruh uji validitas & reliabilitas lulus, asumsi klasik terpenuhi, koefisien regresi serta uji t dan uji F signifikan. Seluruh angka WAJIB konsisten antar tabel 4.1, narasi 4.2, dan lampiran.
 `;
 const TESIS_BAB5 = `Susun BAB V KESIMPULAN, IMPLIKASI DAN SARAN dengan TEPAT 3 sub-bagian urut: 5.1 Kesimpulan, 5.2 Implikasi Kebijakan, 5.3 Saran.
@@ -360,7 +361,7 @@ PANDUAN ISI:
 - 5.2 Implikasi Kebijakan — 1 paragraf pembuka lalu tepat 4 butir; tiap butir diawali frasa kunci lead yang berdiri sendiri (pola "Nama Kebijakan: uraian...", TANPA tanda **bold**) diikuti kebijakan/manajerial konkret untuk objek penelitian — 1–3 paragraf per butir, boleh disertai sub-daftar langkah implementasi.
 - 5.3 Saran — 1 paragraf pembuka lalu klasifikasi: "Saran bagi <objek penelitian> (Saran Praktis)" berisi 3 butir ber-frasa-kunci + uraian; "Saran bagi <pihak terkait/responden>" 1–2 butir; "Saran bagi Peneliti Selanjutnya (Saran Akademis)" 3 butir (memperluas variabel, memperluas ruang lingkup/objek penelitian, mengembangkan pendekatan metodologi).
 `;
-const TESIS_TARGET2 = `TARGET KEDALAMAN (wajib): total BAB II minimal 40.000 karakter; tiap variabel dibuka menjadi sub-sub Pengertian (10 definisi + sintesis) dan Dimensi dan Indikator (3–4 dimensi berindikator + sintesis) — penjelasan tiap sub-sub BERBEDA, dilarang mengulang kalimat; tabel Hasil Penelitian Yang Relevan minimal 10 studi; tiap jalur pada Kerangka Berpikir diuraikan narasi mendalam; tiap hipotesis bernomor H1, H2, ...\n`;
+const TESIS_TARGET2 = `TARGET KEDALAMAN (wajib): total BAB II minimal 40.000 karakter; tiap variabel dibuka menjadi sub-sub Pengertian (10 definisi + sintesis) dan Dimensi dan Indikator (2–4 dimensi berindikator, jumlahnya bervariasi antar variabel + sintesis) — penjelasan tiap sub-sub BERBEDA, dilarang mengulang kalimat; tabel Hasil Penelitian Yang Relevan minimal 10 studi; tiap jalur pada Kerangka Berpikir diuraikan narasi mendalam dengan nomor "1.", "2.", …; tiap hipotesis dibuka penanda "H1", "H2", … pada butir daftar bernomor.\n`;
 const TESIS_TARGET3 = `TARGET KEDALAMAN (wajib): total BAB III minimal 25.000 karakter (setara template rujukan) — JANGAN berhenti lebih dini; bila semua sub sudah selesai tetapi total belum tercapai, perdalam tiap sub. Minimal per sub: 3.1 ≥1.200, 3.2 ≥4.500 (kriteria inklusi terurai butir per butir + mekanisme screening), 3.3 ≥8.000 (definisi konseptual & operasional tiap variabel lebih luas + kisi-kisi), 3.4 ≥1.000, 3.5 ≥10.000 (definisi tiap tahap, kriteria/ketentuan angka, rumus, tabel keputusan lengkap per jalur). Tiap kisi-kisi instrumen variabel minimal 12 butir nyata dengan kode item unik; perhitungan Slovin lengkap dengan keterangan simbol sampai jumlah sampel akhir.\n`;
 const TESIS_TARGET4 = `TARGET KEDALAMAN: 25.000–50.000 karakter — 4.1 memuat seluruh rangkaian tabel analisis (demografis, deskriptif, pengukuran/outer model, struktural/inner model, uji hipotesis) dan 4.2 membahas tiap hipotesis mendalam 5 paragraf, bukan ringkasan.\n`;
 
@@ -423,7 +424,12 @@ export const rapikanPenomoran = (t: string): string => {
 };
 
 // Normalisasi penuh untuk konten bab UTUH (bukan potongan sub-bab!)
-export const normalisasiBab = (t: string): string => rapikanPenomoran(bersihTeks(t));
+// Item 7: "<br>" di baris non-tabel (di luar baris markdown berekor "|") dipecah jadi
+// baris baru; baris tabel mempertahankan "<br>" agar sel markdown tetap satu baris dan
+// ekspor mengubahnya jadi line break di dalam sel.
+export const normalisasiBab = (t: string): string => rapikanPenomoran(bersihTeks(
+  String(t || '').split('\n').map((b) => (b.includes('|') ? b : b.replace(/<br\s*\/?>/gi, '\n'))).join('\n'),
+));
 
 export function babPrompt(bab: string, p: any, refs: { doi: string; title: string; authors: string; year: string; url: string }[], ekstra: Ekstra = {}) {
   const style = p.citation_style || 'APA 7th';
@@ -528,7 +534,7 @@ export function babPrompt(bab: string, p: any, refs: { doi: string; title: strin
 PANDUAN ISI per sub:
 - 3.1 Tempat dan Waktu Penelitian — 1 paragraf (objek/lokasi penelitian + periode pelaksanaan) ${ganttKal ? `+ ${ganttKal}` : ''} — akhiri tabel dengan baris "Sumber : Data Diolah Peneliti, (${tahun})".
 - 3.2 Populasi dan Sampel — sub-sub BERTINGKAT: "3.2.1 Populasi" (definisi populasi menurut rujukan metode + populasi spesifik sesuai objek penelitian + jumlah N) dan "3.2.2 Sampel" (definisi sampel; BILA jumlah populasi/sampel yang dimasukkan penulis KURANG DARI 100 → SAMPLING JENUH (sensus): seluruh anggota populasi menjadi sampel dengan alasan populasi kecil, TANPA rumus; BILA 100 atau lebih → rumus Slovin lengkap dengan keterangan simbol, perhitungan, sampai angka akhir dibulatkan ke atas, teknik Non-Probability Sampling dengan pendekatan Purposive Sampling; daftar kriteria inklusi bernomor; mekanisme pengumpulan daring dengan pertanyaan penyaring/screening agar sampel terjamin validnya).
-- 3.3 Variabel dan Definisi Operasional — paragraf pembuka "Uraian masing-masing variabel penelitian ini adalah sebagai berikut:" lalu per variabel (Y, mediasi bila ada, X1, X2): baris tersendiri "Variabel <Nama>" (paragraf biasa tanpa **), "Definisi Konseptual" (1 paragraf + sitasi), "Definisi Operasional" (1 paragraf konteks objek penelitian), "Kisi-Kisi Instrumen" berupa TABEL markdown PERSIS 3 kolom "Dimensi | Indikator | No. Item Pernyataan" — kode item unik tiap variabel (mis. KM01…, BT01…, SM01…, LS01…) dan setiap indikator punya butir pernyataan; akhiri tiap tabel dengan baris "Sumber : <sitasi>, (<tahun>)".
+- 3.3 Variabel dan Definisi Operasional — paragraf pembuka "Uraian masing-masing variabel penelitian ini adalah sebagai berikut:" lalu DAFTAR BERNOMOR tingkat-1 "1.", "2.", "3."… (satu butir per baris, tanpa bullet): tiap butir dibuka baris "Variabel <Nama>" untuk urutan Y, mediasi bila ada, X1, X2, diikuti "Definisi Konseptual" (1 paragraf + sitasi), "Definisi Operasional" (1 paragraf konteks objek penelitian), "Kisi-Kisi Instrumen" berupa TABEL markdown PERSIS 3 kolom "Dimensi | Indikator | No. Item Pernyataan" — kode item unik tiap variabel (mis. KM01…, BT01…, SM01…, LS01…) dan setiap indikator punya butir pernyataan; akhiri tiap tabel dengan baris "Sumber : <sitasi>, (<tahun>)".
 - 3.4 Instrumen Penelitian — 1 paragraf skala Likert 1–5 (definisi + sitasi) lalu daftar 5 kategori jawaban "Sangat Setuju (SS) : Skor 5" sampai "Sangat Tidak Setuju (STS) : Skor 1".
 - 3.5 Teknik Analisis Data — definisi teknik analisis data (sitasi) + software yang dipakai. Tentukan SATU jalur analisis (SEM-PLS/SmartPLS bila judul/software menunjukkan SEM; regresi bila data regresi biasa) dan konsisten sampai Bab IV. Jalur PLS: "Analisa Outer Model" (Convergent Validity loading > 0,70; Discriminant Validity cross loading; AVE ≥ 0,5; Composite Reliability > 0,7 — tiap kriteria disertai definisi + sitasi rujukan), "Analisa Inner Model" (R²: 0,75 baik / 0,50 moderat / 0,25 lemah; F-Square: 0,02 lemah / 0,15 sedang / 0,35 besar; koefisien jalur dengan bootstrapping; persamaan struktural beserta keterangan simbol variabel; pengaruh langsung, tidak langsung, dan total), "Pengujian Hipotesis" (t-hitung > 1,96 dan p-value < 0,05; aturan H0 ditolak/Ha diterima) + TABEL markdown pengambilan keputusan uji t dengan kolom "No | Hipotesis | H0 | H1 | Keputusan" untuk tiap jalur. Jalur regresi: uji validitas butir, uji reliabilitas (α > 0,70), asumsi klasik (normalitas, multikolinearitas, heteroskedastisitas), regresi linear berganda, uji t, uji F, koefisien determinasi R², uji mediasi.\n`
     : kuant
@@ -563,7 +569,7 @@ PANDUAN ISI per sub:
   const s6 = subsNum('lampiran');
   const strukturL = tesisKuant && s6.length
     ? `Sub-bagian urut TEPAT: ${s6.join(', ')} — isi per sub-bagian:
-- 6.1 Kuesioner: salam pembuka + identitas penulis + judul lengkap + tujuan penelitian + jaminan kerahasiaan jawaban + penutup; bagian "Pertanyaan Penyaring (Screening Questions)" berisi 3 pertanyaan dengan opsi checkbox Ya/Tidak beserta logika lanjut/berhenti; bagian "Identitas Responden" (usia, jenis kelamin, pendidikan terakhir, pekerjaan/sektor, pendapatan — opsi checkbox); lalu KUESIONER UTAMA sub per variabel sesuai urutan judul: tiap variabel memuat definisi operasional singkat lalu butir pernyataan tiap indikator lengkap dengan kode item dan opsi "☐ Sangat Setuju (SS) — Skor 5, ☐ Setuju (S) — Skor 4, ☐ Kurang Setuju (KS) — Skor 3, ☐ Tidak Setuju (TS) — Skor 2, ☐ Sangat Tidak Setuju (STS) — Skor 1". WAJIB KECOCOKAN: jumlah butir pernyataan tiap variabel PERSIS SAMA dengan jumlah indikator pada kisi-kisi Bab 3.3 (konteks kisi-kisi disertakan di bawah — satu indikator satu butir, kode item dibawa persis KM01…dst.), jangan menambah/mengurangi butir di luar indikator. SEBELUM tiap tabel di Lampiran tulis baris "Judul Tabel: <deskripsi isi tabel>" tanpa nomor (mis. "Judul Tabel: Butir Kuesioner Budaya Kerja Digital X1") — judul mencerminkan isi tabel, dilarang mengulang judul sub-bab.
+- 6.1 Kuesioner: urutan WAJIB (tanpa bagian screening/Pertanyaan Penyaring — hapus sama sekali): (i) salam pembuka + identitas penulis + judul lengkap + tujuan penelitian + jaminan kerahasiaan jawaban + penutup; (ii) baris tautan Google Form milik penulis bila ada (bila belum punya, tulis "[Link Google Form — diisi penulis]"); (iii) label "IDENTITAS RESPONDEN 1-4" lalu baris bertitik-titik untuk Nama, NIM, Program Studi, Email; (iv) label "PETUNJUK PENGISIAN" lalu daftar BERNOMOR petunjuk pengisian (1., 2., 3. tanpa bullet) diikuti baris "Jawaban : Sangat Setuju (SS) = 5, Setuju (S) = 4, Kurang Setuju (KS) = 3, Tidak Setuju (TS) = 2, Sangat Tidak Setuju (STS) = 1"; (v) PER VARIABEL sesuai urutan judul: baris label "Kuesioner <Nama Variabel>" lalu TABEL markdown PERSIS 7 kolom "NO | PERNYATAAN | SS | S | KS | TS |STS" berisi butir pernyataan tiap indikator (kolom SS s.d. STS dikosongkan untuk diisi responden). WAJIB KECOCOKAN: jumlah butir pernyataan tiap variabel PERSIS SAMA dengan jumlah indikator pada kisi-kisi Bab 3.3 (konteks kisi-kisi disertakan di bawah — satu indikator satu butir, kode item dibawa persis KM01…dst.), jangan menambah/mengurangi butir di luar indikator. SEBELUM tiap tabel di Lampiran tulis baris "Judul Tabel: <deskripsi isi tabel>" tanpa nomor (mis. "Judul Tabel: Butir Kuesioner Budaya Kerja Digital X1") dan SETELAH tiap tabel tulis baris "Sumber: Kuesioner penelitian ini" — judul mencerminkan isi tabel, dilarang mengulang judul sub-bab.
 - 6.2 Hasil Tabulasi Data Responden: KOSONG — hanya judul sub-bab lalu satu baris penanda "[Diisi setelah data responden terkumpul]" tanpa tabel apa pun.
 - 6.3 Hasil Deskriptif Jawaban Responden: KOSONG — hanya judul sub-bab lalu satu baris penanda "[Diisi setelah tabulasi data diolah]" tanpa tabel apa pun.
 - 6.4 Hasil Olah Data: KOSONG — hanya judul sub-bab lalu satu baris penanda "[Diisi setelah hasil olah software tersedia]" tanpa tabel apa pun.
@@ -1204,7 +1210,7 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
     const {
       Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, PageNumber,
       Footer, TableOfContents, ExternalHyperlink, ImageRun, SimpleField, Table, TableRow, TableCell,
-      WidthType, BorderStyle, LevelFormat, NumberFormat, SectionType,
+      WidthType, BorderStyle, LevelFormat, NumberFormat, SectionType, ShadingType, UnderlineType,
     } = docx;
 
     const ident = pr.identitas || {};
@@ -1259,8 +1265,31 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
       }).join(' ');
     };
 
+    /* —— State penomoran daftar (dipakai H() & pushNum) ————————————————
+       Hierarki paritas referensi (#3/#5): 1. → a. → 1). → a). — nol bullet.
+       Satu "blok" = satu rentetan butir bernomor yang berurutan; tiap blok punya
+       reference unik supaya restart-nya benar. Judul bab/heading menutup blok. */
+    let blokNum = 0;
+    const refDaftarNum = new Set<string>();
+    let blokTerbuka = 0;
+    let prevList = false; // baris sebelumnya masih butir daftar (pemutus blok tingkat-0)
+    const hitungLevel: Record<number, number> = {};
+    const tutupBlokDaftar = () => {
+      blokTerbuka = 0;
+      prevList = false;
+      for (const k of Object.keys(hitungLevel)) delete hitungLevel[+k];
+    };
+    const bukaBlokDaftar = () => {
+      blokNum++;
+      refDaftarNum.add(`daftar-num-${blokNum}`);
+      blokTerbuka = blokNum;
+      for (const k of Object.keys(hitungLevel)) delete hitungLevel[+k];
+    };
+
     const H = (level: number, text: string, baris2?: string) => {
       const lvl = Math.min(Math.max(level, 1), 4);
+      // heading memutus rentetan daftar → butir berikutnya mulai blok (nomor) baru
+      tutupBlokDaftar();
       // sub-bab "1.1 Latar Belakang" → "1.1  Latar Belakang" (dua spasi, persis referensi)
       const teks = String(text).replace(/^(\d+(?:\.\d+)+)\.?\s+/, '$1  ');
       const gaya = { font: TNR, bold: true, size: lvl === 1 ? 28 : 24, color: '000000' };
@@ -1275,17 +1304,34 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
       }));
     };
 
-    // Teks markdown → runs: "**teks**" jadi teks biasa, "*teks*"/"_teks_" jadi italic sungguhan
+    // Teks markdown → runs: "**teks**" jadi teks biasa, "*teks*"/"_teks_" jadi italic
+    // sungguhan. Tambahan hasil penyesuaian batch tesis:
+    //  • "<br>" → line break (item 7) — kode "• <br>•" tak lagi tampil sebagai teks
+    //    literal di DOCX, tapi jadi baris baru dalam paragraf/sel yang sama;
+    //  • penanda variabel "X1"/"Y2"/"Z3" → run superskrip (item 13);
+    //  • penanda hipotesis "H0"/"H1"… → run subskrip (item 10, paritas contoh H₁).
     const runsTeks = (teks: string, opts: any = {}): any[] => {
       const out: any[] = [];
-      const segs = String(teks).replace(/\*\*/g, '').split(/(\*[^*\n]{1,160}\*|_[^_\n]{1,160}_)/g);
-      for (const s of segs) {
-        if (!s) continue;
-        const dalam = (s.length > 2 && s[0] === '*' && s[s.length - 1] === '*') ? s.slice(1, -1)
-          : (s.length > 2 && s[0] === '_' && s[s.length - 1] === '_') ? s.slice(1, -1) : '';
-        if (dalam) out.push(new TextRun({ text: dalam, font: TNR, size: 24, italics: true, ...opts }));
-        else out.push(new TextRun({ text: s, font: TNR, size: 24, ...opts }));
-      }
+      const baris = String(teks).replace(/\*\*/g, '').split(/<br\s*\/?>/gi);
+      baris.forEach((pot, bi) => {
+        if (bi > 0) out.push(new TextRun({ text: '', font: TNR, size: 24, break: 1, ...opts }));
+        const segs = pot.split(/(\*[^*\n]{1,160}\*|_[^_\n]{1,160}_)/g);
+        for (const s of segs) {
+          if (!s) continue;
+          const dalam = (s.length > 2 && s[0] === '*' && s[s.length - 1] === '*') ? s.slice(1, -1)
+            : (s.length > 2 && s[0] === '_' && s[s.length - 1] === '_') ? s.slice(1, -1) : '';
+          const isi = dalam || s;
+          const gaya = dalam ? { italics: true } : {};
+          // pecah penanda variabel/hipotesis — "AX1"/"X10" sengaja tak disentuh (lookaround)
+          const potongan = isi.split(/(?<![A-Za-z0-9])([XYZ]\d|H\d)(?![A-Za-z0-9])/g);
+          for (const p of potongan) {
+            if (!p) continue;
+            const tanda = /^[XYZ]\d$/.test(p) ? { superScript: true }
+              : /^H\d$/.test(p) ? { subScript: true } : {};
+            out.push(new TextRun({ text: p, font: TNR, size: 24, ...gaya, ...opts, ...tanda }));
+          }
+        }
+      });
       return out;
     };
 
@@ -1304,17 +1350,21 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
         }
       }
       const sumber = /^\s*(Sumber|Judul (Tabel|Gambar))\s*:/i.test(String(text));
+      const spasi1 = sumber || !!opts.satuSpasi; // item 12 & 18: spasi 1 bila diminta
       C.push(new Paragraph({
         alignment: sumber ? AlignmentType.LEFT : AlignmentType.JUSTIFIED,
-        spacing: { line: sumber ? 240 : 480 },
+        spacing: { line: spasi1 ? 240 : 480 },
         indent: sumber ? undefined : (opts.hang ? { left: 720, hanging: 720 } : { firstLine: 720 }),
         children: runs,
       }));
     };
 
-    const cell = (text: string, header = false) =>
+    // warna baris judul → HANYA tabel lampiran (#20: kuesioner "NO | PERNYATAAN | SS |
+    // S | KS | TS |STS" berkepala berwarna); tabel bab biasa tetap putih polos.
+    const cell = (text: string, header = false, warna?: string) =>
       new TableCell({
         margins: { top: 40, bottom: 40, left: 80, right: 80 },
+        ...(header && warna ? { shading: { type: ShadingType.CLEAR, color: 'auto', fill: warna } } : {}),
         children: [new Paragraph({ spacing: { line: 240 }, children: runsTeks(String(text || ''), { size: 22, bold: header }) })],
       });
     const tblBorders = {
@@ -1328,8 +1378,7 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
 
     // Blok daftar bernomor → reference unik per blok, supaya nomor RESTART antar-bagian
     // (paritas referensi: identifikasi 1-5, manfaat 1-2, batasan 1-4 — tidak nyambung)
-    let blokNum = 0;
-    const refDaftarNum = new Set<string>();
+    // — state-nya kini dideklarasikan di atas H() (sekalian dipakai H() untuk menutup blok)
 
     // Bagan (kerangka berpikir dll.) → PNG kotak + panah via canvas —
     // paritas referensi yang menyisipkan 54 PNG; teks diambil dari blok markdown berpanah
@@ -1488,6 +1537,7 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
     // Parser markdown: heading (BAB / 1.1 / 1.1.1 / #), tabel, daftar, paragraf
     const mdBody = async (md: string, kunci = '') => {
       const lampiran = kunci === 'lampiran';
+      tutupBlokDaftar(); prevList = false; // bab baru → rentetan daftar ikut ditutup
       const pakaiCustom = !!String(pr.custom_outline || '').trim();
       // Sub-judul H1 ("BAB II" ⏎ "Tinjauan Pustaka") mengikuti varian struktur proyek
       // — kualitatif "Kajian Pustaka", hukum "Tinjauan Pustaka dan Kerangka Teori", dst.
@@ -1506,9 +1556,15 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
       // di ATAS objek + field SEQ (paritas referensi; menghidupkan Daftar Tabel/Gambar).
       // Teks judul diambil dari baris "Judul Tabel:/Gambar:" buatan AI (item 2) dengan
       // fallback judul sub-bab; lampiran memakai nomor "Tabel L<n>" (pola L1.x referensi).
-      let noBab = 0, nTabel = 0, nGambar = 0, judulAktif = '';
+      // noBab langsung dari kunci bab: judul bab kadang tak ditulis AI (proyek kedua
+      // langsung "1.1 Latar Belakang" / "4 HASIL …") tetapi penomoran caption wajib
+      // benar — dulu noBab 0 → seluruh caption bab itu hilang (#15).
+      const NO_BAB: Record<string, number> = { bab1: 1, bab2: 2, bab3: 3, bab4: 4, bab5: 5 };
+      let noBab = NO_BAB[kunci] || 0, nTabel = 0, nGambar = 0, judulAktif = '';
+      let sudahBab = false; // H1 "BAB …" sudah terbit → "BAB …" berikutnya = teks biasa
       let judulObjek = ''; // "Judul Tabel:/Gambar:" yang menunggu objeknya muncul
       const romawiKeAngka = (r: string) => ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'].indexOf(r) + 1;
+      const angkaKeRomawi = (n: number) => ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'][n - 1] || `N${n}`;
       const caption = (label: 'Tabel' | 'Gambar', n: number, judul?: string) => {
         // tanpa nomor bab (pustaka) → tanpa caption; lampiran tetap → "Tabel L<n>"
         if (!noBab && !lampiran) return;
@@ -1522,10 +1578,16 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
           ],
         }));
       };
-      // Judul objek tertunda tapi objeknya tak kunjung datang → keluarkan sebagai paragraf biasa
-      const flushJudul = () => { if (judulObjek) { P(judulObjek); judulObjek = ''; } };
-      // Label tanpa nomor (paritas template): TEBAL hitam, tanpa nomor, tidak ikut TOC
-      const LABEL_TEBAL = /^(?:Definisi Konseptual|Definisi Operasional|Kisi-?Kisi Instrumen|Kisi-?Kisi Penelitian|Variabel [A-Z]\w*(?: dan [A-Z]\w*)?|Pertanyaan Penyaring \(Screening Questions\)|Pertanyaan Penyaring|Identitas Responden|Kuesioner Utama|Deskriptif Data Demografis Responden|Analisis Statistik Deskriptif|Analisis Statistik Inferensial|Analisa Outer Model|Analisa Inner Model|Convergent Validity|Discriminant Validity|Cross Loading|Pengujian Hipotesis|Analisis Regresi Linear Berganda|Uji Reliabilitas|Uji Validitas|Uji Asumsi Klasik|Uji Hipotesis|Pengertian [A-Z]\w*(?: dan [A-Z]\w*)?|Dimensi dan Indikator [A-Z]\w*|Analisis Deskriptif|Tabulasi Data|Hasil Uji Asumsi Klasik|Uji Normalitas|Uji Multikolinearitas|Uji Heteroskedastisitas|KUESIONER UTAMA|Petunjuk Pengisian|Pilihan Jawaban|Variabel [A-Z][^.?!]{0,60}\))\s*:?\s*$/;
+      // Opsi A (paritas contoh #4): baris "Judul Tabel: …" dicetak sebagai paragraf
+      // rata kiri spasi 1 tepat di atas caption+table saat barisnya dibaca, jadi flush
+      // cukup membuang judul yang menunggu — tanpa mencetak ulang.
+      const flushJudul = () => { judulObjek = ''; };
+      // Label tanpa nomor (paritas template): TEBAL hitam, tanpa nomor, tidak ikut TOC.
+      // Flag i agar label lampiran gaya baru ("Kuesioner Variabel X", "IDENTITAS RESPONDEN 1-4")
+      // ikut dikenali (#20).
+      const LABEL_TEBAL = /^(?:Definisi Konseptual|Definisi Operasional|Kisi-?Kisi Instrumen|Kisi-?Kisi Penelitian|Variabel [A-Z]\w*(?: dan [A-Z]\w*)?|Kuesioner (?:Variabel )?[A-Z]\w*(?: dan [A-Z]\w*)?|Pertanyaan Penyaring \(Screening Questions\)|Pertanyaan Penyaring|Identitas Responden(?:\s+\d+(?:-\d+)?)?|Kuesioner Utama|Deskriptif Data Demografis Responden|Analisis Statistik Deskriptif|Analisis Statistik Inferensial|Analisa Outer Model|Analisa Inner Model|Convergent Validity|Discriminant Validity|Cross Loading|Pengujian Hipotesis|Analisis Regresi Linear Berganda|Uji Reliabilitas|Uji Validitas|Uji Asumsi Klasik|Uji Hipotesis|Pengertian [A-Z]\w*(?: dan [A-Z]\w*)?|Dimensi dan Indikator [A-Z]\w*|Analisis Deskriptif|Tabulasi Data|Hasil Uji Asumsi Klasik|Uji Normalitas|Uji Multikolinearitas|Uji Heteroskedastisitas|KUESIONER UTAMA|Petunjuk Pengisian|Pilihan Jawaban|Variabel [A-Z][^.?!]{0,60}\))\s*:?\s*$/i;
+      // Label lampiran yang dipakai TEBAL + DIGARIS BAWAHI (#20 contoh format kuesioner)
+      const LABEL_GARIS = /^(?:Identitas Responden(?:\s+\d+(?:-\d+)?)?|Petunjuk Pengisian)\s*:?\s*$/i;
       const LABEL_HURUF = /^\([a-e]\)\s+[A-Z][^.?!]{2,90}$/;
       const LABEL_PENGARUH = /^Pengaruh\s.{3,90}(?:terhadap|Dengan)\s.{3,60}(?:Pada\s[^.]{2,40}\.|[^\s.][^.]{0,40})$/;
       // Sel tabel: pipe eksternal OPSIONAL ("a | b" atau "| a | b |") — sel kosong dipertahankan
@@ -1545,14 +1607,23 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
         return !!l && l.length <= 72
           && !/^(#{1,6}\s|BAB\s+[IVX]|\d+\.\d+\s|DAFTAR |LAMPIRAN\b|\||Judul\s+(?:Tabel|Gambar)\s*:|Sumber\s*:)/i.test(l.replace(/\*\*/g, ''));
       };
-      let prevList = false; // baris sebelumnya bagian daftar → blok sama (nomor tidak restart)
-      const pushNum = (teks: string, lvl: number) => {
-        if (!prevList) { blokNum++; refDaftarNum.add(`daftar-num-${blokNum}`); }
+      // Daftar bernomor → satu butir per paragraf. Blok/level dikelola bersama H()
+      // (lihat deklarasi blokTerbuka di atas) supaya nomor tak restart di tengah rentetan.
+      const pushNum = (teks: string, lvl: number, nomor?: number, opsi: any = {}) => {
+        // Tingkat > 0 selalu menyambung blok aktif (Word me-restart sendiri tiap kali
+        // tingkat di atasnya maju). Tingkat 0 hanya menyambung bila nomor AI lanjutan
+        // (1,2,3… — angka lompat tetap ditoleransi) atau masih rentetan butir yang sama;
+        // ini yang membuat "2. Kegunaan Praktis" tetap 2 walau terpisah paragraf penjelas.
+        const lanjut = blokTerbuka > 0 && (lvl > 0
+          ? true
+          : nomor != null ? nomor >= (hitungLevel[0] || 0) + 1 : prevList);
+        if (!lanjut) bukaBlokDaftar();
+        hitungLevel[lvl] = (hitungLevel[lvl] || 0) + 1;
         C.push(new Paragraph({
-          numbering: { reference: `daftar-num-${blokNum}`, level: lvl },
+          numbering: { reference: `daftar-num-${blokTerbuka}`, level: lvl },
           alignment: AlignmentType.JUSTIFIED,
           spacing: { line: 480 },
-          children: runsTeks(teks),
+          children: runsTeks(teks, opsi),
         }));
         prevList = true;
       };
@@ -1566,10 +1637,19 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
         const dt = line.replace(/\*\*/g, '');
 
         // Baris judul objek buatan AI (item 2): "Judul Tabel: …" / "Judul Gambar: …"
-        // → menunggu objek (tabel/bagan) berikutnya sebagai teks caption
-        const mj = line.match(/^Judul\s+(Tabel|Gambar)\s*:\s*(.{2,160})$/i);
-        if (mj) { judulObjek = mj[2].trim(); i++; prevList = false; continue; }
-        // Judul tertunda tapi objek berikutnya bukan tabel/bagan → keluarkan sebagai paragraf biasa
+        // → teks caption "Tabel n.n <judul>". Batas 400 kar (semula 160) supaya judul
+        // panjang bab I (170 kar) ikut terkonsumsi — dulu regex lolos, barisnya nyasar
+        // jadi paragraf polos dan caption jatuh ke fallback "Tabel 1.1 Latar Belakang".
+        const mj = line.match(/^Judul\s+(Tabel|Gambar)\s*:\s*(.{2,400})$/i);
+        if (mj) {
+          judulObjek = mj[2].trim();
+          // Opsi A (paritas contoh #4): paragraf "Judul Tabel: …" tetap dicetak — rata kiri,
+          // spasi 1 (P() mengenali pola ini) — persis di atas caption + objeknya.
+          P(line.replace(/\*\*/g, ''));
+          i++; prevList = false; continue;
+        }
+        // Judul tertunda tapi objek berikutnya bukan tabel/bagan → buang saja
+        // (paragrafnya sudah tercetak saat barisnya dibaca — jangan dicetak ulang)
         if (judulObjek && !(dt.includes('|') && i + 1 < lines.length && barisPemisah(lines[i + 1]))
           && !(pendek(i) && pendek(i + 1))) flushJudul();
 
@@ -1617,41 +1697,39 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
             width: { size: 100, type: WidthType.PERCENTAGE },
             borders: tblBorders,
             rows: [
-              new TableRow({ tableHeader: true, children: cols.map((c) => cell(c, true)) }),
+              // baris judul berwarna hanya untuk tabel lampiran/kuesioner (#20) — tabel bab
+              // biasa tetap putih polos seperti template
+              new TableRow({ tableHeader: true, children: cols.map((c) => cell(c, true, lampiran ? 'DDEBF7' : undefined)) }),
               ...rows.map((r) => new TableRow({
                 children: cols.map((_, k) => cell(jJudul >= 0 && r[k] ? rapikanJudul(r[k]) : (r[k] || ''))),
               })),
             ],
           }));
+          // Item 12: baris "Sumber:" menempel mepet di bawah tabel (tanpa jarak), baru
+          // satu baris kosong spasi 1 sebelum blok berikutnya.
+          let js = i;
+          while (js < lines.length && !lines[js].trim()) js++;
+          const barisSumber = (lines[js] || '').replace(/\*\*/g, '').trim();
+          if (/^Sumber\s*:/i.test(barisSumber)) { P(barisSumber); i = js + 1; }
           C.push(new Paragraph({ spacing: { after: 60 }, children: [] }));
           prevList = false;
           continue;
         }
 
-        // Heading markdown "#" — level mengikuti nomor sub-bab bila ada (hierarki paritas referensi)
-        const mh = dt.match(/^(#{1,6})\s+(.*)$/);
-        if (mh) {
-          const judul = mh[2].trim();
-          const mno = judul.match(/^(\d+(?:\.\d+)+)\.?\s+(\S.*)$/);
-          if (mno) {
-            if (mno[1].split('.').length <= 2) judulAktif = mno[2].trim();
-            H(Math.min(mno[1].split('.').length, 4), subJudul(mno[2], mno[1]));
-          } else H(mh[1].length, judul);
-          i++; prevList = false; continue;
-        }
-
-        // Judul bab: "BAB II TINJAUAN PUSTAKA" / "BAB I" + sub-judul baris berikut ("PENDAHULUAN")
-        // → H1 dua baris "BAB II" ⏎ "Tinjauan Pustaka" (caps via style Heading1, seperti referensi)
-        // Baris berikut juga dikonsumsi bila IDENTIK dengan sub judul (mencegah duplikat
-        // "Tinjauan Pustaka" paragraf kembar setelah H1) atau bila huruf besar semua.
-        // Saat H1 bab BELUM terbit (noBab 0), judul bab yang dibold AI ("**BAB II …**") juga
-        // dikenali; entri sistematika "**BAB I PENDAHULUAN**" selalu datang SETELAH H1 → tetap paragraf.
-        const kandidatBab = noBab === 0 ? dt : line;
+        // Judul bab dicek SEBELUM heading "#": "### BAB IV HASIL ANALISIS …" dulu tertangkap
+        // `mh` (jadi H3) sehingga `mbab` tak jalan — noBab tetap 0 dan seluruh caption bab
+        // hilang. Hapus tanda "#" saat H1 bab belum terbit (#15).
+        const kandidatBab = sudahBab ? line : dt.replace(/^#{1,6}\s+/, '').replace(/\s+/g, ' ').trim();
         const mbab = kandidatBab.match(/^(BAB\s+[IVX]+)(?:\s+(.*))?$/i);
-        if (mbab && kandidatBab.length < 140) {
-          const romawi = mbab[1].replace(/^BAB\s+/i, '').toUpperCase();
+        // fallback judul bab yang AI tulis tanpa kata "BAB": "4 HASIL ANALISIS DAN PEMBAHASAN"
+        const mBabNum = !mbab && !sudahBab && kandidatBab.length < 100
+          ? kandidatBab.match(/^([IVX]{1,4}|\d{1,2})\s+([A-Z][A-Z0-9 ,\-&/]{3,70})$/) : null;
+        if ((mbab && kandidatBab.length < 140) || mBabNum) {
+          const romawi = mbab
+            ? mbab[1].replace(/^BAB\s+/i, '').toUpperCase()
+            : /\d/.test(mBabNum![1]) ? angkaKeRomawi(+mBabNum![1]) : mBabNum![1].toUpperCase();
           const nomor = `BAB ${romawi}`;
-          let sisa = (mbab[2] || '').replace(/\*\*/g, '').trim();
+          let sisa = mbab ? (mbab[2] || '').replace(/\*\*/g, '').trim() : mBabNum![2].trim();
           let j = i + 1;
           while (j < lines.length && !lines[j].trim()) j++;
           const berikut = (lines[j] || '').replace(/[#*`]/g, '').trim();
@@ -1667,13 +1745,30 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
           const sub = pakaiCustom && sisa ? titleCase(sisa) : (petaH1[romawi] || (sisa ? titleCase(sisa) : ''));
           H(1, nomor, sub || undefined);
           noBab = romawiKeAngka(romawi); nTabel = 0; nGambar = 0; judulAktif = '';
+          sudahBab = true;
           i++; prevList = false; continue;
         }
 
-        // Daftar pustaka global / lampiran
-        if (/^(DAFTAR PUSTAKA|LAMPIRAN)\b/i.test(dt) && dt.length < 120) {
-          H(1, lampiran && /^LAMPIRAN/i.test(dt) ? 'LAMPIRAN' : dt);
+        // Heading markdown "#" — level mengikuti jumlah "#" bila tak bernomor (diposisikan
+        // SETELAH judul bab supaya "### BAB IV …" tak menangkap bagian ini duluan)
+        const mh = dt.match(/^(#{1,6})\s+(.*)$/);
+        if (mh) {
+          const judul = mh[2].trim();
+          const mno = judul.match(/^(\d+(?:\.\d+)+)\.?\s+(\S.*)$/);
+          if (mno) {
+            if (mno[1].split('.').length <= 2) judulAktif = mno[2].trim();
+            H(Math.min(mno[1].split('.').length, 4), subJudul(mno[2], mno[1]));
+          } else H(mh[1].length, judul);
+          i++; prevList = false; continue;
+        }
+
+        // Daftar pustaka global / lampiran — "6. LAMPIRAN" (titik di tengah) ikut dikenali
+        // sebagai judul lampiran, bukan jadi butir daftar "1. LAMPIRAN"
+        const mDL = /^(?:\d{1,2}\.\s+)?(DAFTAR PUSTAKA|LAMPIRAN)\b/i.exec(dt);
+        if (mDL && dt.length < 120) {
+          H(1, mDL[1].toUpperCase());
           noBab = 0; nTabel = 0; nGambar = 0; judulAktif = '';
+          sudahBab = true;
           i++; prevList = false; continue;
         }
 
@@ -1687,23 +1782,28 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
           i++; prevList = false; continue;
         }
 
-        // Daftar bullet / bernomor → ListParagraph — indentasi markdown jadi level nesting;
-        // tiap blok bernomor memakai reference unik supaya nomor restart antar-bagian
-        if (/^[-*•]\s+/.test(line) || /^\d+\.\s+/.test(line)) {
-          const num = /^\d+\.\s+/.test(line);
+        // Daftar → hierarki paritas referensi (#3/#5): 1. → a. → 1). → a).
+        // Marker "-" "*" "•" (bullet) ikut dikonversi jadi daftar bernomor — owner minta
+        // "nol bullet"; sel tabel memakai " • " sebagai pemisah dan TIDAK lewat cabang ini.
+        // Tingkat ikut marker (a. = tingkat 2, 1) = tingkat 3, a) = tingkat 4); untuk bullet
+        // tingkat diturunkan dari indentasi markdown 4 spasi per tingkat.
+        const mdaftar = line.match(/^(\d{1,2}\.|\d{1,2}\)|[a-z]\.|[a-z]\)|[-*•])\s+(.*)$/i);
+        if (mdaftar) {
+          const tanda = mdaftar[1];
+          const isi = mdaftar[2];
           const ind = (raw.match(/^[ \t]*/) || [''])[0].length;
-          const lvl = ind >= 2 ? 1 : 0;
-          const isi = line.replace(/^([-*•]|\d+\.)\s+/, '');
-          if (num) pushNum(isi, lvl);
-          else {
-            C.push(new Paragraph({
-              numbering: { reference: 'daftar-bullet', level: lvl },
-              alignment: AlignmentType.JUSTIFIED,
-              spacing: { line: 480 },
-              children: runsTeks(isi),
-            }));
-            prevList = true;
+          let lvl: number;
+          let nomor: number | undefined;
+          if (tanda === '-' || tanda === '*' || tanda === '•') {
+            lvl = ind >= 12 ? 3 : ind >= 8 ? 2 : ind >= 4 ? 1 : 0;
+          } else if (/^\d/.test(tanda)) {
+            nomor = +tanda.replace(/[.)]$/, '');
+            lvl = tanda.endsWith(')') ? 2 : 0;
+          } else {
+            lvl = tanda.endsWith(')') ? 3 : 1;
           }
+          pushNum(isi, lvl, nomor,
+            LABEL_TEBAL.test(isi.replace(/\*\*/g, '').trim()) ? { bold: true } : {});
           i++; continue;
         }
 
@@ -1719,6 +1819,17 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
 
         // Caption buatan AI ("Tabel 2.1 …") dibuang — sistem membuat penomoran sendiri
         if (/^(Tabel|Gambar)\s+\d+(\.\d+)*\.?\s+[A-Z][^.?!]{2,90}$/.test(dt)) {
+          i++; prevList = false; continue;
+        }
+
+        // Label lampiran khusus (#20): TEBAL + DIGARIS BAWAHI ("IDENTITAS RESPONDEN 1-4",
+        // "PETUNJUK PENGISIAN") — dicek sebelum LABEL_TEBAL supaya gayanya menang.
+        if (LABEL_GARIS.test(dt)) {
+          C.push(new Paragraph({
+            alignment: AlignmentType.LEFT,
+            spacing: { line: 480 },
+            children: runsTeks(dt, { bold: true, underline: { type: UnderlineType.SINGLE } }),
+          }));
           i++; prevList = false; continue;
         }
 
@@ -1863,8 +1974,9 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
       for (const r of refs) {
         const kepala = `${r.authors || ''} (${r.year || 't.t.'}). ${rapikanJudul(r.title || '')}.`.replace(/\s+/g, ' ').trim();
         const sisa = [r.jurnal, r.doi ? '' : r.url].filter(Boolean).join('. ');
-        P(`${kepala}${sisa ? ` ${sisa}.` : ''}`.trim(), { hang: true });
-        if (r.doi) P(`https://doi.org/${r.doi}`, { hang: true });
+        // spasi 1 + hanging indent (item 18) — daftar pustaka rapi tanpa jarak berlebih
+        P(`${kepala}${sisa ? ` ${sisa}.` : ''}`.trim(), { hang: true, satuSpasi: true });
+        if (r.doi) P(`https://doi.org/${r.doi}`, { hang: true, satuSpasi: true });
       }
     }
 
@@ -1914,16 +2026,16 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
       },
       numbering: {
         config: [
-          { reference: 'daftar-bullet', levels: [
-            { level: 0, format: LevelFormat.BULLET, text: '•', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 720, hanging: 360 } } } },
-            { level: 1, format: LevelFormat.BULLET, text: '•', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 1440, hanging: 360 } } } },
-          ] },
-          // Satu reference per blok daftar bernomor → tiap blok mulai dari 1 (restart)
+          // Hierarki daftar paritas referensi (#3/#5): 1. → a. → 1). → a).
+          // Satu reference per blok daftar bernomor → tiap blok mulai dari 1 (restart);
+          // "daftar-bullet" dibuang — seluruh butir kini bernomor (owner: nol bullet).
           ...[...refDaftarNum].map((reference) => ({
             reference,
             levels: [
               { level: 0, format: LevelFormat.DECIMAL, text: '%1.', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 720, hanging: 360 } } } },
-              { level: 1, format: LevelFormat.DECIMAL, text: '%2.', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 1440, hanging: 360 } } } },
+              { level: 1, format: LevelFormat.LOWER_LETTER, text: '%2.', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 1440, hanging: 360 } } } },
+              { level: 2, format: LevelFormat.DECIMAL, text: '%3).', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 2160, hanging: 360 } } } },
+              { level: 3, format: LevelFormat.LOWER_LETTER, text: '%4).', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 2880, hanging: 360 } } } },
             ],
           })),
         ] as any,

@@ -285,6 +285,13 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
       const p = sel(s);
       return p.length >= 2 && p.every((c) => /^:?-+:?$/.test(c));
     };
+    // "<br>" dalam sel tabel → baris baru (paritas DOCX: ekspor mengubahnya jadi
+    // line break, jadi penanda "<br>" tidak pernah tampil sebagai teks literal)
+    const teksBr = (s: string) => (
+      <>{String(s).split(/<br\s*\/?>/gi).map((seg, n) => (
+        <span key={`brseg-${n}`}>{n > 0 ? <br /> : null}{seg}</span>
+      ))}</>
+    );
     while (i < lines.length) {
       const t = lines[i].trim();
       if (!t || /^---+$/.test(t)) { i++; continue; }
@@ -311,8 +318,8 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
         }
         target.push(
           <table key={`tbl-${i}`} className="w-full text-xs border-collapse my-4">
-            <thead><tr>{head.map((h, k) => <th key={k} className="border border-border-strong px-2 py-1 text-left">{h}</th>)}</tr></thead>
-            <tbody>{rows.map((r, k) => <tr key={k}>{head.map((_, j) => <td key={j} className="border border-border-strong px-2 py-1">{r[j] || ''}</td>)}</tr>)}</tbody>
+            <thead><tr>{head.map((h, k) => <th key={k} className="border border-border-strong px-2 py-1 text-left">{teksBr(h)}</th>)}</tr></thead>
+            <tbody>{rows.map((r, k) => <tr key={k}>{head.map((_, j) => <td key={j} className="border border-border-strong px-2 py-1">{teksBr(r[j] || '')}</td>)}</tr>)}</tbody>
           </table>
         );
         continue;
