@@ -1214,7 +1214,10 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
     } = docx;
 
     const ident = pr.identitas || {};
-    const judul = String(pr.judul || '');
+    // Judul boleh diketik multi-baris oleh pengguna — rapikan dulu supaya kutipan judul
+    // di front matter (Kata Pengantar, Lembar Persetujuan dsb.) tak terpecah jadi
+    // beberapa paragraf terpisah (temuan verifikasi).
+    const judul = String(pr.judul || '').replace(/\s*\n\s*/g, ' ').trim();
     const jenisSelected = pr.jenis === 'tesis' ? 'Tesis' : pr.jenis === 'disertasi' ? 'Disertasi' : 'Skripsi';
     const tahun = new Date().getFullYear();
     const nama = String(ident.nama || '');
@@ -1585,7 +1588,7 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
       // Label tanpa nomor (paritas template): TEBAL hitam, tanpa nomor, tidak ikut TOC.
       // Flag i agar label lampiran gaya baru ("Kuesioner Variabel X", "IDENTITAS RESPONDEN 1-4")
       // ikut dikenali (#20).
-      const LABEL_TEBAL = /^(?:Definisi Konseptual|Definisi Operasional|Kisi-?Kisi Instrumen|Kisi-?Kisi Penelitian|Variabel [A-Z]\w*(?: dan [A-Z]\w*)?|Kuesioner (?:Variabel )?[A-Z]\w*(?: dan [A-Z]\w*)?|Pertanyaan Penyaring \(Screening Questions\)|Pertanyaan Penyaring|Identitas Responden(?:\s+\d+(?:-\d+)?)?|Kuesioner Utama|Deskriptif Data Demografis Responden|Analisis Statistik Deskriptif|Analisis Statistik Inferensial|Analisa Outer Model|Analisa Inner Model|Convergent Validity|Discriminant Validity|Cross Loading|Pengujian Hipotesis|Analisis Regresi Linear Berganda|Uji Reliabilitas|Uji Validitas|Uji Asumsi Klasik|Uji Hipotesis|Pengertian [A-Z]\w*(?: dan [A-Z]\w*)?|Dimensi dan Indikator [A-Z]\w*|Analisis Deskriptif|Tabulasi Data|Hasil Uji Asumsi Klasik|Uji Normalitas|Uji Multikolinearitas|Uji Heteroskedastisitas|KUESIONER UTAMA|Petunjuk Pengisian|Pilihan Jawaban|Variabel [A-Z][^.?!]{0,60}\))\s*:?\s*$/i;
+      const LABEL_TEBAL = /^(?:Definisi Konseptual|Definisi Operasional|Kisi-?Kisi Instrumen|Kisi-?Kisi Penelitian|Variabel [A-Z]\w*(?: dan [A-Z]\w*)?|Kuesioner (?:Variabel )?[A-Z][A-Za-z ]{0,40}(?: \([A-Z0-9]{1,4}\))?|Pertanyaan Penyaring \(Screening Questions\)|Pertanyaan Penyaring|Identitas Responden(?:\s+\d+(?:-\d+)?)?|Kuesioner Utama|Deskriptif Data Demografis Responden|Analisis Statistik Deskriptif|Analisis Statistik Inferensial|Analisa Outer Model|Analisa Inner Model|Convergent Validity|Discriminant Validity|Cross Loading|Pengujian Hipotesis|Analisis Regresi Linear Berganda|Uji Reliabilitas|Uji Validitas|Uji Asumsi Klasik|Uji Hipotesis|Pengertian [A-Z]\w*(?: dan [A-Z]\w*)?|Dimensi dan Indikator [A-Z]\w*|Analisis Deskriptif|Tabulasi Data|Hasil Uji Asumsi Klasik|Uji Normalitas|Uji Multikolinearitas|Uji Heteroskedastisitas|KUESIONER UTAMA|Petunjuk Pengisian|Pilihan Jawaban|Variabel [A-Z][^.?!]{0,60}\))\s*:?\s*$/i;
       // Label lampiran yang dipakai TEBAL + DIGARIS BAWAHI (#20 contoh format kuesioner)
       const LABEL_GARIS = /^(?:Identitas Responden(?:\s+\d+(?:-\d+)?)?|Petunjuk Pengisian)\s*:?\s*$/i;
       const LABEL_HURUF = /^\([a-e]\)\s+[A-Z][^.?!]{2,90}$/;
@@ -1721,9 +1724,11 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
         // hilang. Hapus tanda "#" saat H1 bab belum terbit (#15).
         const kandidatBab = sudahBab ? line : dt.replace(/^#{1,6}\s+/, '').replace(/\s+/g, ' ').trim();
         const mbab = kandidatBab.match(/^(BAB\s+[IVX]+)(?:\s+(.*))?$/i);
-        // fallback judul bab yang AI tulis tanpa kata "BAB": "4 HASIL ANALISIS DAN PEMBAHASAN"
+        // fallback judul bab yang AI tulis tanpa kata "BAB": "4 HASIL ANALISIS DAN PEMBAHASAN",
+        // termasuk varian ber-titik "2. TINJAUAN PUSTAKA" (dulu lolos ke cabang daftar bernomor
+        // sehingga heading bab-nya hilang dari dokumen & TOC)
         const mBabNum = !mbab && !sudahBab && kandidatBab.length < 100
-          ? kandidatBab.match(/^([IVX]{1,4}|\d{1,2})\s+([A-Z][A-Z0-9 ,\-&/]{3,70})$/) : null;
+          ? kandidatBab.match(/^([IVX]{1,4}|\d{1,2})\.?\s+([A-Z][A-Z0-9 ,\-&/]{3,70})$/) : null;
         if ((mbab && kandidatBab.length < 140) || mBabNum) {
           const romawi = mbab
             ? mbab[1].replace(/^BAB\s+/i, '').toUpperCase()

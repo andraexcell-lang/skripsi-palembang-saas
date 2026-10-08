@@ -109,7 +109,7 @@ async function daftarJudulTabel() {
     }
     return null;
   };
-  for (const label of [/^Kuesioner (?:Variabel )?[A-Z][A-Za-z ]{0,40}$/,
+  for (const label of [/^Kuesioner (?:Variabel )?[A-Z][A-Za-z ]{0,40}(?: \([A-Z0-9]{1,4}\))?$/,
     'Pertanyaan Penyaring (Screening Questions)', 'Identitas Responden', 'Petunjuk Pengisian']) {
     const b = runTebal(label);
     const nama = typeof label === 'string' ? label : 'Kuesioner <Variabel>';
