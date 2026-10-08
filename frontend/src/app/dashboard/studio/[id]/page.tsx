@@ -278,6 +278,53 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
     // Baris "BAB …" baru tampil → baris HURUF BESAR berikutnya ("PENDAHULUAN")
     // adalah NAMA BAB — ikut judul (tebal rata tengah), persis ekspor DOCX.
     let baruBab = false;
+    // Status caption (paritas ekspor DOCX Opsi A): nomor bab dari kunci konten,
+    // penghitung tabel, judul sub-bab aktif (fallback judul caption), dan judul
+    // objek tertunda dari baris "Judul Tabel:/Gambar:".
+    const NO_BAB: Record<string, number> = { bab1: 1, bab2: 2, bab3: 3, bab4: 4, bab5: 5 };
+    const lampiranAktif = active === 'lampiran';
+    const noBab = NO_BAB[active] || 0; // konstan per tab (satu renderDoc = satu bab)
+    let nTabel = 0, judulAktif = '', judulObjek = '';
+    // Label tebal tanpa nomor (paritas template; regex disalin dari ekspor DOCX) —
+    // "Definisi Konseptual", "Kuesioner Variabel X", "Petunjuk Pengisian", dst.
+    const LABEL_TEBAL = /^(?:Definisi Konseptual|Definisi Operasional|Kisi-?Kisi Instrumen|Kisi-?Kisi Penelitian|Variabel [A-Z]\w*(?: dan [A-Z]\w*)?|Kuesioner (?:Variabel )?[A-Z]\w*(?: dan [A-Z]\w*)?|Pertanyaan Penyaring \(Screening Questions\)|Pertanyaan Penyaring|Identitas Responden(?:\s+\d+(?:-\d+)?)?|Kuesioner Utama|Deskriptif Data Demografis Responden|Analisis Statistik Deskriptif|Analisis Statistik Inferensial|Analisa Outer Model|Analisa Inner Model|Convergent Validity|Discriminant Validity|Cross Loading|Pengujian Hipotesis|Analisis Regresi Linear Berganda|Uji Reliabilitas|Uji Validitas|Uji Asumsi Klasik|Uji Hipotesis|Pengertian [A-Z]\w*(?: dan [A-Z]\w*)?|Dimensi dan Indikator [A-Z]\w*|Analisis Deskriptif|Tabulasi Data|Hasil Uji Asumsi Klasik|Uji Normalitas|Uji Multikolinearitas|Uji Heteroskedastisitas|KUESIONER UTAMA|Petunjuk Pengisian|Pilihan Jawaban|Variabel [A-Z][^.?!]{0,60}\))\s*:?\s*$/i;
+    // Label yang dipakai tebal + DIGARIS BAWAHI (paritas contoh format kuesioner #20)
+    const LABEL_GARIS = /^(?:Identitas Responden(?:\s+\d+(?:-\d+)?)?|Petunjuk Pengisian)\s*:?\s*$/i;
+    // Caption "Tabel 2.1 <judul>" — tebal rata tengah di ATAS objek (paritas DOCX);
+    // lampiran memakai nomor "Tabel L<n>". Tanpa nomor bab (pustaka/abstrak) → tanpa caption.
+    const caption = (label: 'Tabel' | 'Gambar', n: number, judul?: string) => {
+      if (!noBab && !lampiranAktif) return;
+      const nomor = lampiranAktif ? `${label} L${n}` : `${label} ${noBab}.${n}`;
+      target.push(
+        <p key={`cap-${label}-${n}`} className="mt-3 mb-1 text-center text-xs font-bold text-text-primary">
+          {nomor}{judul ? ` ${judul}` : ''}
+        </p>
+      );
+    };
+    // Penomoran daftar (paritas ekspor DOCX #3/#5/#6): hierarki 1. → a. → 1). → a).
+    // Marker "nol bullet" — baris "-", "*", "•" ikut dihitung jadi angka. Setiap tingkat
+    // tampil dihitung sendiri dan di-reset tiap kali tingkat di atasnya maju (persis
+    // numbering multilevel Word), plus keputusan "lanjut/blok baru" meniru pushNum backend.
+    let blokList = 0; // blok daftar aktif (0 = belum ada / tertutup)
+    let prevListW = false; // baris sebelumnya masih butir daftar (pemutus blok tingkat-0)
+    const hitungW: Record<number, number> = {};
+    let mdList: RegExpMatchArray | null = null; // hasil regex daftar per baris (dipakai cabang daftar)
+    const resetDaftar = () => {
+      blokList = 0; prevListW = false;
+      for (const k of Object.keys(hitungW)) delete hitungW[+k];
+    };
+    const tingkatDari = (tanda: string, ind: number): number => {
+      if (tanda === '-' || tanda === '*' || tanda === '•') return ind >= 12 ? 3 : ind >= 8 ? 2 : ind >= 4 ? 1 : 0;
+      if (/^\d/.test(tanda)) return tanda.endsWith(')') ? 2 : 0;
+      return tanda.endsWith(')') ? 3 : 1; // [a-z]
+    };
+    const tandaList = (lvl: number, n: number): string => {
+      const huruf = String.fromCharCode(96 + ((n - 1) % 26) + 1); // 1→a, 2→b, …
+      if (lvl === 0) return `${n}.`;
+      if (lvl === 1) return `${huruf}.`;
+      if (lvl === 2) return `${n})`;
+      return `${huruf})`;
+    };
     // Tabel markdown: pipe eksternal opsional + sel kosong dipertahankan —
     // parser identik dengan ekspor DOCX (proyek "No | Nama (Tahun) | …" tampil sebagai tabel juga)
     const sel = (s: string) => s.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim());
@@ -293,19 +340,28 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
       ))}</>
     );
     while (i < lines.length) {
-      const t = lines[i].trim();
+      const raw = lines[i];
+      const t = raw.trim();
       if (!t || /^---+$/.test(t)) { i++; continue; }
-      // Judul tabel/gambar ("Judul Tabel: …") — tampil sebagai NAMA objek di atasnya
-      // (paritas caption DOCX; baris ini dipakai parser Word jadi "Tabel 2.1 …")
+      // Status baris sebelumnya (untuk logika lanjut-blok daftar) — baris kosong/---
+      // tidak memutus rentetan daftar (paritas backend), jadi reset di bawah skip keduanya.
+      const prevSebelum = prevListW;
+      prevListW = false; // default: baris ini bukan daftar; cabang daftar akan set true
+      // Judul tabel/gambar ("Judul Tabel: …") — Opsi A (paritas contoh #4): paragraf
+      // rata kiri spasi 1, dan judulnya dipakai jadi caption "Tabel 2.1 …" di atas objek
       if (/^Judul\s+(Tabel|Gambar)\s*:/i.test(t)) {
         baruBab = false;
+        const mJo = t.match(/^Judul\s+(Tabel|Gambar)\s*:\s*(.{2,400})$/i);
+        if (mJo) judulObjek = mJo[2].replace(/\*\*/g, '').trim();
         target.push(
-          <p key={`judul-objek-${i}`} className="mt-4 mb-1 text-center text-xs font-semibold tracking-wide text-text-secondary">
+          <p key={`judul-objek-${i}`} className="mt-4 mb-0 text-left text-xs leading-snug text-text-secondary">
             {cleanMd(t)}
           </p>
         );
         i++; continue;
       }
+      // Judul tertunda tapi objek berikutnya bukan tabel → buang (paragrafnya sudah tercetak)
+      if (judulObjek && !(t.includes('|') && i + 1 < lines.length && pemisah(lines[i + 1].trim()))) judulObjek = '';
       if (t.includes('|') && i + 1 < lines.length && pemisah(lines[i + 1].trim())) {
         baruBab = false;
         const head = sel(t).map(cleanMd);
@@ -316,12 +372,28 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
           rows.push(sel(lines[i]).map(cleanMd));
           i++;
         }
+        // Caption "Tabel 2.1 <judul>" di atas tabel (paritas DOCX Opsi A)
+        nTabel++;
+        caption('Tabel', nTabel, judulObjek || judulAktif);
+        judulObjek = '';
         target.push(
           <table key={`tbl-${i}`} className="w-full text-xs border-collapse my-4">
-            <thead><tr>{head.map((h, k) => <th key={k} className="border border-border-strong px-2 py-1 text-left">{teksBr(h)}</th>)}</tr></thead>
-            <tbody>{rows.map((r, k) => <tr key={k}>{head.map((_, j) => <td key={j} className="border border-border-strong px-2 py-1">{teksBr(r[j] || '')}</td>)}</tr>)}</tbody>
+            <thead><tr>{head.map((h, k) => <th key={k} className="border border-border-strong px-2 py-1 text-left font-semibold">{teksBr(h)}</th>)}</tr></thead>
+            <tbody>{rows.map((r, k) => <tr key={k}>{head.map((_, j) => <td key={j} className="border border-border-strong px-2 py-1 align-top">{teksBr(r[j] || '')}</td>)}</tr>)}</tbody>
           </table>
         );
+        // Item 12: baris "Sumber:" menempel mepet di bawah tabel (paritas DOCX)
+        let js = i;
+        while (js < lines.length && !lines[js].trim()) js++;
+        const barisSumber = (lines[js] || '').replace(/\*\*/g, '').trim();
+        if (/^Sumber\s*:/i.test(barisSumber)) {
+          target.push(
+            <p key={`sumber-${js}`} className="mt-0 mb-3 text-left text-xs leading-snug text-text-secondary">
+              {barisSumber}
+            </p>
+          );
+          i = js + 1;
+        }
         continue;
       }
       const dt = cleanMd(t);
@@ -330,6 +402,7 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
         // (sebelumnya hanya "BAB X" murni yang match — judul satubar dianggap paragraf)
         target.push(<h3 key={i} className="text-center font-bold text-base mt-6 mb-3">{dt}</h3>);
         baruBab = /^BAB\s+[IVX0-9]+/i.test(dt);
+        resetDaftar(); // judul bab memutus rentetan daftar → penomoran mulai blok baru
       } else if (baruBab && !/^\d/.test(dt) && dt.length < 80 && dt === dt.toUpperCase() && /[A-Z]{3,}/.test(dt)) {
         // Nama bab dua baris ("BAB I" ⏎ "PENDAHULUAN") → judul kedua, tebal rata tengah
         target.push(<h3 key={`bab-nama-${i}`} className="text-center font-bold text-base mt-0 mb-3">{dt}</h3>);
@@ -337,8 +410,10 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
       } else if (/^\d+\.\d+\.?\s+\S/.test(dt)) {
         // Sub-bab baru (boleh "1.1 Judul" atau "1.1. Judul") → kelompok sendiri untuk kontrol Perkaya / Hapus
         baruBab = false;
+        judulAktif = dt.replace(/^\d+\.\d+\.?\s+/, ''); // fallback judul caption (paritas DOCX)
         bagian.push({ raw: dt, anak: [] });
         target = bagian[bagian.length - 1].anak;
+        resetDaftar(); // sub-bab baru memutus rentetan daftar → penomoran mulai blok baru
       } else if (editIdx === i) {
         // Editor inline (paritas referensi): textarea + petunjuk Markdown, simpan saat blur
         baruBab = false;
@@ -358,18 +433,64 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
             </p>
           </div>
         );
+      } else if ((mdList = t.match(/^(\d{1,2}\.|\d{1,2}\)|[a-z]\.|[a-z]\)|[-*•])\s+(.*)$/i))) {
+        // Butir daftar → hierarki 1. → a. → 1). → a). (paritas DOCX #3/#5/#6). Marker
+        // "nol bullet" — "-", "*", "•" dihitung jadi angka. Nomor tampil dihitung sendiri
+        // (tiap tingkat reset saat tingkat di atasnya maju, persis numbering multilevel
+        // Word) + keputusan blok-baru meniru pushNum backend (nomor sumber / baris sebelumnya).
+        baruBab = false;
+        const tanda = mdList[1];
+        const isi = mdList[2];
+        const ind = (raw.match(/^[ \t]*/) || [''])[0].length;
+        const lvl = tingkatDari(tanda, ind);
+        const nomor = /^\d/.test(tanda) ? +tanda.replace(/[.)]$/, '') : undefined;
+        // Tingkat >0 selalu menyambung blok aktif; tingkat 0 hanya bila nomor sumber
+        // lanjutan ATAU baris sebelumnya masih butir daftar (paritas pushNum).
+        const lanjut = blokList > 0 && (lvl > 0
+          ? true
+          : nomor != null ? nomor >= (hitungW[0] || 0) + 1 : prevSebelum);
+        if (!lanjut) { blokList = 1; for (const k of Object.keys(hitungW)) delete hitungW[+k]; }
+        hitungW[lvl] = (hitungW[lvl] || 0) + 1;
+        for (let d = lvl + 1; d <= 3; d++) delete hitungW[d]; // tingkat dalam reset saat maju
+        prevListW = true;
+        const tampil = tandaList(lvl, hitungW[lvl]);
+        const tebalItem = LABEL_TEBAL.test(cleanMd(isi));
+        const idxL = i;
+        target.push(
+          <p
+            key={`list-${idxL}`}
+            onClick={(e) => { if ((e.target as HTMLElement).closest('a')) return; mulaiEdit(idxL, lines[idxL]); }}
+            style={{ paddingLeft: `${1 + lvl * 1.5}rem` }}
+            className={`cursor-text -mx-1 mb-1 rounded-md px-1 text-justify leading-relaxed transition-colors hover:bg-brand-primary/5${tebalItem ? ' font-semibold' : ''}`}
+          >
+            <span className="mr-1 select-none text-text-secondary">{tampil}</span>
+            {renderSitasi(cleanMd(isi), `l${idxL}-`)}
+          </p>
+        );
+        i++; continue;
       } else {
         // `idx` ditangkap per-iterasi: `i` adalah variabel loop yang nilainya berubah
         // setelah renderDoc selesai, sehingga penutup (closure) tak boleh memakai `i` langsung.
         baruBab = false;
         const idx = i;
+        const teks = cleanMd(t);
+        // Paritas DOCX: label tebal tanpa nomor (LABEL_GARIS ikut digarisbawahi),
+        // baris "Sumber:" rata kiri tanpa indeks — paragraf biasa tetap justify + indent-8.
+        const garis = LABEL_GARIS.test(teks);
+        const tebal = garis || LABEL_TEBAL.test(teks);
+        const sumber = /^Sumber\s*:/i.test(teks);
+        const kelas = tebal
+          ? `cursor-text -mx-1 mb-2 rounded-md px-1 text-left font-semibold leading-snug transition-colors hover:bg-brand-primary/5${garis ? ' underline underline-offset-2' : ''}`
+          : sumber
+            ? 'cursor-text -mx-1 mb-2 rounded-md px-1 text-left text-xs leading-snug text-text-secondary transition-colors hover:bg-brand-primary/5'
+            : 'cursor-text -mx-1 mb-3 rounded-md px-1 text-justify indent-8 leading-relaxed transition-colors hover:bg-brand-primary/5';
         target.push(
           <p
             key={idx}
             onClick={(e) => { if ((e.target as HTMLElement).closest('a')) return; mulaiEdit(idx, lines[idx]); }}
-            className="cursor-text -mx-1 mb-3 rounded-md px-1 text-justify indent-8 leading-relaxed transition-colors hover:bg-brand-primary/5"
+            className={kelas}
           >
-            {renderSitasi(cleanMd(t), `l${idx}-`)}
+            {renderSitasi(teks, `l${idx}-`)}
           </p>
         );
       }
