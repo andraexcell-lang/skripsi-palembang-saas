@@ -347,20 +347,15 @@ export default function StudioWorkspace({ params }: { params: Promise<{ id: stri
       // tidak memutus rentetan daftar (paritas backend), jadi reset di bawah skip keduanya.
       const prevSebelum = prevListW;
       prevListW = false; // default: baris ini bukan daftar; cabang daftar akan set true
-      // Judul tabel/gambar ("Judul Tabel: …") — Opsi A (paritas contoh #4): paragraf
-      // rata kiri spasi 1, dan judulnya dipakai jadi caption "Tabel 2.1 …" di atas objek
+      // Judul tabel/gambar ("Judul Tabel: …") — OPSI B (diputuskan owner): paragraf
+      // TIDAK dicetak; teksnya hanya dipakai jadi caption "Tabel 2.1 …" di atas objek
       if (/^Judul\s+(Tabel|Gambar)\s*:/i.test(t)) {
         baruBab = false;
         const mJo = t.match(/^Judul\s+(Tabel|Gambar)\s*:\s*(.{2,400})$/i);
         if (mJo) judulObjek = mJo[2].replace(/\*\*/g, '').trim();
-        target.push(
-          <p key={`judul-objek-${i}`} className="mt-4 mb-0 text-left text-xs leading-snug text-text-secondary">
-            {cleanMd(t)}
-          </p>
-        );
         i++; continue;
       }
-      // Judul tertunda tapi objek berikutnya bukan tabel → buang (paragrafnya sudah tercetak)
+      // Judul tertunda tapi objek berikutnya bukan tabel → buang (tak ada paragraf yang dicetak)
       if (judulObjek && !(t.includes('|') && i + 1 < lines.length && pemisah(lines[i + 1].trim()))) judulObjek = '';
       if (t.includes('|') && i + 1 < lines.length && pemisah(lines[i + 1].trim())) {
         baruBab = false;

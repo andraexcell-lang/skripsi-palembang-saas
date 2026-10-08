@@ -335,7 +335,7 @@ type Ekstra = { bagan?: 'kirim' | 'ai'; baganTeks?: string; populasi?: string; t
 /* ===== PROMPT STRUKTUR BAKU BARU KHUSUS TESIS KUANTITATIF =====
    Diterjemahkan dari instruksi "INSTRUKSI UNTUK PROMPT" + contoh isi pada
    TEMPLATE TESIS.docx (pemilik template = format baku yang diminta owner). */
-const TESIS_BAB2 = `Sumber & keabsahan rujukan (wajib untuk seluruh BAB II): artikel yang disitasi harus NYATA — terbit di jurnal terindeks SINTA (S1–S4), Scopus, atau Web of Science, ATAU jurnal internasional bereputasi; buku rujukan harus penerbit terakreditasi/terindeks. Bila daftar referensi berisi tahun < 2023, JANGAN dipakai untuk Bab II (kecuali teori klasik yang sudah umum & universal). DILARANG mengarang nama jurnal, tahun, DOI, atau tautan apa pun. Bila teori klasik (Maslow, Herzberg, Taylor, dll.) dibutuhkan, cukup sebutkan nama ahli & tahunnya di teks tanpa menempelkannya ke jurnal modern mana pun.
+const TESIS_BAB2 = `Sumber & keabsahan rujukan (wajib untuk seluruh BAB II): artikel yang disitasi harus NYATA — terbit di jurnal terindeks SINTA (S1–S4), Scopus, atau Web of Science, ATAU jurnal internasional bereputasi. Status indeks tidak bisa diverifikasi otomatis: bila kamu RAGU sebuah jurnal terindeks SINTA/Scopus/WoS, JANGAN sitas — pilih rujukan lain yang lebih pasti; dilarang mengklaim atau mengarang status terindeks. Buku rujukan wajib penerbit terakreditasi/terindeks DAN tahun ≥ 2023. Rujukan tahun < 2023 JANGAN dipakai untuk Bab II — KECUALI teori klasik/seminal yang sudah umum & universal (mis. Maslow 1943, Herzberg 1959, Taylor, Likert, Vroom 1964, Kahn 1990, Schaufeli & Bakker 2004 — tahun terbit teori klasik bebas). DILARANG mengarang nama jurnal, tahun, DOI, atau tautan apa pun. Untuk teori klasik cukup sebutkan nama ahli & tahunnya di teks (bila perlu dengan penerbit bukunya) tanpa menempelkannya ke jurnal modern mana pun.
 Struktur wajib BAB II (TEPAT 4 sub-bagian): 2.1 Kajian Pustaka, 2.2 Hasil Penelitian Yang Relevan, 2.3 Kerangka Berpikir, 2.4 Hipotesis Penelitian.
 PANDUAN ISI per sub (urutan wajib diikuti):
 - 2.1 Kajian Pustaka — untuk SETIAP variabel dalam judul dengan urutan: variabel dependen (Y) dulu, lalu variabel mediasi/moderasi (bila ada), lalu X1, X2. Tiap variabel menjadi sub-bab "2.1.x <Nama Variabel>" yang berisi sub-sub BERTINGKAT bernomor:
@@ -569,7 +569,7 @@ PANDUAN ISI per sub:
   const s6 = subsNum('lampiran');
   const strukturL = tesisKuant && s6.length
     ? `Sub-bagian urut TEPAT: ${s6.join(', ')} — isi per sub-bagian:
-- 6.1 Kuesioner: urutan WAJIB (tanpa bagian screening/Pertanyaan Penyaring — hapus sama sekali): (i) salam pembuka + identitas penulis + judul lengkap + tujuan penelitian + jaminan kerahasiaan jawaban + penutup; (ii) baris tautan Google Form milik penulis bila ada (bila belum punya, tulis "[Link Google Form — diisi penulis]"); (iii) label "IDENTITAS RESPONDEN 1-4" lalu baris bertitik-titik untuk Nama, NIM, Program Studi, Email; (iv) label "PETUNJUK PENGISIAN" lalu daftar BERNOMOR petunjuk pengisian (1., 2., 3. tanpa bullet) diikuti baris "Jawaban : Sangat Setuju (SS) = 5, Setuju (S) = 4, Kurang Setuju (KS) = 3, Tidak Setuju (TS) = 2, Sangat Tidak Setuju (STS) = 1"; (v) PER VARIABEL sesuai urutan judul: baris label "Kuesioner <Nama Variabel>" lalu TABEL markdown PERSIS 7 kolom "NO | PERNYATAAN | SS | S | KS | TS |STS" berisi butir pernyataan tiap indikator (kolom SS s.d. STS dikosongkan untuk diisi responden). WAJIB KECOCOKAN: jumlah butir pernyataan tiap variabel PERSIS SAMA dengan jumlah indikator pada kisi-kisi Bab 3.3 (konteks kisi-kisi disertakan di bawah — satu indikator satu butir, kode item dibawa persis KM01…dst.), jangan menambah/mengurangi butir di luar indikator. SEBELUM tiap tabel di Lampiran tulis baris "Judul Tabel: <deskripsi isi tabel>" tanpa nomor (mis. "Judul Tabel: Butir Kuesioner Budaya Kerja Digital X1") dan SETELAH tiap tabel tulis baris "Sumber: Kuesioner penelitian ini" — judul mencerminkan isi tabel, dilarang mengulang judul sub-bab.
+- 6.1 Kuesioner: urutan WAJIB (tanpa bagian screening/Pertanyaan Penyaring — hapus sama sekali): (i) salam pembuka + identitas penulis + judul lengkap + tujuan penelitian + jaminan kerahasiaan jawaban + penutup; (ii) baris tautan Google Form milik penulis bila ada (bila belum punya, tulis "[Link Google Form — diisi penulis]"); (iii) label "IDENTITAS RESPONDEN 1-4" lalu baris bertitik-titik untuk Nama, NIM, Program Studi, Email; (iv) label "PETUNJUK PENGISIAN" lalu daftar BERNOMOR petunjuk pengisian (1., 2., 3. tanpa bullet) diikuti baris "Jawaban : Sangat Setuju (SS) = 5, Setuju (S) = 4, Kurang Setuju (KS) = 3, Tidak Setuju (TS) = 2, Sangat Tidak Setuju (STS) = 1"; (v) PER VARIABEL sesuai urutan judul: baris label "Kuesioner <Nama Variabel>" lalu TABEL markdown PERSIS 7 kolom "NO | PERNYATAAN | SS | S | KS | TS |STS" berisi butir pernyataan tiap indikator (kolom SS s.d. STS dikosongkan untuk diisi responden). WAJIB KECOCOKAN: jumlah butir pernyataan tiap variabel PERSIS SAMA dengan jumlah indikator pada kisi-kisi Bab 3.3 (konteks kisi-kisi disertakan di bawah — satu indikator satu butir, kode item disalin PERSIS dari kisi-kisi termasuk awalan hurufnya (jangan disingkat/diubah — mis. BKD01 tetap BKD01, bukan KD01)), jangan menambah/mengurangi butir di luar indikator. SEBELUM tiap tabel di Lampiran tulis baris "Judul Tabel: <deskripsi isi tabel>" tanpa nomor (mis. "Judul Tabel: Butir Kuesioner Budaya Kerja Digital X1") dan SETELAH tiap tabel tulis baris "Sumber: Kuesioner penelitian ini" — judul mencerminkan isi tabel, dilarang mengulang judul sub-bab.
 - 6.2 Hasil Tabulasi Data Responden: KOSONG — hanya judul sub-bab lalu satu baris penanda "[Diisi setelah data responden terkumpul]" tanpa tabel apa pun.
 - 6.3 Hasil Deskriptif Jawaban Responden: KOSONG — hanya judul sub-bab lalu satu baris penanda "[Diisi setelah tabulasi data diolah]" tanpa tabel apa pun.
 - 6.4 Hasil Olah Data: KOSONG — hanya judul sub-bab lalu satu baris penanda "[Diisi setelah hasil olah software tersedia]" tanpa tabel apa pun.
@@ -604,7 +604,11 @@ PANDUAN ISI per sub:
     if (mul < 0) return '';
     const sisa = b3.slice(mul);
     const akhir = sisa.search(/^3\.4\s+\S/m);
-    return (akhir > 0 ? sisa.slice(0, akhir) : sisa).slice(0, 9000);
+    // Cap 9000 lama MEMOTONG kisi-kisi: bagian 3.3 bisa ±16.000 kar (Budaya Kerja
+    // Digital & Work Overload ada di luar window) → kode item terpotong, lampiran
+    // mengarang kode sendiri (KD01 alih-alih BKD01). Cap dinaikkan agar seluruh
+    // 3.3 muat; tetap dibatasi 24.000 kar sebagai pengaman bila 3.3 raksasa.
+    return (akhir > 0 ? sisa.slice(0, akhir) : sisa).slice(0, 24000);
   })();
 
   // Opsi A (upload .xlsx/.csv): data tabulasi milik user → angka Bab IV WAJIB dari
@@ -1581,9 +1585,9 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
           ],
         }));
       };
-      // Opsi A (paritas contoh #4): baris "Judul Tabel: …" dicetak sebagai paragraf
-      // rata kiri spasi 1 tepat di atas caption+table saat barisnya dibaca, jadi flush
-      // cukup membuang judul yang menunggu — tanpa mencetak ulang.
+      // OPSI B (diputuskan owner): baris "Judul Tabel: …" tidak dicetak sama sekali —
+      // hanya mengisi judulObjek untuk caption; flush cukup membuang judul yang
+      // menunggu (tak ada paragraf yang pernah terbit).
       const flushJudul = () => { judulObjek = ''; };
       // Label tanpa nomor (paritas template): TEBAL hitam, tanpa nomor, tidak ikut TOC.
       // Flag i agar label lampiran gaya baru ("Kuesioner Variabel X", "IDENTITAS RESPONDEN 1-4")
@@ -1646,13 +1650,12 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
         const mj = line.match(/^Judul\s+(Tabel|Gambar)\s*:\s*(.{2,400})$/i);
         if (mj) {
           judulObjek = mj[2].trim();
-          // Opsi A (paritas contoh #4): paragraf "Judul Tabel: …" tetap dicetak — rata kiri,
-          // spasi 1 (P() mengenali pola ini) — persis di atas caption + objeknya.
-          P(line.replace(/\*\*/g, ''));
+          // OPSI B (diputuskan owner): paragraf "Judul Tabel: …" TIDAK dicetak —
+          // baris ini hanya jadi sumber teks caption "Tabel n.n <judul>".
           i++; prevList = false; continue;
         }
         // Judul tertunda tapi objek berikutnya bukan tabel/bagan → buang saja
-        // (paragrafnya sudah tercetak saat barisnya dibaca — jangan dicetak ulang)
+        // (tak ada paragraf yang pernah dicetak — cukup reset judulObjek)
         if (judulObjek && !(dt.includes('|') && i + 1 < lines.length && barisPemisah(lines[i + 1]))
           && !(pendek(i) && pendek(i + 1))) flushJudul();
 

@@ -6,8 +6,9 @@
  *   - spasi 2 (line 480) untuk semua tulisan; spasi 1 (240) hanya caption/tabel/Sumber;
  *     TIDAK boleh ada sisa line 360 (spasi 1.5 lama)
  *   - TOC 3 tingkat (\o "1-3")
- *   - baris "Judul Tabel:" AI tidak tampil polos — sudah jadi caption "Tabel 3.1 <nama>"
- *     (daftar nama diambil dari konten proyek di DB bila project-id diberikan)
+ *   - OPSI B: baris "Judul Tabel:" TIDAK dicetak sama sekali — hanya jadi sumber
+ *     judul caption "Tabel 3.1 <nama>" (daftar nama diambil dari konten proyek di DB
+ *     bila project-id diberikan)
  *   - caption lampiran "Tabel L1"
  *   - label tanpa nomor dicetak TEBAL
  *   - paragraf "Sumber :" & caption memakai spasi 1
@@ -63,23 +64,16 @@ async function daftarJudulTabel() {
   const tocOk = /\\o\s+(&quot;|")1-3(&quot;|")/.test(xml);
   cek('TOC 3 tingkat (\\o "1-3")', tocOk, tocOk ? 'field TOC 1-3' : 'belum 1-3');
 
-  /* —— Judul tabel jadi caption (item 2) + Opsi A ——
+  /* —— Judul tabel jadi caption (item 2) + OPSI B ——
          Caption: <w:t>Tabel 3.</w:t> lalu <w:fldSimple instr="SEQ Tabel \s 1"> → angka
          datang dari field, jadi "Tabel 3.1" tak pernah muncul literal.
-         OPSI A (diputuskan owner — paritas contoh #4): paragraf "Judul Tabel: …" MEMANG
-         sengaja dicetak — rata kiri, spasi 1 — persis di atas caption "Tabel n.n <judul>"
-         dan objeknya; jadi keberadaannya justru wajib (bukan kegagalan). —— */
+         OPSI B (diputuskan owner — menggantikan Opsi A): baris "Judul Tabel: …" HANYA
+         jadi sumber judul caption; paragrafnya TIDAK dicetak ke dokumen. Kehadiran
+         namanya di caption dibuktikan lewat check "nama dari … muncul sebagai caption"
+         (diambil dari konten proyek di DB). —— */
   const barisJudul = [...xml.matchAll(/<w:t[^>]*>(Judul (?:Tabel|Gambar): [^<]{2,400})<\/w:t>/g)];
-  let judulRapi = barisJudul.length > 0; let jelek = 0;
-  for (const mj of barisJudul) {
-    const par = paragrafDi(mj.index);
-    const sesudah = xml.slice(mj.index, mj.index + 1500);
-    const adaCaption = /<w:t[^>]*>(Tabel|Gambar) /.test(sesudah) && /SEQ (Tabel|Gambar)/.test(sesudah);
-    const ok = par.includes('w:line="240"') && /w:jc w:val="left"/.test(par) && adaCaption;
-    if (!ok) { judulRapi = false; jelek++; }
-  }
-  cek('paragraf "Judul Tabel:" rata kiri spasi 1 + caption di bawahnya (Opsi A)', judulRapi,
-    barisJudul.length ? `${barisJudul.length} paragraf · ${jelek} tidak rapi` : 'tidak ada sama sekali');
+  cek('paragraf "Judul Tabel:" tak dicetak (Opsi B)', barisJudul.length === 0,
+    barisJudul.length ? `${barisJudul.length} paragraf masih tampil — harusnya nol` : '0 — hanya dipakai jadi caption');
   const capBab = n(/Tabel 3\./g);
   cek('caption "Tabel 3." + field SEQ ada', capBab > 0 && n(/SEQ Tabel/g) >= capBab, `${capBab} caption bab-3 · ${n(/SEQ Tabel/g)} field SEQ`);
   let daftar = [];
@@ -109,10 +103,15 @@ async function daftarJudulTabel() {
     }
     return null;
   };
-  for (const label of [/^Kuesioner (?:Variabel )?[A-Z][A-Za-z ]{0,40}(?: \([A-Z0-9]{1,4}\))?$/,
-    'Pertanyaan Penyaring (Screening Questions)', 'Identitas Responden', 'Petunjuk Pengisian']) {
+  // Label dicari case-insensitive + boleh bersufiks ("IDENTITAS RESPONDEN 1-4") —
+  // format baru #20 menulisnya HURUF KAPITAL, format lama title case; keduanya
+  // wajib bold (LABEL_GARIS/LABEL_TEBAL di exporter memakai pola sama).
+  for (const [label, nama] of [
+    [/^Kuesioner (?:Variabel )?[A-Z][A-Za-z ]{0,40}(?: \([A-Z0-9]{1,4}\))?$/, 'Kuesioner <Variabel>'],
+    ['Pertanyaan Penyaring (Screening Questions)', 'Pertanyaan Penyaring (Screening Questions)'],
+    [/^identitas responden(?:\s+\d+(?:-\d+)?)?$/i, 'Identitas Responden'],
+    [/^petunjuk pengisian$/i, 'Petunjuk Pengisian']]) {
     const b = runTebal(label);
-    const nama = typeof label === 'string' ? label : 'Kuesioner <Variabel>';
     if (b === null) console.log(`SKIP | label "${nama}" — tidak ada di dokumen`);
     else cek(`label "${nama}" TEBAL`, b === true, b ? 'bold ✓' : 'bukan bold');
   }

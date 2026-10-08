@@ -199,11 +199,22 @@ const selesai = (kode) => { process.exitCode = kode; return; };
   }
   if (content.lampiran && tesisKuant) {
     const t = String(content.lampiran);
-    cek('lampiran punya kuesioner + screening', /penyaring|screening/i.test(t) && /Kuesioner/i.test(t), '6.1 Kuesioner');
-    cek('lampiran opsi Likert checkbox', /☐/.test(t), 'kotak pilihan responden');
+    // Format baru #19/#20 (diputuskan owner): 6.1 Kuesioner TANPA bagian
+    // screening/Pertanyaan Penyaring dan TANPA checkbox ☐ — kolom SS s.d. STS
+    // justru DIKOSONGKAN untuk diisi responden (tabel 7 kolom).
+    cek('lampiran 6.1 kuesioner tanpa screening (format #19)',
+      /Kuesioner/i.test(t) && !/penyaring|screening/i.test(t),
+      /Kuesioner/i.test(t)
+        ? (/penyaring|screening/i.test(t) ? 'masih ada bagian screening/penyaring' : 'kuesioner ada · screening nol')
+        : 'label "Kuesioner" tak ada');
+    cek('lampiran tabel kuesioner 7 kolom SS–STS (tanpa ☐, format #20)',
+      /NO\s*\|\s*PERNYATAAN\s*\|/i.test(t) && /Jawaban\s*:\s*Sangat Setuju \(SS\)\s*=\s*5/.test(t) && !/☐/.test(t),
+      `${/NO\s*\|\s*PERNYATAAN\s*\|/i.test(t) ? 'header 7 kolom ✓' : 'header 7 kolom HILANG'} · ${/Jawaban\s*:\s*Sangat Setuju \(SS\)\s*=\s*5/.test(t) ? 'baris Jawaban ✓' : 'baris Jawaban HILANG'} · ${/☐/.test(t) ? 'ada ☐ (harusnya kosong)' : 'tanpa ☐'}`);
     cek('lampiran placeholder Turnitin jujur', /Turnitin/i.test(t) && !/persentase\s*:\s*\d+\s*%/i.test(t), 'tanpa angka similarity karangan');
-    // Butir kuesioner = indikator kisi-kisi Bab 3.3 (item 8) — dibandingkan lewat kode item
-    const kode = (s) => [...new Set(String(s).match(/\b[A-Z]{2}\d{2}\b/g) || [])].sort();
+    // Butir kuesioner = indikator kisi-kisi Bab 3.3 (item 8) — dibandingkan lewat kode item.
+    // {2,4} huruf: kode bisa 3–4 huruf (BKD01 = Budaya Kerja Digital) — regex {2} lama
+    // tak mengenali BKD, padahal kisi-kisi memakainya.
+    const kode = (s) => [...new Set(String(s).match(/\b[A-Z]{2,4}\d{2}\b/g) || [])].sort();
     const k3 = kode(content.bab3 || '');
     if (k3.length) {
       const kL = kode(t);
