@@ -99,6 +99,18 @@
 </div>
 <script>
 (function () {
+  // Penangkap error JavaScript — dikirim ke add-in agar tercatat di addin.log
+  // (debug senyap di WebView2 mustahil dilihat pengguna).
+  try {
+    window.addEventListener('error', (e) => {
+      if (window.chrome && window.chrome.webview)
+        window.chrome.webview.postMessage({ cmd: 'errJs', data: { pesan: (e.message || 'error') + ' @baris ' + e.lineno } });
+    });
+    window.addEventListener('unhandledrejection', (e) => {
+      if (window.chrome && window.chrome.webview)
+        window.chrome.webview.postMessage({ cmd: 'errJs', data: { pesan: 'reject: ' + String((e.reason && e.reason.message) || e.reason) } });
+    });
+  } catch (e) {}
   const $ = (id) => document.getElementById(id);
   const api = () => ($('api').value || '').replace(/\/$/, '');
   const key = () => $('key').value.trim();
