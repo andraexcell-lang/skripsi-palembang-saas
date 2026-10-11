@@ -372,8 +372,10 @@
       if (act === 'gen') btn.onclick = () => genSub(b, btn.getAttribute('data-sub'), btn);
       else if (act === 'heading') btn.onclick = async () => {
         try {
-          const judul = OUTLINE[b] ? OUTLINE[b].bab : b;
-          await kirim('sisip', { posisi: 'kursor', blok: [{ teks: judul, bold: true, size: 14 }] });
+          // Paritas Mantra: "BAB I PENDAHULUAN" huruf kapital = Heading 1, 20pt,
+          // rata tengah, diawal halaman baru — otomatis jadi entri DAFTAR ISI.
+          const judul = (OUTLINE[b] ? OUTLINE[b].bab : b).toUpperCase();
+          await kirim('sisip', { posisi: 'kursor', blok: [{ teks: judul, heading: 1, center: true, bold: true, size: 20, mulaiHalaman: true }] });
         } catch (e) { msg2('Error: ' + e.message); }
       };
       else if (act === 'del') btn.onclick = () => {
