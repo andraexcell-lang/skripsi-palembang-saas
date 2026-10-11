@@ -380,6 +380,21 @@ Lanjutan uji pada dokumen yang sama (`%TEMP%\opencode\bab1-paritas.docx`, proyek
 
 **Catatan pemakaian (bukan bug)**: sub baru disisipkan di **posisi kursor** (paritas Mantra, terdokumentasi di `Jembatan.SisipSub`). Skrip uji menyetel kursor ke akhir dokumen sebelum tiap klik — saat itu akhir dokumen = setelah dapus (dapus dibuat pada uji Bab I), sehingga 2.1–2.6 sempat mendarat **setelah** DAFTAR PUSTAKA; dirapikan dengan memindah blok dapus (Cut/Paste COM) ke akhir. Pemakaian normal: letakkan kursor setelah judul bab (hasil klik "▶ Judul bab" sudah tepat — kursor otomatis merayap setelah sub terakhir saat generate berurutan). TOC belum di-refresh untuk Bab II (F9 manual). Skrip uji UIA di `%TEMP%\opencode\`: `bab2-a-recon.ps1`, `bab2-b-buka.ps1`, `bab2-c-generate.ps1`, `bab2-d-inspect.ps1`, `bab2-e-rapi.ps1`, `bab2-f-akhir.ps1`.
 
+## Uji paritas plugin Word — Bab III tesis kuantitatif — SELESAI 12 Okt 2026
+
+Lanjutan pada dokumen yang sama: klik **"▶ Judul bab" Bab III** (kursor sebelum DAFTAR PUSTAKA) → **7× Generate sub 3.1–3.7 berurutan, TANPA `EndKey`** — pelajaran Bab II diterapkan: kursor otomatis merayap setelah sub terakhir, terbukti 3.1 mendarat @318 tepat setelah BAB III @317. Hasil: **427 paragraf · 36 halaman**, tersimpan.
+
+| Elemen | Hasil uji |
+|---|---|
+| BAB III METODOLOGI | Judul 1 · 20 pt ✓ (masuk sebelum dapus) |
+| Sub 3.1–3.7 (7/7) | Judul 2 · 16 pt · bold ✓ — urutan rapi 317→…→dapus@387 |
+| Isi per sub (kata) | 3.1=316 · 3.2=363 · 3.3=465 · 3.4=348 · 3.5=402 · 3.6=374 · 3.7=402 — **semua dalam target 300–600** |
+| Kualitas teks | `**` **0** · `*` **0 dari konten baru** (total 72 = sisa Bab I era pra-fix) · `#` **0** · `---` **0** · sitasi `(Tahun)` **72** (+11) · tabel 0 (3.7 Jadwal = prosa sesuai `PANDUAN_SUB`) |
+
+**Fix asterisk terbukti di jalur panel nyata** (commit `27c54cf`): panel masih memuat versi JS lama (ter-load sebelum fix) tetapi `bersihTeks` backend membersihkan tiap chunk stream — konten Bab III lahir **0 asterisk** tanpa perlu reload panel.
+
+**1 gangguan, perilaku benar**: 3.2 gagal sekali (`Error: [GoogleGenerativeAI Error]: Failed to parse stream` — error transien LLM) — **error tampil jelas di panel, tanpa sisip parsial, tanpa ✓ palsu** (kontras langsung dengan plugin Mantra: "✓ … disisipkan" padahal nol byte masuk — ANALISIS §12.3); percobaan ulang pertama sukses. Skrip: `bab3-a-recon.ps1`, `bab3-b-generate.ps1`, `bab3-c-lanjut.ps1` (retry maks 3), `bab3-d-cek31.ps1`.
+
 ## Tunda (butuh owner)
 
 1. Project Supabase BARU (kunci bersih) + ulangi 5 migrasi + update env Railway/Vercel/lokal
