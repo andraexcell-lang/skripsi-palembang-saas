@@ -362,6 +362,24 @@ Panduan `PANDUAN_SUB` terbukti diikuti model: 1.2 pembuka "Sesuai uraian pada la
 
 **Catatan**: 1.1 masih memakai **cache hasil uji pertama** (1.578 kata, di atas target 600–1000) — regenerasi `force` via endpoint non-stream bila perlu; 1.6 (632) & 1.7 (775) sedikit di atas target 300–600, sub lain dalam target. Prompt `SITASI_SUB` + `bersihSub` membuang semua bocoran pada 1.2–1.8 (terbukti 0 pembuka/`---`). Skrip uji UIA di `%TEMP%\opencode\`: `bab1-uji2.ps1` (fase A+B utuh), `bab1-uji3/uji4-lanjut.ps1`, `bab1-3-verif.ps1` (fase C: dapus+TOC+verifikasi), `dump-*.ps1`, `final-snapshot.ps1`, `cek-15.ps1`.
 
+## Uji paritas plugin Word — Bab II tesis kuantitatif — SELESAI 12 Okt 2026
+
+Lanjutan uji pada dokumen yang sama (`%TEMP%\opencode\bab1-paritas.docx`, proyek Nurmayanti, akun admin): klik **"▶ Judul bab" Bab II** (kursor disetel sebelum DAFTAR PUSTAKA) → **6× Generate sub 2.1–2.6 berurutan via UIA**. Hasil akhir: **348 paragraf · 29 halaman · 73.390 karakter** (dapus dipindah ke akhir setelah urutan sementara salah — lihat catatan pemakaian).
+
+| Elemen | Hasil uji |
+|---|---|
+| BAB II TINJAUAN PUSTAKA | Judul 1 · 20 pt · bold · center · page-break ✓ (masuk sebelum dapus) |
+| Sub 2.1–2.6 (6/6) | Judul 2 · 16 pt · bold ✓ — semua dalam **satu kali klik per sub, tanpa retry** |
+| Body tiap sub | TNR 12 pt · justify ✓ |
+| Isi per sub (kata) | 2.1=374 · 2.2=485 · 2.3=586 · 2.4=562 · 2.5=485 · 2.6=397 — **semua dalam target 300–600** (`PANDUAN_SUB` diikuti) |
+| Kualitas teks | pembuka model **0** · `---` **0** · `**` **0** · `#` **0** · sitasi `(Tahun)` **61** |
+
+**1 bug produk ditemukan & diperbaiki** (temuan uji ini): **marker `*italic*` bocor ke dokumen** — model menulis emphases istilah sebagai `*self-efficacy*`/`*work environment*`; `bersihTeks` backend hanya mem-blok `**bold**` → 72 asterisk literal di 16 paragraf (**isi Bab I juga kena**, tidak terdeteksi saat uji Bab I karena pemeriksaan waktu itu hanya mengecek `**`). Perbaikan dua lapis: `bersihTeks` menambah regex `\*([^*\n]+)\*` → polos + buang sisa asterisk (berlaku di semua jalur simpan/stream), dan `bersihSub()` panel strip serupa (pasangan `*…*` bisa terbelah di batas chunk stream) — commit prod **`27c54cf`**, staging menyusul. *Roadmap: dukungan italic nyata di Word (kirim run terformat) bila diminta owner.*
+
+**Perbandingan vs Mantra (ANALISIS §11.2.1–§11.2.2, uji berbarengan hari yang sama)**: plugin Mantra **gagal total** pada Bab II — 2.1 & 2.2 error `<!DOCTYPE` di ±2 menit (endpoint long-form `landasan_teori`/`kerangka_teori` sistematis rusak), 2.4–2.6 melaporkan ✓ hijau tapi **menggerogoti sub sebelumnya** (posisi blok basi saat `tulisLengkap`), 2.6 menimpa drafnya sendiri jadi net 0. Plugin kita: **6/6 sukses**, tidak ada sub tergerus (penulisan per-stream tunggal di posisi kursor, tanpa penghapusan blok berbasis posisi lama), status ✓ = isi benar-benar masuk (diverifikasi pertumbuhan paragraf per sub).
+
+**Catatan pemakaian (bukan bug)**: sub baru disisipkan di **posisi kursor** (paritas Mantra, terdokumentasi di `Jembatan.SisipSub`). Skrip uji menyetel kursor ke akhir dokumen sebelum tiap klik — saat itu akhir dokumen = setelah dapus (dapus dibuat pada uji Bab I), sehingga 2.1–2.6 sempat mendarat **setelah** DAFTAR PUSTAKA; dirapikan dengan memindah blok dapus (Cut/Paste COM) ke akhir. Pemakaian normal: letakkan kursor setelah judul bab (hasil klik "▶ Judul bab" sudah tepat — kursor otomatis merayap setelah sub terakhir saat generate berurutan). TOC belum di-refresh untuk Bab II (F9 manual). Skrip uji UIA di `%TEMP%\opencode\`: `bab2-a-recon.ps1`, `bab2-b-buka.ps1`, `bab2-c-generate.ps1`, `bab2-d-inspect.ps1`, `bab2-e-rapi.ps1`, `bab2-f-akhir.ps1`.
+
 ## Tunda (butuh owner)
 
 1. Project Supabase BARU (kunci bersih) + ulangi 5 migrasi + update env Railway/Vercel/lokal
