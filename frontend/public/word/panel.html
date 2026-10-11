@@ -420,6 +420,10 @@
     t = paras.join('\n\n');
     const dp = t.search(/^\s*(DAFTAR PUSTAKA|Daftar Pustaka Bab Ini|Daftar Pustaka|REFERENSI|REFERENCES)\s*$/im);
     if (dp > 0) t = t.slice(0, dp);
+    // *italic markdown* (emphases istilah seperti *self-efficacy*) — backend membersihkan
+    // teks utuh saat simpan, tapi pasangan bisa terbelah di batas chunk stream, jadi
+    // dibersihkan pula di sini. Uji Bab II 12 Okt: 72 asterisk bocor tanpa lapis ini.
+    t = t.replace(/\*([^*\n]+)\*/g, '$1').replace(/\*/g, '');
     return t.replace(/\n{3,}/g, '\n\n').trim();
   }
   async function genSub(bab, sub, btn) {

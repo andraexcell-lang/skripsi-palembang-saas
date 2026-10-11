@@ -352,9 +352,10 @@ const SITASI_SUB = `Aturan output: teks polos siap tempel — TANPA **bold**, TA
 // Pilihan interaktif studio (paritas referensi): bagan Bab II + input metodologi Bab III
 type Ekstra = { bagan?: 'kirim' | 'ai'; baganTeks?: string; populasi?: string; takDiketahui?: boolean; desain?: string; software?: string };
 
-// Buang penanda tebal markdown — SITASI melarang **bold**, tapi model kadang tetap
-// menulisnya (emphases nama dimensi/indikator). Dibersihkan deterministik di semua
-// jalur simpan/stream supaya TOC, taskpane, DOCX, dan audit selalu bersih.
+// Buang penanda tebal/italic markdown — SITASI melarang **bold**, tapi model kadang
+// tetap menulisnya (emphases nama dimensi/indikator); *italic* tunggal pun sempat
+// bocor ke dokumen (uji Bab II 12 Okt: 72 asterisk). Dibersihkan deterministik di
+// semua jalur simpan/stream supaya TOC, taskpane, DOCX, dan audit selalu bersih.
 // Sekaligus membuang sisa format LaTeX (item 5: rumus wajib karakter biasa).
 const LATEX_HURUF: Record<string, string> = {
   alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', epsilon: 'ε', theta: 'θ', lambda: 'λ',
@@ -364,6 +365,7 @@ const LATEX_HURUF: Record<string, string> = {
 export const bersihTeks = (t: string): string =>
   String(t)
     .replace(/\*\*([\s\S]*?)\*\*/g, '$1').replace(/\*\*/g, '')
+    .replace(/\*([^*\n]+)\*/g, '$1').replace(/\*/g, '')
     .replace(/\$\$?([^$\n]+?)\$\$?/g, (_m, a: string) => a)
     .replace(/\\frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, (_m, a: string, b: string) => /[+\-×·*]/.test(b) ? `${a}/(${b})` : `${a}/${b}`)
     .replace(/\\sqrt\s*\{([^{}]*)\}/g, '√$1')
