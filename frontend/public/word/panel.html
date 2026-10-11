@@ -403,6 +403,20 @@
     });
   }
   $('proj').onchange = renderOutline;
+  // Buang sisa output model yang tak boleh masuk dokumen: judul sub bernomor di
+  // awal, pembuka "Berikut adalah...", pemisah "---", dan bagian Daftar Pustaka
+  // bawaan model (daftar pustaka ditulis tombol "Tulis Ulang Daftar Pustaka").
+  // Terbukti bocor pada uji Bab I 11 Okt walau prompt sudah melarang.
+  function bersihSub(t) {
+    t = String(t).replace(/^[ \t]*---[ \t]*\r?\n?/gm, '');
+    const paras = t.split(/\r?\n\s*\r?\n/);
+    if (paras.length > 1 && /^\d+(\.\d+)+\.?\s+\S/.test(paras[0].trim()) && paras[0].split(/\s+/).length <= 8) paras.shift();
+    while (paras.length && (/^Berikut (adalah|ini)\b/i.test(paras[0].trim()) || !paras[0].trim())) paras.shift();
+    t = paras.join('\n\n');
+    const dp = t.search(/^\s*(DAFTAR PUSTAKA|Daftar Pustaka Bab Ini|Daftar Pustaka|REFERENSI|REFERENCES)\s*$/im);
+    if (dp > 0) t = t.slice(0, dp);
+    return t.replace(/\n{3,}/g, '\n\n').trim();
+  }
   async function genSub(bab, sub, btn) {
     const pid = $('proj').value;
     if (!pid) return msg2('Pilih proyek dulu.');
@@ -450,7 +464,8 @@
         }
       }
       // Judul sub-bab sudah ada → native menyisipkan isi tepat SETELAH judulnya;
-      // belum ada → judul (tebal 13pt) + isi disisipkan di posisi kursor.
+      // belum ada → judul Heading 2 16pt (entri DAFTAR ISI) + isi di posisi kursor.
+      full = bersihSub(full);
       await kirim('sisipSub', {
         label: sub,
         judul: sub,

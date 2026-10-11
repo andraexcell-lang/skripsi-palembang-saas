@@ -343,6 +343,12 @@ const SITASI = `Aturan format: teks bersih — TANPA **bold**, tanpa ---, tanpa 
 const SITASI_KUTIP = `Wajib: (1) tulis dalam bahasa yang diminta, (2) bodynote sesuai gaya sitasi yang diminta di setiap sub-bab yang memakai teori/temuan, (3) akhiri dengan sub-bagian "Daftar Pustaka Bab Ini" berisi referensi di atas dalam format gaya sitasi yang diminta lengkap dengan link DOI yang bisa diklik. Untuk ARTIKEL JURNAL: hanya dari daftar referensi (jangan mengarang DOI/judul di luar daftar); untuk BUKU TEKS: hanya dari daftar buku atau teori klasik yang benar-benar ada.`;
 const SITASI_BAB5 = `BAB V TANPA KUTIPAN: JANGAN menulis bodynote/sitasi/tautan DOI apa pun, dan JANGAN menyertakan sub-bab "Daftar Pustaka Bab Ini" — kesimpulan, implikasi, dan saran murni diturunkan dari isi Bab I–IV. Wajib: (1) tulis dalam bahasa yang diminta, (2) ringkas dan tegas.`;
 
+// Aturan format khusus generate PER SUB-BAB (endpoint generate-subbab/-stream) —
+// ringkas, tanpa bagian bab-penuh (caption/judul bab/SITASI_KUTIP) yang tak relevan
+// untuk satu sub; melarang judul/pembuka/---/daftar pustaka bawaan model (terbukti
+// bocor pada uji Bab I 11 Okt).
+const SITASI_SUB = `Aturan output: teks polos siap tempel — TANPA **bold**, TANPA pemisah "---", TANPA judul sub-bab bernomor (judulnya sudah dibuat sistem), TANPA kalimat pembuka/pembungkus seperti "Berikut adalah sub-bab...", dan TANPA bagian "Daftar Pustaka"/referensi di akhir (daftar pustaka disusun terpisah oleh panel). Tabel markdown hanya bila diminta panduan (pipe di awal & akhir SETIAP baris). DILARANG tag HTML (<br> dll) dan LaTeX ($…$).`;
+
 // Pilihan interaktif studio (paritas referensi): bagan Bab II + input metodologi Bab III
 type Ekstra = { bagan?: 'kirim' | 'ai'; baganTeks?: string; populasi?: string; takDiketahui?: boolean; desain?: string; software?: string };
 
@@ -972,7 +978,7 @@ router.post('/:id/generate-subbab', requireAuthOrKey, async (req: AuthRequest, r
     const refs = await crossrefTop(`${p.judul} ${sub}`, 5, p.min_year);
     const sp = subPanduan(p, bab, sub);
     const text = await generateContent(
-      `Susun sub-bab "${sub}" dari ${(outlineFor(p)[bab] || {}).bab || bab} untuk karya berikut. Judul: ${p.judul}. Metode: ${p.metode}. Bahasa: ${p.language || 'Indonesia'}. Gaya sitasi: ${p.citation_style || 'APA 7th'}.\n${refBlock(refs)}\nTulis ${sp.kata} kata akademik dengan bodynote bila memakai teori. Jangan mengarang DOI.${sp.panduan}`
+      `Susun sub-bab "${sub}" dari ${(outlineFor(p)[bab] || {}).bab || bab} untuk karya berikut. Judul: ${p.judul}. Metode: ${p.metode}. Bahasa: ${p.language || 'Indonesia'}. Gaya sitasi: ${p.citation_style || 'APA 7th'}.\n${refBlock(refs)}\nTulis ${sp.kata} kata akademik dengan bodynote bila memakai teori. Jangan mengarang DOI.${sp.panduan}\n${SITASI_SUB}`
     );
     const content = { ...(p.content || {}), [key]: bersihTeks(text) };
     await d.from('projects').update({ content, updated_at: new Date().toISOString() }).eq('id', id);
@@ -1014,7 +1020,7 @@ router.post('/:id/generate-subbab-stream', requireAuthOrKey, async (req: AuthReq
     send('cost', { cost });
     const refs = await crossrefTop(`${p.judul} ${sub}`, 5, p.min_year);
     const sp = subPanduan(p, bab, sub);
-    const prompt = `Susun sub-bab "${sub}" dari ${(outlineFor(p)[bab] || {}).bab || bab} untuk karya berikut. Judul: ${p.judul}. Metode: ${p.metode}. Bahasa: ${p.language || 'Indonesia'}. Gaya sitasi: ${p.citation_style || 'APA 7th'}.\n${refBlock(refs)}\nTulis ${sp.kata} kata akademik dengan bodynote bila memakai teori. Jangan mengarang DOI.${sp.panduan}`;
+    const prompt = `Susun sub-bab "${sub}" dari ${(outlineFor(p)[bab] || {}).bab || bab} untuk karya berikut. Judul: ${p.judul}. Metode: ${p.metode}. Bahasa: ${p.language || 'Indonesia'}. Gaya sitasi: ${p.citation_style || 'APA 7th'}.\n${refBlock(refs)}\nTulis ${sp.kata} kata akademik dengan bodynote bila memakai teori. Jangan mengarang DOI.${sp.panduan}\n${SITASI_SUB}`;
     let full = '';
     try {
       for await (const t of generateContentStream(prompt)) {
