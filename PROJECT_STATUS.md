@@ -289,6 +289,8 @@ Playwright 1.63 + Firefox 155 (build v1543) di Windows, skrip **`tools/ff-smoke.
 
 ## Struktur baku baru KHUSUS tesis kuantitatif (TEMPLATE TESIS.docx) — verifikasi 7 Okt 2026
 
+> **DIPERBARUI 12 Okt 2026**: varian `V_TESIS_KUANTITATIF` sudah **dihapus** (rework paritas Mantra) — tesis kuantitatif kembali **base + overlay 32 sub** (Bab I 8 sub standar s.d. 1.8 Sistematika, Bab III + Etika 3.6, Bab V + Agenda, Lampiran Kisi-Kisi + Pernyataan Kuisioner); track prompt `tesisKuant`/`TESIS_*` diganti **`PANDUAN_SUB` + `subPanduan()`** (latar_belakang 600–1000 kata, sub lain 300–600, panduan alur per sub paritas Mantra). Label & panduan isi template di bawah tetap jadi acuan konten; bukti uji live lihat bagian **Uji paritas plugin Word — Bab I** di bawah. *Catatan: `tools/audit-hasil.js` masih memakai cek `tesisKuant` (template 7 Okt) — sinkronkan cek audit ke struktur baru bila perlu.*
+
 **Permintaan owner**: analisis `C:\Users\user\Downloads\TEMPLATE TESIS.docx` (tesis lengkap Universitas Tridinanti, Magister Manajemen, kuantitatif SEM-PLS) lalu buatkan prompt agar agen AI mengisi bab/sub-bab sesuai template. Template berisi ±20 paragraf **"INSTRUKSI UNTUK PROMPT"** yang ditanamkan pembuat template — semuanya diterjemahkan menjadi panduan prompt.
 
 **Arsitektur**: varian baru **`V_TESIS_KUANTITATIF`** di `projects.routes.ts` — menggantikan **base+overlay tesis HANYA** untuk kombinasi `jenis=tesis` + `metode=kuantitatif` (`varianFor()` special-case, tanpa overlay `f` lama); jenis/metode lain terverifikasi tidak tersentuh (uji outline: skripsi kuantitatif & tesis kualitatif tetap struktur lama).
@@ -330,6 +332,35 @@ Halaman baru **`/dashboard/admin`** (hanya akun `plan=admin`, guard dobel: link 
 - **Opsi A (upload tabulasi `.xlsx/.csv`)**: panel **"Data Tabulasi Bab IV"** di studio (saat tab Bab IV) — unggah `.xlsx/.xls/.csv` (maks 8 MB; semua sheet dikonversi CSV, disimpan maks 20 rb karakter di `content.tabulasi`; endpoint `POST/DELETE /api/projects/:id/tabulasi`, guard punya project). Prompt Bab IV menyuntik blok wajib **"DATA TABULASI HASIL OLAH DATA"** → angka hasil WAJIB persis dari data user, **dilarang mengarang angka lain**; tanpa data → Opsi B (simulasi: semua uji lulus, semua hipotesis signifikan) tetap jalan. UI: chip "Terpasang" + preview + Ganti/Hapus. Verifikasi: `node tools/uji-tabulasi.js` **9/9 PASS** + unit `babPrompt` 6/6 PASS (injeksi hanya di bab4) · `tsc` BE+FE 0.
 - **Guard mock payment P0**: `/api/billing/checkout` + `/confirm` **mati default (503)** — nyalakan hanya opt-in `BILLING_MOCK=1` di `backend/.env` pengembangan (tetap mati walau salah set saat `NODE_ENV=production`); `/packages` mengembalikan `mock` → UI billing 3 keadaan: Midtrans siap → bayar real · mock aktif → tombol mock · keduanya mati → tombol "Pembayaran belum aktif" (disabled) + "hubungi admin". Terbukti: default 503/503/401 · opt-in 200 (kredit 5→115 lalu dibalik bersih, `.env` dikembalikan).
 - **Regen Bab III final (terjadwal otomatis)**: `node tools/regen-bab3-aman.js` berjalan di background 8 Okt — **backup content dulu**, tunggu reset kuota **00:00 UTC (07:00 WIB)**, regen `bab3 --coba=3` (1 kredit), wajib **≥25.000 karakter** → kalau kurang **RESTORE backup otomatis** (aman dari model lite yang menulis pendek).
+
+## Uji paritas plugin Word — Bab I tesis kuantitatif — SELESAI 12 Okt 2026
+
+Uji live plugin Word kita vs plugin **Mantra Riset** (analisis statis + dioperasikan sebagai user via UIA; kompetitor **tidak** dimodifikasi — panel produksi dipakai dengan izin owner). Ground truth: `Skripsi-Palembang-Staging\hasil-analisis-mantrariset\ANALISIS-PLUGIN-WORD.md` §9.4/§10.1/§10.3 — Bab I tesis = 8 sub (…1.6 Batasan → 1.7 Kebaruan → 1.8 Sistematika), Lampiran = Kisi-Kisi Penelitian + Pernyataan Kuisioner.
+
+- **Outline produksi 32 sub** terverifikasi (`GET /api/projects/meta/outline?metode=Kuantitatif&jenis=tesis`): Bab I 8 · II 6 · III 7 (Etika 3.6) · IV 6 · V 3+Agenda · Lampiran 2.
+- **Alur uji End-to-End di Word** (proyek Nurmayanti produksi, akun admin — generate bypass kredit, saldo tetap 40 = normal, bukan bug): bersihkan cache WebView2 → buka `cover-kita-hasil.docx` → panel login "Tempel API key" → proyek terpilih otomatis → klik **"▶ Judul bab"** + **8× Generate sub via UIA** → Tulis Ulang Daftar Pustaka → update TOC. Hasil: **`%TEMP%\opencode\bab1-paritas.docx`** — 264 paragraf · 21 halaman · 50.250 karakter.
+
+**Format lolos penuh (paritas §9.4)**:
+
+| Elemen | Hasil uji |
+|---|---|
+| BAB I PENDAHULUAN | Judul 1 · 20 pt · bold · center · page-break · outline 1 · TNR ✓ |
+| Sub 1.1–1.8 (8/8) | Judul 2 · 16 pt · bold · rata kiri · outline 2 ✓ |
+| Body tiap sub | TNR 12 pt · justify ✓ |
+| DAFTAR ISI | ter-update memuat BAB I + 1.1 … 1.8 ✓ |
+| DAFTAR PUSTAKA | 40 baris entri (tombol dapus, judul disisipkan di kursor) ✓ |
+| Kualitas teks | pembuka model **0** · `---` **0** · `**` **0** · placeholder **0** · "maaf" **0** · sitasi gaya (Penulis, Tahun) **38** · baris tabel pipe 14 (TABEL FENOMENA sesuai `PANDUAN_SUB`; Mantra juga mengetik markdown apa adanya) |
+| Isi per sub (kata) | 1.1=1578 (cache) · 1.2=469 · 1.3=462 · 1.4=569 · 1.5=446 · 1.6=632 · 1.7=775 · 1.8=344 |
+
+Panduan `PANDUAN_SUB` terbukti diikuti model: 1.2 pembuka "Sesuai uraian pada latar belakang…", 1.3 "Adapun masalah yang akan diselesaikan…", 1.4 "Adapun tujuan penelitian…", 1.5 "1. Manfaat Teoretis/2. Manfaat Praktis".
+
+**3 bug ditemukan & diperbaiki selama uji**:
+
+1. **Tombol Generate salah sasaran** — parent-walk UIA selalu jatuh ke tombol sub pertama (WebView2 mem-flatten DOM) → 8 klik berturut-turut menyisipkan sub 1.1 dari cache (uji pertama gagal: hanya judul 1.1 masuk). Perbaikan skrip uji: sasarkan via **koordinat baris** (BoundingRectangle label vs tombol), **retry** setelah re-render panel, **asersi label sub pada status panel** (abort otomatis bila salah tombol), fallback urutan dokumen.
+2. **Endpoint sub-bab tanpa aturan format** — `POST /:id/generate-subbab(-stream)` tidak menyertakan `SITASI` (hanya generator bab penuh) → model mengirim pembuka "Berikut adalah sub-bab…", pemisah `---`, dan bagian "Daftar Pustaka" di akhir sub. Perbaikan: konstanta **`SITASI_SUB`** (larangan judul sub/pembuka/`---`/daftar pustaka; tabel markdown hanya bila diminta panduan) disambungkan ke **kedua endpoint** + **`bersihSub()`** di panel sebelum `kirim('sisipSub')` — commit prod **`c6f3954`**, staging **`fa5fc87`**.
+3. **Judul ganda pada konten cache lama** — `bersihSub` v1 hanya membuang judul di paragraf pertama, sedangkan konten cache 1.1 mengulang blok judul+pembuka. Perbaikan: parameter **`judul`** + loop strip (judul/pembuka/kosong berulang sampai isi asli) — commit prod **`e7998e9`**, staging **`1fdd0c7`**; fosil judul ganda ikut dihapus dari dokumen uji.
+
+**Catatan**: 1.1 masih memakai **cache hasil uji pertama** (1.578 kata, di atas target 600–1000) — regenerasi `force` via endpoint non-stream bila perlu; 1.6 (632) & 1.7 (775) sedikit di atas target 300–600, sub lain dalam target. Prompt `SITASI_SUB` + `bersihSub` membuang semua bocoran pada 1.2–1.8 (terbukti 0 pembuka/`---`). Skrip uji UIA di `%TEMP%\opencode\`: `bab1-uji2.ps1` (fase A+B utuh), `bab1-uji3/uji4-lanjut.ps1`, `bab1-3-verif.ps1` (fase C: dapus+TOC+verifikasi), `dump-*.ps1`, `final-snapshot.ps1`, `cek-15.ps1`.
 
 ## Tunda (butuh owner)
 
