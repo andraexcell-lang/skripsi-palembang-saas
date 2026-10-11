@@ -477,49 +477,84 @@
       const fm = await call('/api/projects/' + pr.id + '/front-matter', {});
       const J = fm.judul || '', N = fm.nama || '', NIM = fm.nim || '';
       const KJ = [fm.kampus, fm.jurusan, fm.fakultas].filter(Boolean).join(' — ');
+      // Jenis karya (skripsi/tesis/disertasi) menentukan label sampul & kata
+      // "dengan judul" di lembar persetujuan — jangan hardcode "Skripsi".
+      const jenis = String(fm.jenis || pr.jenis || 'skripsi').toLowerCase();
+      const JENIS = jenis === 'disertasi' ? 'Disertasi' : jenis === 'tesis' ? 'Tesis' : 'Skripsi';
+      // Kata pengantar AI kadang membawa markdown ("**KATA PENGANTAR**") dan
+      // placeholder "[..]" — bersihkan supaya siap cetak.
+      const kata = String(fm.kata || '')
+        .replace(/\*\*([^*]+)\*\*/g, '$1')
+        .replace(/^[#\s]+/gm, '')
+        .replace(/\s*\[[^\]]*\]/g, '')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim()
+        .split('\n')
+        .filter((x, i) => !(i === 0 && /^kata pengantar$/i.test(x.trim())))  // buang judul dobel
+        .map((x) => x.trim())
+        .filter(Boolean);
       // Front-matter dibangun sebagai daftar blok → engine native menulisnya
       // MULAI DARI AWAL dokumen, termasuk page break & field DAFTAR ISI/TABEL.
+      // Blok heading:1 memakai gaya Heading-1 (Judul 1) supaya judul lembar
+      // otomatis menjadi entri DAFTAR ISI (paritas dengan Mantra).
       const blok = [];
       function para(text, opt) {
         opt = opt || {};
-        blok.push({ teks: text, center: !!opt.center, bold: !!opt.bold, size: opt.size || 12 });
+        const b = { teks: text, center: !!opt.center, bold: !!opt.bold, size: opt.size || 12 };
+        if (opt.heading) b.heading = opt.heading;
+        blok.push(b);
       }
       function brk() {
         para('', {});
         blok.push({ pageBreak: true });
       }
+      function judulLembar(text) {
+        para(text, { center: true, bold: true, size: 20, heading: 1 });
+      }
       para(J.toUpperCase(), { center: true, bold: true, size: 14 });
       para('', {});
-      if (N) para(N, { center: true, bold: true });
-      if (NIM) para('NIM: ' + NIM, { center: true });
+      para(JENIS.toUpperCase(), { center: true, bold: true });
+      para('', {});
+      para('Diajukan untuk memenuhi salah satu syarat', { center: true });
+      para('memperoleh gelar pada program studi terkait', { center: true });
+      para('', {});
+      para('Oleh:', { center: true });
+      if (N) para(N.toUpperCase(), { center: true, bold: true });
+      if (NIM) para('NIM. ' + NIM, { center: true });
       if (KJ) para(KJ, { center: true, bold: true });
-      para('2026', { center: true });
+      para(fm.tahun || '2026', { center: true, bold: true });
       brk();
-      para('LEMBAR PERSETUJUAN', { center: true, bold: true, size: 14 });
-      para('Skripsi dengan judul:', {});
+      judulLembar('LEMBAR PERSETUJUAN');
+      para(JENIS + ' dengan judul:', {});
       para('"' + J + '"', { bold: true });
-      para('yang disusun oleh ' + (N || '........') + ', NIM ' + (NIM || '........') + (KJ ? ', ' + KJ : '') + ', telah diperiksa dan disetujui oleh dosen pembimbing untuk diajukan dalam sidang skripsi.', {});
+      para('yang disusun oleh ' + (N || '........') + ', NIM ' + (NIM || '........') + (KJ ? ', ' + KJ : '') + ', telah diperiksa dan disetujui oleh dosen pembimbing untuk diajukan dalam sidang ' + jenis + '.', {});
       para('Menyetujui,', {});
       para('Dosen Pembimbing', {});
       para('( ........................................ )', {});
       brk();
-      para('LEMBAR PENGESAHAN', { center: true, bold: true, size: 14 });
-      para('Skripsi dengan judul "' + J + '" yang disusun oleh ' + (N || '........') + ' telah dipertahankan di depan dewan penguji dan dinyatakan lulus sebagai salah satu syarat memperoleh gelar.', {});
+      judulLembar('LEMBAR PENGESAHAN');
+      para(JENIS + ' dengan judul "' + J + '" yang disusun oleh ' + (N || '........') + ' telah dipertahankan di depan dewan penguji dan dinyatakan lulus sebagai salah satu syarat memperoleh gelar.', {});
       para('Mengesahkan,', {});
       para('Dosen Pembimbing / Ketua Program Studi', {});
       para('( ........................................ )', {});
       brk();
-      para('LEMBAR PERNYATAAN KEASLIAN', { center: true, bold: true, size: 14 });
+      judulLembar('LEMBAR PERNYATAAN KEASLIAN');
       para('Yang bertanda tangan di bawah ini. Nama: ' + (N || '........') + '. NIM: ' + (NIM || '........') + '. Program Studi: ' + (fm.jurusan || '........') + '.', {});
-      para('Dengan ini menyatakan bahwa skripsi yang berjudul "' + J + '" adalah benar-benar hasil karya sendiri dan bukan menjiplak karya orang lain. Apabila di kemudian hari terbukti sebaliknya, penulis bersedia menerima sanksi sesuai ketentuan yang berlaku.', {});
+      para('Dengan ini menyatakan bahwa ' + jenis + ' yang berjudul "' + J + '" adalah benar-benar hasil karya sendiri dan bukan menjiplak karya orang lain. Apabila di kemudian hari terbukti sebaliknya, penulis bersedia menerima sanksi sesuai ketentuan yang berlaku.', {});
       para('Yang menyatakan,', {});
       para((N || '........') + ' — NIM ' + (NIM || '........'), {});
       brk();
-      para('KATA PENGANTAR', { center: true, bold: true, size: 14 });
-      (fm.kata || '').split('\n').forEach((x) => { if (x.trim()) para(x.trim(), {}); });
-      para('DAFTAR ISI', { center: true, bold: true, size: 14 });
+      judulLembar('KATA PENGANTAR');
+      kata.forEach((x) => para(x, {}));
+      para('(' + (fm.kota || 'Kota') + '), ' + (fm.tahun || '2026'), {});
+      para('Penulis,', {});
+      para('', {});
+      para((N || '........'), {});
+      brk();
+      judulLembar('DAFTAR ISI');
       blok.push({ toc: 'isi' });
-      para('DAFTAR TABEL', { center: true, bold: true, size: 14 });
+      brk();
+      judulLembar('DAFTAR TABEL');
       blok.push({ toc: 'tabel' });
       await kirim('sisip', { posisi: 'awal', blok });
       msg2('Cover, halaman depan, Daftar Isi & Daftar Tabel dibuat. Klik kanan field > Update Field bila isi berubah.');

@@ -981,12 +981,23 @@ router.post('/:id/front-matter', requireAuthOrKey, async (req: AuthRequest, res)
     const { data: p, error } = await db().from('projects').select('*').eq('id', id).eq('user_id', req.userId!).single();
     if (error || !p) return res.status(404).json({ error: 'Proyek tidak ditemukan' });
     const ident = p.identitas || {};
+    // Kata pengantar harus MENYESUAIAI JENIS karya (skripsi/tesis/disertasi) —
+    // temuan parity 11 Okt 2026: prompt lama selalu bilang "skripsi" untuk tesis.
+    const jenis = String(p.jenis || 'skripsi').toLowerCase();
+    const kataJenis = jenis === 'disertasi' ? 'disertasi' : jenis === 'tesis' ? 'tesis' : 'skripsi';
+    const gelar = jenis === 'disertasi' ? 'Doktor (S3)' : jenis === 'tesis' ? 'Magister (S2)' : 'Sarjana (S1)';
     const kata = await generateContent(
-      `Susun KATA PENGANTAR skripsi 250-350 kata, formal Indonesia. Judul: ${p.judul}. Penulis: ${ident.nama || '-'}, NIM ${ident.nim || '-'}, ${ident.jurusan || ''} ${ident.kampus || ''}. Ucapkan syukur, terima kasih pembimbing, sadari kekurangan, harap manfaat. Tanpa markdown tebal berlebihan.`
+      `Susun KATA PENGANTAR ${kataJenis} 250-350 kata, formal Indonesia. ` +
+      `Karya ilmiah ini ${kataJenis} — sebut "penulisan ${kataJenis}" atau "${kataJenis} ini", JANGAN memakai kata "skripsi". ` +
+      `Judul: ${p.judul}. Penulis: ${ident.nama || '-'}, NIM ${ident.nim || '-'}, ${ident.jurusan || ''} ${ident.kampus || ''}. ` +
+      `Salah satu syarat memperoleh gelar ${gelar}. Ucapkan syukur, terima kasih pembimbing & keluarga, sadari kekurangan, harap manfaat. ` +
+      `Hasil WAJIB teks polos: tanpa markdown (** atau #), tanpa placeholder dalam kurung siku, ` +
+      `dan JANGAN tulis baris judul "KATA PENGANTAR" (judul sudah ditulis panel).`
     );
     res.json({
       judul: p.judul, nama: ident.nama || '', nim: ident.nim || '',
       kampus: ident.kampus || '', jurusan: ident.jurusan || '', fakultas: ident.fakultas || '',
+      kota: ident.kota || '', jenis, tahun: String(new Date().getFullYear()),
       kata,
     });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
