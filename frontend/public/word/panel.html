@@ -493,6 +493,14 @@
         .filter((x, i) => !(i === 0 && /^kata pengantar$/i.test(x.trim())))  // buang judul dobel
         .map((x) => x.trim())
         .filter(Boolean);
+      // Buang blok tanda tangan bawaan AI di AKHIR teks (baris "Penulis,", nama,
+      // "NIM ...", "(Kota), TAHUN") — panel menambah tanda tangan sendiri sesudahnya.
+      function tandaTanganAI(x) {
+        if (/^(penulis,?|nim\.?\s*\S*)$/i.test(x)) return true;
+        if (/^(\(.+\)|[A-Z][A-Za-z ]{2,30}),\s*\d{4}$/.test(x)) return true;
+        return /^[A-Z][A-Za-z.'-]+(?:\s+[A-Z][A-Za-z.'-]+){0,3}$/.test(x) && x.length < 40;
+      }
+      while (kata.length && tandaTanganAI(kata[kata.length - 1])) kata.pop();
       // Front-matter dibangun sebagai daftar blok → engine native menulisnya
       // MULAI DARI AWAL dokumen, termasuk page break & field DAFTAR ISI/TABEL.
       // Blok heading:1 memakai gaya Heading-1 (Judul 1) supaya judul lembar

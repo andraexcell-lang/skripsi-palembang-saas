@@ -992,7 +992,9 @@ router.post('/:id/front-matter', requireAuthOrKey, async (req: AuthRequest, res)
       `Judul: ${p.judul}. Penulis: ${ident.nama || '-'}, NIM ${ident.nim || '-'}, ${ident.jurusan || ''} ${ident.kampus || ''}. ` +
       `Salah satu syarat memperoleh gelar ${gelar}. Ucapkan syukur, terima kasih pembimbing & keluarga, sadari kekurangan, harap manfaat. ` +
       `Hasil WAJIB teks polos: tanpa markdown (** atau #), tanpa placeholder dalam kurung siku, ` +
-      `dan JANGAN tulis baris judul "KATA PENGANTAR" (judul sudah ditulis panel).`
+      `dan JANGAN tulis baris judul "KATA PENGANTAR" (judul sudah ditulis panel). ` +
+      `JANGAN pula menulis blok tanda tangan (baris "Penulis,", nama, NIM, atau tanggal penutup) — ` +
+      `panel otomatis menambahkannya setelah kata pengantar.`
     );
     res.json({
       judul: p.judul, nama: ident.nama || '', nim: ident.nim || '',
