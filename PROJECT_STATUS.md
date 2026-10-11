@@ -395,6 +395,19 @@ Lanjutan pada dokumen yang sama: klik **"▶ Judul bab" Bab III** (kursor sebelu
 
 **1 gangguan, perilaku benar**: 3.2 gagal sekali (`Error: [GoogleGenerativeAI Error]: Failed to parse stream` — error transien LLM) — **error tampil jelas di panel, tanpa sisip parsial, tanpa ✓ palsu** (kontras langsung dengan plugin Mantra: "✓ … disisipkan" padahal nol byte masuk — ANALISIS §12.3); percobaan ulang pertama sukses. Skrip: `bab3-a-recon.ps1`, `bab3-b-generate.ps1`, `bab3-c-lanjut.ps1` (retry maks 3), `bab3-d-cek31.ps1`.
 
+## Uji paritas plugin Word — Bab IV tesis kuantitatif — SELESAI 12 Okt 2026
+
+Alur sama: **"▶ Judul bab" Bab IV** (kursor sebelum dapus @387) → **6× Generate 4.1–4.6, semua sukses coba pertama** (tanpa retry). Hasil: **472 paragraf · 43 halaman**, tersimpan.
+
+| Elemen | Hasil uji |
+|---|---|
+| BAB IV HASIL PENELITIAN DAN PEMBAHASAN | Judul 1 · 20 pt ✓ @387, sebelum dapus |
+| Sub 4.1–4.6 (6/6) | Judul 2 · 16 pt · bold ✓ — 4.1 @388 tepat setelah judul; urutan rapi s.d. dapus @432 |
+| Isi per sub (kata) | 4.1=402 · 4.2=364 · 4.3=401 · 4.4=416 · 4.5=371 · 4.6=384 — **semua dalam target 300–600** |
+| Kualitas teks | `**` **0** · `*` **0 konten baru** · `#` **0** · `---` **0** · sitasi `(Tahun)` **94** (+22) · tabel 0 |
+
+Jendela pencocokan tombol Generate diperluas `[-10,+60]` px (baris 4.x punya baris hint tambahan di bawah label — tombol lebih jauh dari label; aturan "terdekat dalam jendela" tetap mencegah salah baris). Skrip: `bab4-a-recon.ps1`, `bab4-b-generate.ps1` (retry maks 3 terpasang sejak awal).
+
 ## Tunda (butuh owner)
 
 1. Project Supabase BARU (kunci bersih) + ulangi 5 migrasi + update env Railway/Vercel/lokal
