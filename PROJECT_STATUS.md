@@ -408,6 +408,18 @@ Alur sama: **"▶ Judul bab" Bab IV** (kursor sebelum dapus @387) → **6× Gene
 
 Jendela pencocokan tombol Generate diperluas `[-10,+60]` px (baris 4.x punya baris hint tambahan di bawah label — tombol lebih jauh dari label; aturan "terdekat dalam jendela" tetap mencegah salah baris). Skrip: `bab4-a-recon.ps1`, `bab4-b-generate.ps1` (retry maks 3 terpasang sejak awal).
 
+## Uji paritas plugin Word — Bab V + Lampiran — SELESAI 12 Okt 2026
+
+**Fase 1 — Bab V** (kursor sebelum dapus @432 → "▶ Judul bab" → 3× Generate, **semua coba pertama**): BAB V PENUTUP Judul 1 · 20 pt @432; 5.1 Simpulan=384 · 5.2 Saran=371 · 5.3 Agenda Penelitian Lanjutan=402 kata; urutan rapi s.d. dapus @471.
+
+**Fase 2 — Lampiran** (setelah dapus — urutan akademik benar: …BAB V → DAFTAR PUSTAKA → LAMPIRAN): tombol "▶ Judul bab" seksi Lampiran berfungsi sama dengan bab (judul LAMPIRAN Judul 1 · 20 pt). 6.1 Kisi-Kisi Penelitian=515 · 6.2 Pernyataan Kuisioner=661 kata. Akhir: **564 paragraf · 49 halaman**, tersimpan; markdown `**`/`#`/`---`=0 · asterisk 0 konten baru (72 sisa Bab I) · sitasi 99.
+
+**Insiden penempatan kursor (kesalahan skrip uji, bukan produk)**: kursor `Content.End−1` = posisi DI DALAM paragraf terakhir (sebelum tanda paragraf), sehingga judul LAMPIRAN menempel ke entri dapus terakhir (par 511 ikut berubah Judul 1, teks jadi "…v6i2.62LAMPIRAN"). Perbaikan: kata dihapus, gaya dikembalikan Normal + format disalin persis dari entri dapus tetangga (TNR 12 pt · indent gantung 36/−36 · justify), judul disisipkan ulang lewat tombol panel yang sama dengan kursor di **awal** paragraf 6.1 → LAMPIRAN @512 (Judul 1/20), 6.1 @513 (Judul 2/16), entri dapus utuh. **Pelajaran**: anchor sisip = posisi AWAL paragraf — paritas dengan bug kursor basi Mantra (ANALISIS §12); jangan `End−1`. Skrip: `bab5-a-recon.ps1` … `bab5-f-format511.ps1`.
+
+### TEMUAN paritas baru: native belum punya konversi tabel (roadmap)
+
+60 paragraf baris berpipa (`| 11 | KK3 | Saya merasa…` — butir kuisioner 6.2) masuk sebagai **teks polos dengan karakter `|` terekspos**, `Tables=0`. Panel mengirim isi sub sebagai satu blok teks (`genSub` → `sisipSub`, `blok:[{teks,…}]`), dan `Jembatan.cs` hanya mengenali `toc:"tabel"` (field DAFTAR TABEL) — **tidak ada parser baris berpipa → tabel Word** di mana pun. Plugin Mantra memiliki `SisipTabel` (meski sering gagal `baris=null` mereka — ANALISIS §11.2.2/§12); gap ini paling terasa pada lampiran kuisioner dan berpotensi pada tabulasi Bab IV kuantitatif. Rencana perbaikan: deteksi baris `|` berurutan dalam `SisipSub` → `Tables.Add` + rapikan (TNR, header tebal, border) — **butuh rebuild DLL + restart Word**, ditunda karena jendela uji plugin Mantra user (dokumen tak tersimpan) tidak boleh disentuh. Status: roadmap.
+
 ## Tunda (butuh owner)
 
 1. Project Supabase BARU (kunci bersih) + ulangi 5 migrasi + update env Railway/Vercel/lokal
