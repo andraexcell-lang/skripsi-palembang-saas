@@ -50,7 +50,24 @@ export default function BuatSkripsiPage() {
   const [konfirmasi, setKonfirmasi] = useState(false);
   const router = useRouter();
 
-  const JENIS_LABEL: Record<string, string> = { skripsi: 'Skripsi (S1)', tesis: 'Tesis (S2)', disertasi: 'Disertasi (S3)', artikel: 'Ubah Skripsi → Artikel' };
+  const JENIS_LABEL: Record<string, string> = {
+    skripsi: 'Skripsi (S1)',
+    tesis: 'Tesis (S2)',
+    tesis_tridinanti: 'Tesis Magister Manajemen (Tridinanti / PLS-SEM)',
+    disertasi: 'Disertasi (S3)',
+    artikel: 'Ubah Skripsi → Artikel',
+  };
+
+  function pilihJenis(v: string) {
+    setJenis(v);
+    if (v === 'tesis_tridinanti') {
+      setMetode('Kuantitatif');
+      if (!kampus) setKampus('Universitas Tridinanti');
+      if (!jurusan) setJurusan('Magister Manajemen');
+      if (!fakultas) setFakultas('Pascasarjana');
+    }
+  }
+
   const ringkas = (): [string, string][] => {
     const scopes = [scopeSinta ? 'Sinta' : '', scopeScopus ? 'Scopus' : ''].filter(Boolean);
     const sumber = [scopeUmum ? 'Umum' : '', ...scopes].join(' + ') || 'Umum';
@@ -73,7 +90,9 @@ export default function BuatSkripsiPage() {
   useEffect(() => {
     try {
       const j = new URLSearchParams(window.location.search).get('jenis');
-      if (j === 'tesis' || j === 'disertasi' || j === 'skripsi') setJenis(j);
+      if (j === 'tesis' || j === 'disertasi' || j === 'skripsi' || j === 'tesis_tridinanti') {
+        pilihJenis(j);
+      }
     } catch { /* abaikan */ }
   }, []);
 
@@ -176,13 +195,19 @@ export default function BuatSkripsiPage() {
           <div>
             <label className="font-bold text-text-primary text-sm block mb-2">Jenis penelitian</label>
             <div className="grid grid-cols-2 gap-3">
-              {[['skripsi', 'Skripsi (S1)'], ['tesis', 'Tesis (S2)'], ['disertasi', 'Disertasi (S3)'], ['artikel', 'Ubah Skripsi → Artikel']].map(([v, l]) => (
-                <div key={v} onClick={() => setJenis(v)} className={`border rounded-lg p-3 flex items-center gap-3 cursor-pointer ${jenis === v ? 'border-2 border-brand-primary bg-brand-primary/10' : 'border-border-strong bg-bg-base'}`}>
+              {[
+                ['skripsi', 'Skripsi (S1)'],
+                ['tesis', 'Tesis (S2)'],
+                ['tesis_tridinanti', 'Tesis MM (Tridinanti / PLS-SEM)'],
+                ['disertasi', 'Disertasi (S3)'],
+                ['artikel', 'Ubah Skripsi → Artikel'],
+              ].map(([v, l]) => (
+                <div key={v} onClick={() => pilihJenis(v)} className={`border rounded-lg p-3 flex items-center gap-3 cursor-pointer ${jenis === v ? 'border-2 border-brand-primary bg-brand-primary/10' : 'border-border-strong bg-bg-base'}`}>
                   <span className="text-sm text-text-primary">{l}</span>
                 </div>
               ))}
             </div>
-            <p className="text-[11px] text-text-muted mt-2">Tesis (S2) & Disertasi (S3) tersedia di paket Profesor.</p>
+            <p className="text-[11px] text-text-muted mt-2">Tesis (S2), Tesis Tridinanti & Disertasi (S3) tersedia di paket Profesor.</p>
           </div>
           <div>
             <label className="font-bold text-text-primary text-sm block mb-2">Metode penelitian</label>

@@ -18,7 +18,7 @@ const BAB_LIST = ['bab1', 'bab2', 'bab3', 'bab4', 'bab5', 'lampiran'];
 // Biaya per bab: tesis 8 kredit (paritas referensi), lainnya 10. Lampiran GRATIS
 // (referensi men-auto-generate Lampiran setelah Bab III tanpa memotong kredit).
 export const biayaBab = (p: any, bab?: string) =>
-  bab === 'lampiran' ? 0 : p?.jenis === 'tesis' ? 8 : FEATURE_COSTS.bab;
+  bab === 'lampiran' ? 0 : (p?.jenis === 'tesis' || p?.jenis === 'tesis_tridinanti') ? 8 : FEATURE_COSTS.bab;
 
 /* ===== Struktur bab baku per metode (paritas mantrariset) =====
    Data varian diekstrak dari chunk 5702-d00db968a5b82f86.js (kamus `d` +
@@ -108,9 +108,70 @@ const V_EKSAKTA: Varian = {
   lampiran: { judul: 'Lampiran', subs: [S('kisi_kisi', 'Kisi-Kisi Instrumen'), S('lembar_pengamatan', 'Lembar Pengamatan & Prosedur Uji')] },
 };
 
+const V_TESIS_TRIDINANTI: Varian = {
+  bab1: {
+    judul: 'Bab I Pendahuluan',
+    subs: [
+      S('latar_belakang', 'Latar Belakang Masalah'),
+      S('identifikasi_masalah', 'Identifikasi Masalah'),
+      S('pembatasan_masalah', 'Pembatasan Masalah'),
+      S('rumusan_masalah', 'Perumusan Masalah'),
+      S('tujuan_penelitian', 'Tujuan Penelitian'),
+      S('manfaat_penelitian', 'Kegunaan Penelitian'),
+    ],
+  },
+  bab2: {
+    judul: 'Bab II Kajian Pustaka dan Hipotesis Penelitian',
+    subs: [
+      S('landasan_teori', 'Kajian Pustaka'),
+      S('penelitian_terdahulu_naratif', 'Hasil Penelitian yang Relevan'),
+      S('kerangka_berpikir', 'Kerangka Berpikir'),
+      S('hipotesis', 'Hipotesis Penelitian'),
+    ],
+  },
+  bab3: {
+    judul: 'Bab III Metode Penelitian',
+    subs: [
+      S('lokasi_waktu_penelitian', 'Tempat dan Waktu Penelitian'),
+      S('populasi_sampel', 'Populasi dan Sampel'),
+      S('teknik_pengumpulan', 'Sumber dan Teknik Pengumpulan Data'),
+      S('definisi_operasional', 'Variabel dan Definisi Operasional'),
+      S('instrumen_penelitian', 'Instrumen Penelitian'),
+      S('analisis_smartpls', 'Teknik Analisis Data (SmartPLS / PLS-SEM)'),
+    ],
+  },
+  bab4: {
+    judul: 'Bab IV Hasil Analisis dan Pembahasan',
+    subs: [
+      S('gambaran_umum', 'Gambaran Umum Objek Penelitian'),
+      S('karakteristik_responden', 'Deskripsi Karakteristik Responden'),
+      S('deskripsi_variabel', 'Deskriptif Variabel Penelitian'),
+      S('evaluasi_smartpls', 'Evaluasi Model PLS-SEM (Outer & Inner Model)'),
+      S('pembahasan_7_jalur', 'Pembahasan Hasil Penelitian (7 Hipotesis)'),
+    ],
+  },
+  bab5: {
+    judul: 'Bab V Kesimpulan, Implikasi dan Saran',
+    subs: [
+      S('simpulan', 'Kesimpulan'),
+      S('implikasi_penelitian', 'Implikasi Penelitian'),
+      S('saran', 'Saran'),
+    ],
+  },
+  lampiran: {
+    judul: 'Lampiran',
+    subs: [
+      S('kisi_kisi', 'Kisi-Kisi Instrumen Penelitian'),
+      S('kuisioner', 'Kuesioner Penelitian'),
+      S('tabulasi_data', 'Tabulasi Data Responden & Output SmartPLS'),
+    ],
+  },
+};
+
 const VARIAN: Record<string, Varian> = {
   kuantitatif: V_KUANTITATIF, kualitatif: V_KUALITATIF, ptk: V_PTK, pustaka: V_PUSTAKA,
   rnd: V_RND, mixed: V_MIXED, hukum_normatif: V_HUKUM_NORMATIF, hukum_empiris: V_HUKUM_EMPIRIS, eksakta: V_EKSAKTA,
+  tesis_tridinanti: V_TESIS_TRIDINANTI,
 };
 
 // Overlay tesis (Kebaruan, Etika, Temuan, Implikasi Teoretis, Agenda) — paritas fungsi P referensi
@@ -145,11 +206,20 @@ const PANDUAN_SUB: Record<string, string> = {
   batasan_masalah: 'Daftar bernomor batasan: variabel (X1, X2, Y), objek penelitian, periode data, karakteristik responden. Padat dan TANPA kutipan/sitasi',
   sistematika_penulisan: 'Daftar per bab (Bab I s.d. Bab V + Lampiran) — tiap butir satu kalimat ringkas. TANPA kutipan/sitasi',
   kebaruan_penelitian: 'jelaskan gap/kebaruan dibanding penelitian terdahulu — teks + boleh tabel ringkas',
+  pembatasan_masalah: 'Daftar batasan bernomor 1., 2., 3.: (1) Ruang lingkup variabel dibatasi pada variabel bebas (X1, X2), variabel mediasi/intervening (M), dan variabel terikat (Y); (2) Ruang lingkup subjek dan objek dibatasi pada pegawai/karyawan instansi yang diteliti; (3) Ruang lingkup periode penelitian. Dibuat padat dan DILARANG MENGGUNAKAN SITASI/KUTIPAN',
+  analisis_smartpls: 'Jelaskan metode PLS-SEM berbantuan SmartPLS: (1) Evaluasi Measurement Model (Outer Model): Convergent Validity (Outer Loading >= 0.70 & AVE >= 0.50), Discriminant Validity (Cross Loading, Fornell-Larcker, HTMT < 0.90), Construct Reliability (Composite Reliability >= 0.70 & Cronbach Alpha >= 0.70); (2) Evaluasi Structural Model (Inner Model): R-Square, F-Square, Q-Square, dan Uji Hipotesis via Bootstrapping 5.000 subsamples (t > 1.96, p < 0.05) untuk pengaruh langsung (H1-H5) serta Specific Indirect Effects untuk mediasi (H6 & H7)',
+  karakteristik_responden: 'Sajikan profil demografi responden dengan TABEL markdown (Distribusi Frekuensi dan Persentase) berdasarkan: Jenis Kelamin, Usia, Tingkat Pendidikan Terakhir, dan Masa Kerja. Setiap tabel wajib ada Judul Tabel di atas ("Tabel 4.x [Nama]") dan baris Sumber di bawah ("Sumber: Data Primer Diolah, [Tahun]") diikuti 1 paragraf narasi deskriptif',
+  deskripsi_variabel: 'Sajikan tabel deskriptif capaian skor rata-rata (mean), kategori capaian (Sangat Baik / Baik / Cukup / Kurang), dan interpretasi untuk setiap variabel penelitian (X1, X2, M, Y) berdasarkan tanggapan responden skala Likert 1-5',
+  evaluasi_smartpls: 'Sajikan hasil estimasi SmartPLS format tabel akademik terbuka (open-border, tanpa garis vertikal, Judul Tabel di atas dan Sumber di bawah): (1) Tabel Loading Factor Outer Model Running 1 & 2; (2) Tabel Nilai AVE (> 0.50); (3) Tabel Reliabilitas Konstruk (Cronbach Alpha & Composite Reliability >= 0.70); (4) Tabel Discriminant Validity HTMT (< 0.90); (5) Tabel R-Square; (6) Tabel Path Coefficients Pengaruh Langsung H1-H5 (Original Sample, T-Statistics, P-Values, Status); (7) Tabel Specific Indirect Effects Pengaruh Mediasi H6-H7',
+  pembahasan_7_jalur: 'Pembahasan komprehensif untuk SELURUH 7 HIPOTESIS (H1 sampai H7). WAJIB MENGGUNAKAN FORMULA 4 PILAR PADA SETIAP HIPOTESIS: (Pilar 1) Fakta Hasil Statistik: sebutkan nilai path coefficient beta, t-stat > 1.96, p-value < 0.05, status diterima; (Pilar 2) Konfirmasi Grand Theory: jelaskan keselarasan temuan dengan teori utama; (Pilar 3) Dukungan Riset Terdahulu: kutip minimal 2-3 jurnal empiris terdahulu yang relevan dan sejalan; (Pilar 4) Analisis Fenomena Faktual Lapangan: jelaskan kondisi nyata operasional di objek penelitian yang menjelaskan mengapa pengaruh tersebut terjadi',
+  implikasi_penelitian: 'Dua bagian bernomor: "1. Implikasi Teoritis" (sumbangan bagi pengembangan ilmu manajemen sumber daya manusia/organisasi) dan "2. Implikasi Manajerial" (rekomendasi kebijakan strategis bagi instansi objek penelitian)',
+  tabulasi_data: 'Sajikan ringkasan format tabulasi data mentah responden (Skala Likert 1-5) untuk setiap butir indikator X1, X2, M, dan Y, serta rekapitulasi output report SmartPLS',
 };
 
 // Sub-bab yang wajib bebas sitasi / tanpa kutipan dan bernarasi padat langsung ke inti
 const SUB_BEBAS_SITASI = new Set([
   'identifikasi_masalah',
+  'pembatasan_masalah',
   'rumusan_masalah',
   'tujuan_penelitian',
   'manfaat_penelitian',
@@ -162,9 +232,12 @@ function isSubBebasSitasi(sub: string, key?: string): boolean {
   const l = String(sub).toLowerCase().replace(/^\d+(\.\d+)*\s*/, '').trim();
   return (
     l.includes('identifikasi masalah') ||
+    l.includes('pembatasan masalah') ||
     l.includes('rumusan masalah') ||
+    l.includes('perumusan masalah') ||
     l.includes('tujuan penelitian') ||
     l.includes('manfaat penelitian') ||
+    l.includes('kegunaan penelitian') ||
     l.includes('batasan masalah') ||
     l.includes('sistematika penulisan')
   );
@@ -185,27 +258,76 @@ function subPanduan(p: any, bab: string, sub: string): { panduan: string; kata: 
     kata = '600-1000';
   } else if (key === 'identifikasi_masalah' || label.includes('identifikasi masalah')) {
     kata = '80-150';
-  } else if (key === 'rumusan_masalah' || label.includes('rumusan masalah')) {
-    kata = '50-100';
+  } else if (key === 'pembatasan_masalah' || label.includes('pembatasan masalah')) {
+    kata = '80-150';
+  } else if (key === 'rumusan_masalah' || label.includes('rumusan masalah') || label.includes('perumusan masalah')) {
+    kata = p?.jenis === 'tesis_tridinanti' ? '120-220' : '50-100';
   } else if (key === 'tujuan_penelitian' || label.includes('tujuan penelitian')) {
-    kata = '50-100';
-  } else if (key === 'manfaat_penelitian' || label.includes('manfaat penelitian')) {
+    kata = p?.jenis === 'tesis_tridinanti' ? '120-220' : '50-100';
+  } else if (key === 'hipotesis' || label.includes('hipotesis')) {
+    kata = p?.jenis === 'tesis_tridinanti' ? '250-450' : '150-300';
+  } else if (key === 'manfaat_penelitian' || label.includes('manfaat penelitian') || label.includes('kegunaan penelitian')) {
     kata = '120-200';
   } else if (key === 'batasan_masalah' || label.includes('batasan masalah')) {
     kata = '80-150';
   } else if (key === 'sistematika_penulisan' || label.includes('sistematika penulisan')) {
     kata = '120-200';
+  } else if (key === 'pembahasan_7_jalur' || label.includes('pembahasan')) {
+    kata = p?.jenis === 'tesis_tridinanti' ? '1200-2000' : '500-1000';
+  } else if (key === 'evaluasi_smartpls') {
+    kata = '600-1200';
+  } else if (key === 'simpulan' || label.includes('simpulan') || label.includes('kesimpulan')) {
+    kata = p?.jenis === 'tesis_tridinanti' ? '200-350' : '100-250';
   }
 
   let panduan = '';
-  if (d && PANDUAN_SUB[d.key]) {
-    panduan = `\nPANDUAN ISI (wajib diikuti): ${PANDUAN_SUB[d.key]}.`;
-  } else if (label.includes('identifikasi masalah')) {
-    panduan = `\nPANDUAN ISI (wajib diikuti): Langsung ke inti tanpa narasi bertele-tele dan DILARANG KERAS MENGGUNAKAN KUTIPAN/SITASI. Cukup 1 kalimat pembuka singkat: "Berdasarkan latar belakang di atas, masalah dalam penelitian ini dapat diidentifikasi sebagai berikut:" lalu langsung butir bernomor 1., 2., dst. yang ringkas dan tegas.`;
-  } else if (label.includes('rumusan masalah')) {
-    panduan = `\nPANDUAN ISI (wajib diikuti): Langsung ke inti tanpa narasi bertele-tele dan DILARANG KERAS MENGGUNAKAN KUTIPAN/SITASI. Cukup 1 kalimat pembuka singkat: "Berdasarkan latar belakang dan identifikasi masalah, rumusan masalah dalam penelitian ini adalah sebagai berikut:" lalu daftar pertanyaan penelitian bernomor 1., 2., dst. yang padat dan terarah.`;
-  } else if (label.includes('tujuan penelitian')) {
-    panduan = `\nPANDUAN ISI (wajib diikuti): Langsung ke inti tanpa narasi bertele-tele dan DILARANG KERAS MENGGUNAKAN KUTIPAN/SITASI. Cukup 1 kalimat pembuka singkat: "Sesuai dengan rumusan masalah di atas, tujuan yang ingin dicapai dalam penelitian ini adalah sebagai berikut:" lalu daftar butir tujuan penelitian bernomor 1., 2., dst. yang selaras satu per satu dengan rumusan masalah.`;
+  if (p?.jenis === 'tesis_tridinanti') {
+    if (key === 'rumusan_masalah' || label.includes('rumusan masalah') || label.includes('perumusan masalah')) {
+      panduan = `\nPANDUAN ISI (wajib diikuti): LANGSUNG 1 kalimat pembuka singkat: "Berdasarkan latar belakang, identifikasi, dan batasan masalah di atas, maka perumusan masalah dalam penelitian ini adalah sebagai berikut:" lalu TEPAT 7 PERTANYAAN PENELITIAN MEDIASI SIMETRIS bernomor 1 s.d 7:
+1. Apakah [X1] berpengaruh terhadap [Y] pada [Objek Penelitian]?
+2. Apakah [X2] berpengaruh terhadap [Y] pada [Objek Penelitian]?
+3. Apakah [X1] berpengaruh terhadap [M] pada [Objek Penelitian]?
+4. Apakah [X2] berpengaruh terhadap [M] pada [Objek Penelitian]?
+5. Apakah [M] berpengaruh terhadap [Y] pada [Objek Penelitian]?
+6. Apakah [X1] berpengaruh terhadap [Y] melalui [M] sebagai variabel intervening pada [Objek Penelitian]?
+7. Apakah [X2] berpengaruh terhadap [Y] melalui [M] sebagai variabel intervening pada [Objek Penelitian]?
+(Sesuaikan nama variabel [X1], [X2], [M], [Y] dan [Objek] dengan judul tesis). DILARANG KERAS MENGGUNAKAN KUTIPAN/SITASI.`;
+    } else if (key === 'tujuan_penelitian' || label.includes('tujuan penelitian')) {
+      panduan = `\nPANDUAN ISI (wajib diikuti): LANGSUNG 1 kalimat pembuka singkat: "Sesuai dengan perumusan masalah di atas, maka tujuan penelitian ini adalah sebagai berikut:" lalu TEPAT 7 BUTIR TUJUAN PENELITIAN MEDIASI SIMETRIS bernomor 1 s.d 7 yang selaras persis dengan rumusan masalah:
+1. Untuk mengetahui dan menganalisis pengaruh [X1] terhadap [Y] pada [Objek Penelitian].
+2. Untuk mengetahui dan menganalisis pengaruh [X2] terhadap [Y] pada [Objek Penelitian].
+3. Untuk mengetahui dan menganalisis pengaruh [X1] terhadap [M] pada [Objek Penelitian].
+4. Untuk mengetahui dan menganalisis pengaruh [X2] terhadap [M] pada [Objek Penelitian].
+5. Untuk mengetahui dan menganalisis pengaruh [M] terhadap [Y] pada [Objek Penelitian].
+6. Untuk mengetahui dan menganalisis pengaruh [X1] terhadap [Y] melalui [M] sebagai variabel intervening pada [Objek Penelitian].
+7. Untuk mengetahui dan menganalisis pengaruh [X2] terhadap [Y] melalui [M] sebagai variabel intervening pada [Objek Penelitian].
+(Sesuaikan nama variabel [X1], [X2], [M], [Y] dan [Objek] dengan judul tesis). DILARANG KERAS MENGGUNAKAN KUTIPAN/SITASI.`;
+    } else if (key === 'hipotesis' || label.includes('hipotesis')) {
+      panduan = `\nPANDUAN ISI (wajib diikuti): Rumuskan TEPAT 7 HIPOTESIS KERJA TERARAH (H1 sampai H7) model mediasi:
+H1: [X1] berpengaruh positif dan signifikan terhadap [Y].
+H2: [X2] berpengaruh positif dan signifikan terhadap [Y].
+H3: [X1] berpengaruh positif dan signifikan terhadap [M].
+H4: [X2] berpengaruh positif dan signifikan terhadap [M].
+H5: [M] berpengaruh positif dan signifikan terhadap [Y].
+H6: [X1] berpengaruh terhadap [Y] melalui [M] sebagai variabel intervening.
+H7: [X2] berpengaruh terhadap [Y] melalui [M] sebagai variabel intervening.
+Sertakan narasi justifikasi teoritis dan bukti empiris ringkas sebelum merumuskan masing-masing hipotesis.`;
+    } else if (key === 'simpulan' || label.includes('simpulan') || label.includes('kesimpulan')) {
+      panduan = `\nPANDUAN ISI (wajib diikuti): LANGSUNG TEPAT 7 BUTIR KESIMPULAN BERNOMOR 1 S.D 7 yang menjawab 7 rumusan masalah dan hipotesis penelitian secara empiris berdasar hasil analisis SmartPLS. Sebutkan arah pengaruh (positif/negatif), nilai koefisien, dan status signifikansinya secara padat, tegas, dan ilmiah. DILARANG MENGGUNAKAN KUTIPAN/SITASI.`;
+    }
+  }
+  if (!panduan) {
+    if (d && PANDUAN_SUB[d.key]) {
+      panduan = `\nPANDUAN ISI (wajib diikuti): ${PANDUAN_SUB[d.key]}.`;
+    } else if (label.includes('identifikasi masalah')) {
+      panduan = `\nPANDUAN ISI (wajib diikuti): Langsung ke inti tanpa narasi bertele-tele dan DILARANG KERAS MENGGUNAKAN KUTIPAN/SITASI. Cukup 1 kalimat pembuka singkat: "Berdasarkan latar belakang di atas, masalah dalam penelitian ini dapat diidentifikasi sebagai berikut:" lalu langsung butir bernomor 1., 2., dst. yang ringkas dan tegas.`;
+    } else if (label.includes('pembatasan masalah')) {
+      panduan = `\nPANDUAN ISI (wajib diikuti): Langsung ke inti batasan ruang lingkup variabel (X1, X2, M, Y), objek penelitian, dan periode waktu. DILARANG KERAS MENGGUNAKAN KUTIPAN/SITASI.`;
+    } else if (label.includes('rumusan masalah') || label.includes('perumusan masalah')) {
+      panduan = `\nPANDUAN ISI (wajib diikuti): Langsung ke inti tanpa narasi bertele-tele dan DILARANG KERAS MENGGUNAKAN KUTIPAN/SITASI. Cukup 1 kalimat pembuka singkat: "Berdasarkan latar belakang dan identifikasi masalah, rumusan masalah dalam penelitian ini adalah sebagai berikut:" lalu daftar pertanyaan penelitian bernomor 1., 2., dst. yang padat dan terarah.`;
+    } else if (label.includes('tujuan penelitian')) {
+      panduan = `\nPANDUAN ISI (wajib diikuti): Langsung ke inti tanpa narasi bertele-tele dan DILARANG KERAS MENGGUNAKAN KUTIPAN/SITASI. Cukup 1 kalimat pembuka singkat: "Sesuai dengan rumusan masalah di atas, tujuan yang ingin dicapai dalam penelitian ini adalah sebagai berikut:" lalu daftar butir tujuan penelitian bernomor 1., 2., dst. yang selaras satu per satu dengan rumusan masalah.`;
+    }
   }
 
   return {
@@ -266,8 +388,11 @@ function terapkanOverlay(v: Varian, overlays: OverlayDef[]): Varian {
 
 // Varian final proyek: metode -> varian, lalu overlay tesis/disertasi (jenis)
 export function varianFor(p?: { metode?: string; jenis?: string } | null): Varian {
-  const key = varianMetode(p?.metode);
   const jenis = p?.jenis;
+  if (jenis === 'tesis_tridinanti') {
+    return V_TESIS_TRIDINANTI;
+  }
+  const key = varianMetode(p?.metode);
   // Tesis/disertasi termasuk kuantitatif memakai base + overlay — paritas struktur
   // Mantra Riset (tesis kuantitatif 32 sub; Bab I 8 sub dengan Kebaruan Penelitian).
   const base = VARIAN[key] || V_KUANTITATIF;
@@ -521,18 +646,27 @@ export function babPrompt(bab: string, p: any, refs: { doi: string; title: strin
     kerangka_konseptual: 'sajikan kerangka konseptual sebagai tabel/bagan konsep–indikator',
     definisi_konseptual_operasional: 'tabel definisi konseptual & operasional tiap istilah kunci',
   };
+  const isTridinanti = p?.jenis === 'tesis_tridinanti';
   const s1 = v.bab1 ? v.bab1.subs : [];
   const struktur1Dasar = `Susun BAB I dengan TEPAT ${s1.length} sub-bagian berurutan: ${s1.map((s, i) => {
     const n = `1.${i + 1} ${s.label}`;
     return nota1[s.key] ? `${n} (${nota1[s.key]})` : n;
   }).join(', ')}.\n`;
-  const struktur1 = struktur1Dasar +
+  const struktur1Tridinanti = `Susun BAB I PENDAHULUAN untuk TESIS MAGISTER MANAJEMEN UNIVERSITAS TRIDINANTI dengan TEPAT 6 sub-bagian berurutan:\n` +
+    `1.1 Latar Belakang Masalah: Alur umum ke khusus. Buka dengan urgensi variabel dependen/terikat (Y) mengutip grand theory, jelaskan variabel mediasi (M) dan variabel bebas (X1, X2), profil objek penelitian di Palembang/Sumsel, TABEL FENOMENA (Tabel 1.1 Kriteria Capaian Kinerja dan Tabel 1.2 Data Capaian 3 Tahun Terakhir yang menunjukkan adanya fluktuasi/belum optimal lengkap dengan baris Sumber di bawahnya), dan research gap penelitian terdahulu. DILARANG KERAS menyitasi buku metodologi penelitian (Sugiyono dkk.).\n` +
+    `1.2 Identifikasi Masalah: LANGSUNG 1 kalimat pembuka singkat: "Berdasarkan latar belakang di atas, masalah dalam penelitian ini dapat diidentifikasi sebagai berikut:" lalu 5-7 butir masalah riil di objek penelitian bernomor 1., 2., dst. TANPA narasi bertele-tele dan DILARANG MENGGUNAKAN SITASI/KUTIPAN.\n` +
+    `1.3 Pembatasan Masalah: LANGSUNG butir bernomor 1., 2., 3. batasan ruang lingkup variabel (X1, X2, M, Y), batasan subjek/objek instansi, dan batasan periode penelitian. DILARANG MENGGUNAKAN SITASI/KUTIPAN.\n` +
+    `1.4 Perumusan Masalah: LANGSUNG 1 kalimat pembuka singkat: "Berdasarkan latar belakang, identifikasi, dan batasan masalah di atas, maka perumusan masalah dalam penelitian ini adalah sebagai berikut:" lalu TEPAT 7 PERTANYAAN PENELITIAN MEDIASI SIMETRIS (1: X1->Y, 2: X2->Y, 3: X1->M, 4: X2->M, 5: M->Y, 6: X1->M->Y, 7: X2->M->Y). DILARANG MENGGUNAKAN SITASI/KUTIPAN.\n` +
+    `1.5 Tujuan Penelitian: LANGSUNG 1 kalimat pembuka singkat: "Sesuai dengan perumusan masalah di atas, maka tujuan penelitian ini adalah sebagai berikut:" lalu TEPAT 7 BUTIR TUJUAN PENELITIAN SIMETRIS yang selaras satu per satu dengan rumusan masalah (1 s.d 7). DILARANG MENGGUNAKAN SITASI/KUTIPAN.\n` +
+    `1.6 Kegunaan Penelitian: Terbagi menjadi "1.6.1 Kegunaan Teoritis" dan "1.6.2 Kegunaan Praktis" (bagi instansi objek, pegawai, dan almamater Program Pascasarjana Magister Manajemen). DILARANG MENGGUNAKAN SITASI/KUTIPAN.\n`;
+
+  const struktur1 = isTridinanti ? struktur1Tridinanti : (struktur1Dasar +
     `PETUNJUK KHUSUS SUB-BAB BAB I:\n` +
     `- Sub-bab 1.1 Latar Belakang: alur umum ke khusus, sitasi hanya artikel jurnal empiris 2022-2026 dan data resmi (DILARANG KERAS menyitasi buku metodologi seperti Sugiyono, Arikunto, Creswell, Sekaran, Ghozali, Moleong, Nazir, dsb.). WAJIB menyajikan Tabel Fenomena (markdown) dengan Judul Tabel di baris atas ("Tabel 1.1 [Nama Judul]") dan baris Sumber di bawah ("Sumber: [Nama Instansi/Peneliti, Tahun]").\n` +
     `- Sub-bab 1.2 Identifikasi Masalah: LANGSUNG 1 kalimat pengantar singkat ("Berdasarkan latar belakang di atas, masalah dalam penelitian ini dapat diidentifikasi sebagai berikut:") lalu langsung daftar butir masalah bernomor 1., 2., dst. TANPA narasi bertele-tele dan DILARANG KERAS menggunakan kutipan/sitasi.\n` +
     `- Sub-bab 1.3 Rumusan Masalah: LANGSUNG 1 kalimat pembuka singkat ("Berdasarkan latar belakang dan identifikasi masalah, rumusan masalah dalam penelitian ini adalah sebagai berikut:") lalu daftar pertanyaan penelitian bernomor 1., 2., dst. yang padat dan terarah. DILARANG KERAS menggunakan kutipan/sitasi.\n` +
     `- Sub-bab 1.4 Tujuan Penelitian: LANGSUNG 1 kalimat pembuka singkat ("Sesuai dengan rumusan masalah di atas, tujuan yang ingin dicapai dalam penelitian ini adalah sebagai berikut:") lalu daftar butir tujuan penelitian bernomor 1., 2., dst. yang selaras satu per satu dengan rumusan masalah. DILARANG KERAS menggunakan kutipan/sitasi.\n` +
-    `- Sub-bab 1.5 Manfaat Penelitian, Batasan Masalah, dan Sistematika Penulisan: sajikan padat dan terstruktur TANPA kutipan.\n`;
+    `- Sub-bab 1.5 Manfaat Penelitian, Batasan Masalah, dan Sistematika Penulisan: sajikan padat dan terstruktur TANPA kutipan.\n`);
 
   const catatan2: Record<string, string> = {
     kualitatif: `Uraikan teori utama tiap konsep kunci penelitian (sub-sub bertingkat bila perlu); TANPA hipotesis. WAJIB: sub Penelitian Terdahulu berupa TABEL markdown persis kolom "No | Nama (Tahun) | Judul | Hasil | Gap" berisi minimal 6 penelitian terdahulu nyata dari referensi yang relevan.\n`,
@@ -543,9 +677,14 @@ export function babPrompt(bab: string, p: any, refs: { doi: string; title: strin
     rnd: `Landasan teori pengembangan produk (kebutuhan, spesifikasi, teori pendukung domain). WAJIB: sub Penelitian Terdahulu berupa TABEL markdown persis kolom "No | Nama (Tahun) | Judul | Hasil | Gap" berisi minimal 6 literatur nyata dari referensi.\n`,
     eksakta: `Landasan teori sistem/rekayasa & konsep pendukung. WAJIB: sub Penelitian Terdahulu berupa TABEL markdown persis kolom "No | Nama (Tahun) | Judul | Hasil | Gap" berisi minimal 6 literatur nyata dari referensi.\n`,
   };
-  const struktur2 = kuant
+  const struktur2Tridinanti = `Susun BAB II KAJIAN PUSTAKA DAN HIPOTESIS PENELITIAN untuk TESIS MAGISTER MANAJEMEN UNIVERSITAS TRIDINANTI dengan TEPAT 4 sub-bagian berurutan:\n` +
+    `2.1 Kajian Pustaka: Uraikan grand theory dan tinjauan teoritis untuk SETIAP variabel (Y, M, X1, X2) mencakup pengertian para ahli, dimensi, indikator, dan faktor yang memengaruhi.\n` +
+    `2.2 Hasil Penelitian yang Relevan: Sajikan TABEL 2.1 Hasil Penelitian yang Relevan (minimal 7-10 jurnal terakreditasi SINTA / internasional bereputasi) kolom: "No | Peneliti & Tahun | Judul Penelitian | Variabel | Alat Analisis | Hasil Penelitian", diawali narasi pengantar singkat.\n` +
+    `2.3 Kerangka Berpikir: Uraikan hubungan logis antar variabel secara terstruktur untuk ke-7 jalur hipotesis mediasi, dan akhiri dengan DIAGRAM KERANGKA BERPIKIR TEKS model mediasi (X1, X2 -> M -> Y) terstruktur dengan kotak dan panah →.\n` +
+    `2.4 Hipotesis Penelitian: Rumuskan TEPAT 7 HIPOTESIS KERJA TERARAH (H1 s.d H7): H1 (X1->Y positif signifikan), H2 (X2->Y positif signifikan), H3 (X1->M positif signifikan), H4 (X2->M positif signifikan), H5 (M->Y positif signifikan), H6 (X1 berpengaruh terhadap Y melalui M sebagai variabel intervening), H7 (X2 berpengaruh terhadap Y melalui M sebagai variabel intervening).\n`;
+  const struktur2 = isTridinanti ? struktur2Tridinanti : (kuant
     ? `Struktur wajib BAB II: 2.1 Landasan Teori — untuk SETIAP konstruk/variabel penelitian buat sub-sub BERTINGKAT 5 tingkat dengan pola: "2.1.1.1 Teori yang Mendasari <variabel>", "2.1.1.2 Pengertian <variabel>", "2.1.1.3 Dimensi <variabel>", "2.1.1.4 Indikator <variabel>", "2.1.1.5 Faktor-Faktor yang Memengaruhi <variabel>" (sub-sub berikutnya lanjut 2.1.2, 2.1.3, dst.); 2.2 Kerangka Teori; 2.3 Hubungan Antar Variabel (satu sub tiap pasangan hubungan termasuk mediasi); 2.4 Penelitian Terdahulu; 2.5 Kerangka Berpikir; 2.6 Hipotesis.\nWAJIB: sub 2.4 Penelitian Terdahulu berupa TABEL markdown persis kolom "No | Nama (Tahun) | Judul | Hasil | Gap" berisi 10 penelitian terdahulu nyata dari referensi yang relevan (1 paragraf penjelasan pendahulu tabel juga boleh).\n`
-    : `Struktur wajib ${((v.bab2 && v.bab2.judul.toUpperCase()) || 'BAB II')}: ${subsNum('bab2').join(', ')}.\n${catatan2[vk] || ''}`;
+    : `Struktur wajib ${((v.bab2 && v.bab2.judul.toUpperCase()) || 'BAB II')}: ${subsNum('bab2').join(', ')}.\n${catatan2[vk] || ''}`);
   const nBagan = nomorSub('bab2', 'kerangka_berpikir');
   const baganNote = nBagan
     ? (ekstra.bagan === 'kirim' && ekstra.baganTeks
@@ -580,14 +719,21 @@ export function babPrompt(bab: string, p: any, refs: { doi: string; title: strin
   const ganttKal = nJad
     ? `sub ${nJad} Jadwal Penelitian berupa TABEL GANTT bulanan — kolom "No | Kegiatan | Januari ${tahun} | Februari ${tahun} | Maret ${tahun} | April ${tahun} | Mei ${tahun} | Juni ${tahun}" dengan tanda X pada bulan berjalan.`
     : '';
-  const struktur3 = kuant
+  const struktur3Tridinanti = `Susun BAB III METODE PENELITIAN untuk TESIS MAGISTER MANAJEMEN UNIVERSITAS TRIDINANTI dengan TEPAT 6 sub-bagian berurutan:\n` +
+    `3.1 Tempat dan Waktu Penelitian: Lokasi objek riset dan TABEL 3.1 Jadwal Pelaksanaan Penelitian bulanan (Gantt Chart).\n` +
+    `3.2 Populasi dan Sampel: Seluruh pegawai di objek penelitian. Gunakan teknik Sampling Jenuh (sensus) bila populasi <= 100 orang (tanpa rumus Slovin) atau rumus Slovin bila > 100 orang.\n` +
+    `3.3 Sumber dan Teknik Pengumpulan Data: Data Primer (kuesioner skala Likert) dan Data Sekunder (profil instansi, laporan kinerja), observasi, wawancara.\n` +
+    `3.4 Variabel dan Definisi Operasional: Sajikan TABEL Kisi-Kisi Definisi Operasional kolom "Variabel | Definisi Operasional | Dimensi | Indikator | Skala Pengukuran".\n` +
+    `3.5 Instrumen Penelitian: Skala Likert 5 poin (1 = Sangat Tidak Setuju s.d. 5 = Sangat Setuju).\n` +
+    `3.6 Teknik Analisis Data: Structural Equation Modeling berbasis Partial Least Squares (PLS-SEM) menggunakan Software SmartPLS. Uraikan 2 tahap pengujian: (1) Evaluasi Measurement Model (Outer Model): Convergent Validity (Outer Loading >= 0.70 & AVE >= 0.50), Discriminant Validity (Cross Loading, Fornell-Larcker, HTMT < 0.90), Construct Reliability (Composite Reliability >= 0.70 & Cronbach Alpha >= 0.70); (2) Evaluasi Structural Model (Inner Model): R-Square (R²), F-Square (f²), Q-Square (Q²), Bootstrapping 5.000 subsamples (t-hitung > 1.96, p < 0.05) untuk uji koefisien jalur H1-H5, serta Specific Indirect Effects untuk pengujian mediasi intervening H6 & H7.\n`;
+  const struktur3 = isTridinanti ? struktur3Tridinanti : (kuant
     ? `Struktur wajib BAB III: ${(v.bab3 ? v.bab3.subs : []).map((s, i) => {
         const n = `3.${i + 1} ${s.label}`;
         if (s.key === 'teknik_pengumpulan') return `${n} (sub ${nKumpul}.1 Kuesioner dengan sub per variabel)`;
         if (s.key === 'analisis_spss') return `${n} (${nAna}.1 Uji Validitas, ${nAna}.2 Uji Reliabilitas, ${nAna}.3 Uji Asumsi Klasik — ${nAna}.3.1 Normalitas, ${nAna}.3.2 Multikolinearitas, ${nAna}.3.3 Heteroskedastisitas, ${nAna}.4 Analisis Regresi Linear Berganda — ${nAna}.4.1 Uji t, ${nAna}.4.2 Uji F, ${nAna}.4.3 Koefisien Determinasi R², ${nAna}.5 Uji Mediasi (Path Analysis))`;
         return n;
       }).join(', ')}.\nWAJIB TABEL: (a) sub ${nDef} Definisi Operasional berupa TABEL markdown persis 7 kolom "Variabel | Definisi Konseptual | Definisi Operasional | Dimensi | Indikator | Skala Pengukuran | Sumber" (satu baris per variabel);${ganttKal ? ` (b) ${ganttKal}` : ''}\n`
-    : `Struktur wajib ${((v.bab3 && v.bab3.judul.toUpperCase()) || 'BAB III')}: ${subsNum('bab3').join(', ')}.\n${catatan3[vk] || ''}${ganttKal ? `WAJIB TABEL: ${ganttKal}\n` : ''}`;
+    : `Struktur wajib ${((v.bab3 && v.bab3.judul.toUpperCase()) || 'BAB III')}: ${subsNum('bab3').join(', ')}.\n${catatan3[vk] || ''}${ganttKal ? `WAJIB TABEL: ${ganttKal}\n` : ''}`);
 
   const catatan4: Record<string, string> = {
     kualitatif: `Sajikan data per tema hasil wawancara/observasi (boleh kutipan informan), Triangulasi & Keabsahan Temuan memuat triangulasi teknik/sumber/waktu + member checking, Pembahasan mengaitkan temuan dengan teori Bab II.`,
@@ -599,16 +745,31 @@ export function babPrompt(bab: string, p: any, refs: { doi: string; title: strin
     eksakta: `Deskripsi data uji, implementasi/eksperimen, Hasil Pengujian dalam tabel/grafik, Pembahasan dibandingkan tolok ukur & literatur.`,
   };
   const adaAgenda = v.bab5 && v.bab5.subs.some((s) => s.key === 'agenda_penelitian');
-  const struktur4 = kuant
+  const struktur4Tridinanti = `Susun BAB IV HASIL ANALISIS DAN PEMBAHASAN untuk TESIS MAGISTER MANAJEMEN UNIVERSITAS TRIDINANTI dengan TEPAT 5 sub-bagian berurutan:\n` +
+    `4.1 Gambaran Umum Objek Penelitian: Sejarah singkat, visi misi, struktur organisasi dan tugas pokok fungsi instansi objek penelitian.\n` +
+    `4.2 Deskripsi Karakteristik Responden: TABEL karakteristik responden (Jenis Kelamin, Usia, Pendidikan Terakhir, Masa Kerja) lengkap kolom Frekuensi dan Persentase bersumber data primer diolah.\n` +
+    `4.3 Deskriptif Variabel Penelitian: TABEL rekapitulasi capaian skor rata-rata (mean) dan kategori capaian untuk variabel X1, X2, M, dan Y.\n` +
+    `4.4 Evaluasi Model PLS-SEM (SmartPLS): Sajikan seluruh tabel hasil estimasi SmartPLS format tabel akademik terbuka (open-border, tanpa garis vertikal, Judul Tabel di atas dan Sumber di bawah): (a) Tabel Loading Factor Outer Model Running 1 & 2; (b) Tabel Nilai AVE (> 0.50); (c) Tabel Reliabilitas Konstruk (Cronbach Alpha & Composite Reliability >= 0.70); (d) Tabel Discriminant Validity HTMT (< 0.90); (e) Tabel R-Square; (f) Tabel Path Coefficients Pengaruh Langsung H1-H5 (Original Sample, T-Statistics, P-Values, Status); (g) Tabel Specific Indirect Effects Pengaruh Mediasi H6-H7.\n` +
+    `4.5 Pembahasan Hasil Penelitian (7 Hipotesis): Bahas tuntas SELURUH 7 HIPOTESIS (H1 sampai H7). WAJIB MENGGUNAKAN FORMULA 4 PILAR PADA SETIAP HIPOTESIS:\n` +
+    `  - Pilar 1: Fakta Hasil Statistik Empiris (nilai beta, t-stat > 1.96, p-val < 0.05, status diterima).\n` +
+    `  - Pilar 2: Konfirmasi Grand Theory yang mendasari hubungan variabel.\n` +
+    `  - Pilar 3: Komparasi Dukungan Riset Terdahulu (sebutkan nama peneliti dan tahun jurnal sejalan).\n` +
+    `  - Pilar 4: Analisis Fenomena Faktual Lapangan (kondisi nyata operasional di instansi objek penelitian).\n`;
+  const struktur4 = isTridinanti ? struktur4Tridinanti : (kuant
     ? `Susun BAB IV HASIL DAN PEMBAHASAN (deskripsi data, hasil analisis, pembahasan dikaitkan teori Bab II). Sub-bagian urut sesuai struktur: ${subsNum('bab4').join(', ')}.\n`
-    : `Susun ${((v.bab4 && v.bab4.judul.toUpperCase()) || 'BAB IV')} dengan sub-bagian urut TEPAT: ${subsNum('bab4').join(', ')} — ${catatan4[vk] || 'sajikan hasil per sub-bagian lalu pembahasan dikaitkan teori Bab II.'}\n`;
-  const struktur5 = kuant
+    : `Susun ${((v.bab4 && v.bab4.judul.toUpperCase()) || 'BAB IV')} dengan sub-bagian urut TEPAT: ${subsNum('bab4').join(', ')} — ${catatan4[vk] || 'sajikan hasil per sub-bagian lalu pembahasan dikaitkan teori Bab II.'}\n`);
+  const struktur5Tridinanti = `Susun BAB V KESIMPULAN, IMPLIKASI DAN SARAN untuk TESIS MAGISTER MANAJEMEN UNIVERSITAS TRIDINANTI dengan TEPAT 3 sub-bagian berurutan:\n` +
+    `5.1 Kesimpulan: TEPAT 7 BUTIR KESIMPULAN BERNOMOR 1 S.D 7 yang menjawab secara empiris 7 rumusan masalah dan hipotesis penelitian secara padat, tegas, dan menyebutkan arah pengaruh serta nilai signifikansinya.\n` +
+    `5.2 Implikasi Penelitian: Uraikan "5.2.1 Implikasi Teoritis" (sumbangan bagi keilmuan MSDM/organisasi) dan "5.2.2 Implikasi Manajerial" (kebijakan strategis bagi manajemen instansi objek).\n` +
+    `5.3 Saran: Uraikan "5.3.1 Saran Praktis" (rekomendasi terarah bagi instansi objek berdasarkan indikator dengan skor terendah) dan "5.3.2 Saran Akademis" (rekomendasi bagi peneliti selanjutnya terkait variabel atau objek baru).\n`;
+  const struktur5 = isTridinanti ? struktur5Tridinanti : (kuant
     ? `Susun BAB V PENUTUP (kesimpulan menjawab rumusan masalah + saran praktis/metodologis). Sub-bagian urut: ${subsNum('bab5').join(', ')}${adaAgenda ? ' — Agenda Penelitian Lanjutan berisi arah penelitian berikutnya berbasis keterbatasan penelitian' : ''}.\n`
-    : `Susun ${((v.bab5 && v.bab5.judul.toUpperCase()) || 'BAB V')} dengan sub-bagian urut: ${subsNum('bab5').join(', ')} — Simpulan menjawab rumusan masalah satu per satu; Saran praktis/teknis/akademis${adaAgenda ? '; Agenda Penelitian Lanjutan berisi arah penelitian berikutnya berbasis keterbatasan penelitian' : ''}.\n`;
+    : `Susun ${((v.bab5 && v.bab5.judul.toUpperCase()) || 'BAB V')} dengan sub-bagian urut: ${subsNum('bab5').join(', ')} — Simpulan menjawab rumusan masalah satu per satu; Saran praktis/teknis/akademis${adaAgenda ? '; Agenda Penelitian Lanjutan berisi arah penelitian berikutnya berbasis keterbatasan penelitian' : ''}.\n`);
   const s6 = subsNum('lampiran');
-  const strukturL = !kuant && s6.length
+  const strukturLTridinanti = `Susun LAMPIRAN TESIS MAGISTER MANAJEMEN: 6.1 Kisi-Kisi Instrumen Penelitian (tabel variabel, dimensi, indikator, butir soal); 6.2 Lembar Kuesioner Penelitian Skala Likert 1-5; 6.3 Rekapitulasi Tabulasi Data Responden & Lembar Output Analisis SmartPLS.\n`;
+  const strukturL = isTridinanti ? strukturLTridinanti : (!kuant && s6.length
     ? `Sub-bagian urut: ${s6.join(', ')} — tiap sub diisi instrumen penelitian NYATA sesuai labelnya (kisi-kisi, pedoman/lembar observasi-keahlian, pernyataan responden, lembar validasi) yang diturunkan dari kajian pustaka dan metode artikelmu, gunakan tabel Markdown bila membantu.\n`
-    : '';
+    : '');
 
   // TARGET KEDALAMAN — patokan panjang dari hasil terukur referensi mantrariset
   // (Bab I 33rb, Bab II 56rb, Bab III 41rb karakter; uji 6 Okt 2026). Tanpa target
@@ -651,7 +812,7 @@ export function babPrompt(bab: string, p: any, refs: { doi: string; title: strin
     bab3: `${struktur3}${target3}${populasiNote}${desainNote}${softwareNote}Judul: karya berikut.\n${base}${ref}\nIkuti kaidah metodologi standar Indonesia.\n${scopeNote}${outlineNote}${SITASI}${SITASI_KUTIP}`,
     bab4: `${struktur4}${target4}${tabulasiNote}${base}${ref}\nGunakan tabel Markdown bila perlu.\n${scopeNote}${outlineNote}${SITASI}${SITASI_KUTIP}`,
     bab5: `${struktur5}${target5}${base}${ref}\n${scopeNote}${outlineNote}${SITASI}${SITASI_BAB5}`,
-    lampiran: `Susun LAMPIRAN ${p.jenis === 'disertasi' ? 'disertasi' : p.jenis === 'tesis' ? 'tesis' : 'skripsi'} (bab penunjang setelah Bab V).\n${targetL}${base}${ref}\n${strukturL}${kisiKonteks ? `KONTEKS WAJIB — KISI-KISI DARI BAB 3.3 (jumlah butir & kode item di Lampiran 6.1 WAJIB persis mengikuti indikator di sini):\n${kisiKonteks}\n` : ''}${strukturL ? '' : `Isinya diturunkan dari kajian pustaka dan metode artikelmu: ${p.metode === 'Kualitatif'
+    lampiran: `Susun LAMPIRAN ${p.jenis === 'disertasi' ? 'disertasi' : (p.jenis === 'tesis' || p.jenis === 'tesis_tridinanti') ? 'tesis' : 'skripsi'} (bab penunjang setelah Bab V).\n${targetL}${base}${ref}\n${strukturL}${kisiKonteks ? `KONTEKS WAJIB — KISI-KISI DARI BAB 3.3 (jumlah butir & kode item di Lampiran 6.1 WAJIB persis mengikuti indikator di sini):\n${kisiKonteks}\n` : ''}${strukturL ? '' : `Isinya diturunkan dari kajian pustaka dan metode artikelmu: ${p.metode === 'Kualitatif'
       ? 'kisi-kisi wawancara/pedoman wawancara, daftar informan, contoh transkrip, lembar observasi'
       : 'kisi-kisi kuisioner, daftar pernyataan per indikator skala Likert, contoh lembar jawaban responden'} serta Lembar Pernyataan/Afirasi. Susun per bagian bernomor 6.1, 6.2, dst. gunakan tabel Markdown bila membantu.\n`}${scopeNote}${outlineNote}${SITASI}${SITASI_KUTIP}`,
   };
@@ -1011,8 +1172,8 @@ router.post('/:id/front-matter', requireAuthOrKey, async (req: AuthRequest, res)
     // Kata pengantar harus MENYESUAIAI JENIS karya (skripsi/tesis/disertasi) —
     // temuan parity 11 Okt 2026: prompt lama selalu bilang "skripsi" untuk tesis.
     const jenis = String(p.jenis || 'skripsi').toLowerCase();
-    const kataJenis = jenis === 'disertasi' ? 'disertasi' : jenis === 'tesis' ? 'tesis' : 'skripsi';
-    const gelar = jenis === 'disertasi' ? 'Doktor (S3)' : jenis === 'tesis' ? 'Magister (S2)' : 'Sarjana (S1)';
+    const kataJenis = jenis === 'disertasi' ? 'disertasi' : (jenis === 'tesis' || jenis === 'tesis_tridinanti') ? 'tesis' : 'skripsi';
+    const gelar = jenis === 'disertasi' ? 'Doktor (S3)' : (jenis === 'tesis' || jenis === 'tesis_tridinanti') ? 'Magister (S2)' : 'Sarjana (S1)';
     const kata = await generateContent(
       `Susun KATA PENGANTAR ${kataJenis} 250-350 kata, formal Indonesia. ` +
       `Karya ilmiah ini ${kataJenis} — sebut "penulisan ${kataJenis}" atau "${kataJenis} ini", JANGAN memakai kata "skripsi". ` +
@@ -1281,7 +1442,7 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
     // di front matter (Kata Pengantar, Lembar Persetujuan dsb.) tak terpecah jadi
     // beberapa paragraf terpisah (temuan verifikasi).
     const judul = String(pr.judul || '').replace(/\s*\n\s*/g, ' ').trim();
-    const jenisSelected = pr.jenis === 'tesis' ? 'Tesis' : pr.jenis === 'disertasi' ? 'Disertasi' : 'Skripsi';
+    const jenisSelected = (pr.jenis === 'tesis' || pr.jenis === 'tesis_tridinanti') ? 'Tesis' : pr.jenis === 'disertasi' ? 'Disertasi' : 'Skripsi';
     const tahun = new Date().getFullYear();
     const nama = String(ident.nama || '');
     const nim = String(ident.nim || '');
@@ -1911,7 +2072,7 @@ router.get('/:id/export-docx', requireAuthOrKey, async (req: AuthRequest, res) =
         }
 
         // Rumusan masalah: paragraf pertanyaan → daftar bernomor (paritas referensi)
-        if (/\brumusan masalah\b/i.test(judulAktif)
+        if (/\b(?:rumusan|perumusan) masalah\b/i.test(judulAktif)
           && /^(Bagaimana|Apakah|Siapa|Kapan|Dimana|Di mana|Mengapa|Berapa|Seberapa)\b/.test(line)
           && /\?\s*$/.test(line) && line.length < 600) {
           pushNum(dt, 0);

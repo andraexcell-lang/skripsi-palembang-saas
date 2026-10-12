@@ -68,7 +68,7 @@
   <div id="form-new" style="display:none">
     <input id="f-judul" placeholder="Judul lengkap skripsi/tesis...">
     <div class="row2">
-      <select id="f-jenis"><option value="skripsi">Skripsi (S1)</option><option value="tesis">Tesis (S2)</option><option value="disertasi">Disertasi (S3)</option></select>
+      <select id="f-jenis"><option value="skripsi">Skripsi (S1)</option><option value="tesis">Tesis (S2)</option><option value="tesis_tridinanti">Tesis MM (Tridinanti / PLS-SEM)</option><option value="disertasi">Disertasi (S3)</option></select>
       <select id="f-metode"><option>Kualitatif</option><option>Kuantitatif</option><option>Mixed Method</option><option>Studi Pustaka</option></select>
     </div>
     <input id="f-logo" type="file" accept="image/*">
@@ -293,6 +293,14 @@
   $('newproj').onclick = () => {
     const f = $('form-new');
     f.style.display = f.style.display === 'none' ? 'block' : 'none';
+  };
+  $('f-jenis').onchange = () => {
+    if ($('f-jenis').value === 'tesis_tridinanti') {
+      $('f-metode').value = 'Kuantitatif';
+      if (!$('f-kampus').value) $('f-kampus').value = 'Universitas Tridinanti';
+      if (!$('f-jurusan').value) $('f-jurusan').value = 'Magister Manajemen';
+      if (!$('f-fakultas').value) $('f-fakultas').value = 'Pascasarjana';
+    }
   };
   $('create').onclick = async () => {
     try {

@@ -46,10 +46,10 @@ const KARYA = [
 ];
 
 const NAMA_JENIS: Record<string, string> = {
-  skripsi: 'Skripsi', tesis: 'Tesis', disertasi: 'Disertasi', artikel: 'Artikel',
+  skripsi: 'Skripsi', tesis: 'Tesis', tesis_tridinanti: 'Tesis MM Tridinanti', disertasi: 'Disertasi', artikel: 'Artikel',
   artikel_sinta: 'Artikel Sinta', artikel_scopus: 'Artikel Scopus', karil: 'Karil UT',
 };
-const LEVEL: Record<string, string> = { skripsi: 'S1', tesis: 'S2', disertasi: 'S3' };
+const LEVEL: Record<string, string> = { skripsi: 'S1', tesis: 'S2', tesis_tridinanti: 'S2', disertasi: 'S3' };
 
 const tgl = (s?: string) => (s ? new Date(s).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '');
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
