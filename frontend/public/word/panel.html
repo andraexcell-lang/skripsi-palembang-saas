@@ -27,6 +27,16 @@
   .row2 > * { flex: 1; }
   .muted { color: #64748b; font-size: 11px; }
   hr { border: none; border-top: 1px solid #e2e8f0; margin: 10px 0; }
+  /* Penanda generate (paritas pola Mantra): progress bar + status berwarna di ATAS panel */
+  #prog-wrap { display: none; margin: 8px 0 0; }
+  #prog-track { height: 6px; background: #E6EBF5; border-radius: 3px; overflow: hidden; }
+  #prog-fill { height: 100%; width: 0; background: #0066FF; transition: width .9s linear; }
+  #prog-pct { font-size: 11px; color: #64748b; }
+  #status { white-space: pre-wrap; font-size: 12px; margin: 6px 0; min-height: 16px; }
+  #status.ok { color: #047857; font-weight: bold; }
+  #status.err { color: #b91c1c; font-weight: bold; }
+  #view-main.sibuk button { opacity: .5; cursor: default; }
+  #view-main.sibuk button.sedang { opacity: 1; background: #EAF1FC; color: #0f172a; }
 </style>
 </head>
 <body>
@@ -49,6 +59,8 @@
 </div>
 <div id="view-main" style="display:none">
   <h3>Skripsi Palembang</h3>
+  <div id="prog-wrap"><div id="prog-track"><div id="prog-fill"></div></div><span id="prog-pct"></span></div>
+  <div id="status"></div>
   <div>Saldo: <span id="bal">—</span> · <button id="out" class="link">Putuskan perangkat ini</button></div>
   <label class="muted">Proyek</label>
   <select id="proj"></select>
@@ -95,7 +107,6 @@
   <hr>
   <h3>Parafrase teks terpilih</h3>
   <button id="par" class="secondary">Parafrase Seleksi &amp; Ganti</button>
-  <div id="msg2"></div>
 </div>
 <script>
 (function () {
@@ -145,7 +156,55 @@
     });
   }
   const msg = (t) => { $('msg').textContent = t; };
-  const msg2 = (t) => { $('msg2').textContent = t; };
+  // Kartu status global (paritas pola Mantra): teks berwarna semantik — hijau saat
+  // sukses (diawali ✓), merah saat gagal, netral saat berjalan. Ditulis ke elemen
+  // #status di ATAS panel agar selalu terlihat tanpa menggulir.
+  function lap(jenis, teks) {
+    const el = $('status');
+    el.textContent = teks;
+    el.className = jenis === 'ok' ? 'ok' : jenis === 'err' ? 'err' : '';
+  }
+  // msg2 lama dipertahankan sebagai alias: otomatis merah bila diawali Error/Gagal.
+  const msg2 = (t) => lap(/^(error|gagal)/i.test(String(t)) ? 'err' : '', t);
+  // Mesin penanda generate (paritas pola Mantra):
+  //  - sibuk(btn, label): kunci semua tombol (redup), sorot tombol aktif (highlight),
+  //    tampilkan progress bar + timer persen asimptotis (maks 96%, "perkiraan").
+  //  - selesai(jenis, teks): selalu dipanggil di jalur sukses & gagal (finally-like)
+  //    agar panel tidak pernah macet terkunci. Bisa bersarang (pewalian sub-bab).
+  let sibukN = 0, progTimer = null;
+  function sibuk(btn, label) {
+    sibukN++;
+    if (sibukN > 1) return;
+    $('view-main').classList.add('sibuk');
+    $('prog-wrap').style.display = 'block';
+    $('prog-fill').style.width = '0%';
+    $('prog-pct').textContent = '';
+    const t0 = Date.now();
+    progTimer = setInterval(() => {
+      const d = (Date.now() - t0) / 1000;
+      const pct = Math.max(3, Math.min(96, Math.round(96 * (1 - Math.exp(-d / 60)))));
+      $('prog-fill').style.width = pct + '%';
+      $('prog-pct').textContent = pct + '% (perkiraan) · ' + Math.floor(d / 60) + ':' +
+        String(Math.floor(d % 60)).padStart(2, '0') + ' berjalan';
+    }, 1000);
+    if (btn) {
+      btn.dataset.label = btn.innerText;
+      btn.innerText = label || 'Menulis...';
+      btn.classList.add('sedang');
+    }
+  }
+  function selesai(jenis, teks) {
+    sibukN = Math.max(0, sibukN - 1);
+    if (sibukN > 0) { if (teks) lap(jenis, teks); return; }
+    if (progTimer) { clearInterval(progTimer); progTimer = null; }
+    $('prog-wrap').style.display = 'none';
+    $('view-main').classList.remove('sibuk');
+    document.querySelectorAll('#view-main button.sedang').forEach((b) => {
+      b.classList.remove('sedang');
+      if (b.dataset.label) { b.innerText = b.dataset.label; delete b.dataset.label; }
+    });
+    if (teks) lap(jenis, teks);
+  }
   let projects = [];
   try {
     $('api').value = localStorage.getItem('spw-api') || $('api').value;
@@ -376,7 +435,8 @@
           // rata tengah, diawal halaman baru — otomatis jadi entri DAFTAR ISI.
           const judul = (OUTLINE[b] ? OUTLINE[b].bab : b).toUpperCase();
           await kirim('sisip', { posisi: 'kursor', blok: [{ teks: judul, heading: 1, center: true, bold: true, size: 20, mulaiHalaman: true }] });
-        } catch (e) { msg2('Error: ' + e.message); }
+          lap('ok', '\u2713 Judul bab "' + judul + '" disisipkan.');
+        } catch (e) { lap('err', 'Gagal: ' + e.message); }
       };
       else if (act === 'del') btn.onclick = () => {
         const o2 = getOverrides();
@@ -428,13 +488,10 @@
   }
   async function genSub(bab, sub, btn) {
     const pid = $('proj').value;
-    if (!pid) return msg2('Pilih proyek dulu.');
-    if (btn) { btn.disabled = true; btn.dataset.label = btn.innerText; btn.innerText = 'Menulis...'; }
+    if (!pid) return lap('err', 'Pilih proyek dulu.');
+    sibuk(btn);
+    lap('', 'Menulis draf "' + sub + '" — jangan tutup Word.');
     const t0 = Date.now();
-    const tick = setInterval(() => {
-      const s = Math.floor((Date.now() - t0) / 1000);
-      msg2('Menulis draf... ' + Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') + ' berjalan. Jangan tutup Word.');
-    }, 1000);
     try {
       const r = await fetch(api() + '/api/projects/' + pid + '/generate-subbab-stream', {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': key() },
@@ -483,12 +540,12 @@
       SCAN = null;
       $('gen-kosong').style.display = 'none';
       $('scan-info').textContent = 'Dokumen berubah — pindai ulang untuk memperbarui status sub-bab.';
-      msg2(sub + ' selesai (' + nwords + ' kata).');
+      const dtk = Math.floor((Date.now() - t0) / 1000);
+      selesai('ok', '\u2713 ' + sub + ' selesai — ' + nwords + ' kata, ' +
+        Math.floor(dtk / 60) + ':' + String(dtk % 60).padStart(2, '0') + ' berjalan.');
       if (btn) btn.innerText = 'Ulangi';
       refresh();
-    } catch (e) { msg2('Error: ' + e.message); }
-    clearInterval(tick);
-    if (btn) { btn.disabled = false; btn.innerText = btn.dataset.label || 'Generate'; }
+    } catch (e) { selesai('err', 'Gagal generate: ' + e.message); }
   }
   $('gen-custom').onclick = async () => {
     const s = $('custom-sub').value.trim();
@@ -497,8 +554,9 @@
   };
   $('cover').onclick = async () => {
     const pr = projects.find((x) => x.id === $('proj').value);
-    if (!pr) return msg2('Pilih proyek dulu.');
-    msg2('Membangun halaman depan...');
+    if (!pr) return lap('err', 'Pilih proyek dulu.');
+    sibuk($('cover'), 'Membuat...');
+    lap('', 'Membangun halaman depan...');
     try {
       const fm = await call('/api/projects/' + pr.id + '/front-matter', {});
       const J = fm.judul || '', N = fm.nama || '', NIM = fm.nim || '';
@@ -591,8 +649,8 @@
       judulLembar('DAFTAR TABEL');
       blok.push({ toc: 'tabel' });
       await kirim('sisip', { posisi: 'awal', blok });
-      msg2('Cover, halaman depan, Daftar Isi & Daftar Tabel dibuat. Klik kanan field > Update Field bila isi berubah.');
-    } catch (e) { msg2('Error: ' + e.message); }
+      selesai('ok', '\u2713 Cover, halaman depan, Daftar Isi & Daftar Tabel dibuat. Klik kanan field > Update Field bila isi berubah.');
+    } catch (e) { selesai('err', 'Gagal: ' + e.message); }
   };
   function rapikanJudul(s) {
     const teks = String(s || '').replace(/\s+/g, ' ').trim();
@@ -615,12 +673,13 @@
   }
   $('dafpus').onclick = async () => {
     const pr = projects.find((x) => x.id === $('proj').value);
-    if (!pr) return msg2('Pilih proyek dulu.');
-    msg2('Mengambil referensi proyek...');
+    if (!pr) return lap('err', 'Pilih proyek dulu.');
+    sibuk($('dafpus'), 'Menyusun...');
+    lap('', 'Mengambil referensi proyek...');
     try {
       const rf = await call('/api/projects/' + pr.id + '/references');
       const refs = (rf.items || []).slice(0, 60);
-      if (!refs.length) return msg2('Belum ada referensi. Unggah artikel dulu di aplikasi (tab Pustaka).');
+      if (!refs.length) { selesai('err', 'Belum ada referensi. Unggah artikel dulu di aplikasi (tab Pustaka).'); return; }
       const baris = [];
       for (const r of refs) {
         const kepala = ((r.authors || '') + ' (' + (r.year || 't.t.') + '). ' + rapikanJudul(r.title || '') + '.').replace(/\s+/g, ' ').trim();
@@ -631,34 +690,35 @@
       // Native: cari judul DAFTAR PUSTAKA (termasuk "6. DAFTAR PUSTAKA"), hapus isi lama
       // sampai judul bab/daftar berikutnya, lalu sisip entri baru (gaya hanging 720 twips).
       const hasil = await kirim('gantiDapus', { baris: baris.map((b) => ({ teks: b })) });
-      msg2('Daftar Pustaka ditulis ulang: ' + baris.length + ' baris' +
+      selesai('ok', '\u2713 Daftar Pustaka ditulis ulang: ' + baris.length + ' baris' +
         (hasil.ganti ? ' (mengganti ' + hasil.ganti + ' baris lama).' : ' — judul "DAFTAR PUSTAKA" belum ada, disisipkan di posisi kursor.'));
-    } catch (e) { msg2('Error: ' + e.message); }
+    } catch (e) { selesai('err', 'Gagal: ' + e.message); }
   };
   async function pageNum(fmt) {
     try {
       await kirim('nomorHalaman', { gaya: fmt });
-      msg2('Nomor halaman dipasang.');
-    } catch (e) { msg2('Error: ' + e.message); }
+      lap('ok', '\u2713 Nomor halaman dipasang.');
+    } catch (e) { lap('err', 'Gagal: ' + e.message); }
   }
   $('pg-arab').onclick = () => pageNum('arab');
   $('pg-rom').onclick = () => pageNum('rom');
   $('par').onclick = async () => {
-    msg2('Memarafrase seleksi... (1 kredit)');
+    sibuk($('par'), 'Memarafrase...');
+    lap('', 'Memarafrase seleksi... (1 kredit)');
     try {
       const s = await kirim('bacaSeleksi');
       const sel = s.teks || '';
-      if (!sel || !sel.trim()) return msg2('Blok dulu teks di dokumen.');
+      if (!sel || !sel.trim()) { selesai('err', 'Blok dulu teks di dokumen.'); return; }
       const j = await call('/api/ai/generate', { prompt: 'Parafrase akademik formal (Indonesia), pertahankan makna:\n\n' + sel.slice(0, 4000), feature: 'parafrase' });
       await kirim('gantiSeleksi', { teks: j.result.slice(0, 15000) });
-      msg2('Parafrase selesai.');
+      selesai('ok', '\u2713 Parafrase selesai — teks lama sudah diganti di dokumen.');
       refresh();
-    } catch (e) { msg2('Error: ' + e.message); }
+    } catch (e) { selesai('err', 'Gagal: ' + e.message); }
   };
   // Sapa jembatan: pastikan panel terhubung ke add-in & Word
   kirim('ping')
-    .then((r) => msg2('Terhubung ke Word ' + r.word + ' · add-in v' + r.versi + '.'))
-    .catch((e) => msg2(e.message));
+    .then((r) => lap('ok', '\u2713 Terhubung ke Word ' + r.word + ' · add-in v' + r.versi + '.'))
+    .catch((e) => lap('err', e.message));
 })();
 </script>
 </body>
