@@ -94,6 +94,9 @@
   <input id="custom-sub" placeholder="mis. Analisis SWOT">
   <button id="gen-custom" class="secondary">Generate</button>
   <hr>
+  <button id="atur-hlm" class="secondary">Atur Halaman &amp; Margin Standar</button>
+  <p class="muted">Format otomatis dokumen aktif ke kertas A4 dengan margin 4-4-3-3 cm.</p>
+  <hr>
   <button id="cover">Bangun Cover + Daftar Isi + Daftar Tabel</button>
   <p class="muted">Disisipkan di awal dokumen. Nomor halaman &amp; daftar dihitung otomatis oleh Word.</p>
   <div class="row2">
@@ -434,10 +437,10 @@
       if (act === 'gen') btn.onclick = () => genSub(b, btn.getAttribute('data-sub'), btn);
       else if (act === 'heading') btn.onclick = async () => {
         try {
-          // Paritas Mantra: "BAB I PENDAHULUAN" huruf kapital = Heading 1, 20pt,
-          // rata tengah, diawal halaman baru — otomatis jadi entri DAFTAR ISI.
+          // Paritas Mantra: "BAB I PENDAHULUAN" huruf kapital = Heading 1, 14pt,
+          // bold, rata tengah, diawal halaman baru — otomatis jadi entri DAFTAR ISI.
           const judul = (OUTLINE[b] ? OUTLINE[b].bab : b).toUpperCase();
-          await kirim('sisip', { posisi: 'kursor', blok: [{ teks: judul, heading: 1, center: true, bold: true, size: 20, mulaiHalaman: true }] });
+          await kirim('sisip', { posisi: 'kursor', blok: [{ teks: judul, heading: 1, center: true, bold: true, size: 14, mulaiHalaman: true }] });
           lap('ok', '\u2713 Judul bab "' + judul + '" disisipkan.');
         } catch (e) { lap('err', 'Gagal: ' + e.message); }
       };
@@ -604,7 +607,7 @@
         blok.push({ pageBreak: true });
       }
       function judulLembar(text) {
-        para(text, { center: true, bold: true, size: 20, heading: 1 });
+        para(text, { center: true, bold: true, size: 14, heading: 1 });
       }
       para(J.toUpperCase(), { center: true, bold: true, size: 14 });
       para('', {});
@@ -674,6 +677,16 @@
       return wl.charAt(0).toUpperCase() + wl.slice(1) + tanda;
     }).join(' ');
   }
+  $('atur-hlm').onclick = async () => {
+    sibuk($('atur-hlm'), 'Mengatur...');
+    lap('', 'Mengatur ukuran kertas A4 & margin 4-4-3-3 cm...');
+    try {
+      await kirim('aturHalaman', {});
+      selesai('ok', '\u2713 Halaman dokumen berhasil diatur ke A4 (Margin: Atas 4cm, Kiri 4cm, Bawah 3cm, Kanan 3cm).');
+    } catch (e) {
+      selesai('err', 'Gagal mengatur halaman: ' + e.message);
+    }
+  };
   $('dafpus').onclick = async () => {
     const pr = projects.find((x) => x.id === $('proj').value);
     if (!pr) return lap('err', 'Pilih proyek dulu.');
