@@ -437,9 +437,14 @@
       if (act === 'gen') btn.onclick = () => genSub(b, btn.getAttribute('data-sub'), btn);
       else if (act === 'heading') btn.onclick = async () => {
         try {
-          // Paritas Mantra: "BAB I PENDAHULUAN" huruf kapital = Heading 1, 14pt,
-          // bold, rata tengah, diawal halaman baru — otomatis jadi entri DAFTAR ISI.
-          const judul = (OUTLINE[b] ? OUTLINE[b].bab : b).toUpperCase();
+          // Tata letak Bab: BAB I di atas, PENDAHULUAN di bawah (shift-enter / newline).
+          // Heading 1, 14pt, bold, rata tengah, diawal halaman baru — otomatis jadi entri DAFTAR ISI.
+          const rawBab = (OUTLINE[b] ? OUTLINE[b].bab : b).toUpperCase().trim();
+          let judul = rawBab;
+          const mBab = rawBab.match(/^(BAB\s+[IVX0-9]+)\s+(.+)$/);
+          if (mBab) {
+            judul = mBab[1] + '\v' + mBab[2];
+          }
           await kirim('sisip', { posisi: 'kursor', blok: [{ teks: judul, heading: 1, center: true, bold: true, size: 14, mulaiHalaman: true }] });
           lap('ok', '\u2713 Judul bab "' + judul + '" disisipkan.');
         } catch (e) { lap('err', 'Gagal: ' + e.message); }
