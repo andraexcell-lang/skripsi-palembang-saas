@@ -136,27 +136,83 @@ const OVERLAY_DISERTASI: OverlayDef[] = [
 /* Panduan isi per sub (paritas Mantra Riset) — dipakai generator bab penuh
    (struktur1 via nota1) maupun generate-subbab (stream & biasa). Kunci = key sub. */
 const PANDUAN_SUB: Record<string, string> = {
-  latar_belakang: 'alur UMUM → KHUSUS dengan urutan paragraf: (1) fenomena umum/kekinian dengan sitasi; (2) 1 paragraf variabel dependen (Y); (3) 1 paragraf variabel mediasi/moderasi bila ada di judul; (4) 1 paragraf X1; (5) 1 paragraf X2; (6) profil objek penelitian; (7) TABEL FENOMENA (markdown) tentang variabel dependen berisi angka nyata bersumber + 1 paragraf pembahasnya; (8) 2 paragraf fenomena variabel mediasi (bila ada); (9) 2 paragraf fenomena variabel X1; (10) 2 paragraf fenomena variabel X2; (11) urgensi penelitian; (12) research gap — bandingkan temuan penelitian relevan yang berbeda/berlawanan hasilnya; (13) kalimat penutup; tiap paragraf punya bodynote bila memakai angka/temuan. DILARANG KERAS menyitasi buku teks metodologi penelitian (seperti Sugiyono, Arikunto, Creswell, Sekaran, Ghozali, Moleong, Nazir, dsb.) di dalam Latar Belakang — sitasi di Latar Belakang HANYA dari artikel jurnal empiris terkait topik/variabel atau data/regulasi resmi',
+  latar_belakang: 'alur UMUM → KHUSUS dengan urutan paragraf: (1) fenomena umum/kekinian dengan sitasi; (2) 1 paragraf variabel dependen (Y); (3) 1 paragraf variabel mediasi/moderasi bila ada di judul; (4) 1 paragraf X1; (5) 1 paragraf X2; (6) profil objek penelitian; (7) TABEL FENOMENA (markdown) tentang variabel dependen berisi angka nyata bersumber. WAJIB diawali Judul Tabel di atas ("Tabel 1.1 [Nama Judul]") dan WAJIB mencantumkan Sumber data tepat di baris bawah tabel ("Sumber: [Nama Instansi/Lembaga/Peneliti, Tahun]") (contoh: "Sumber: BPS / Bagian Kepegawaian, 2024") + 1 paragraf pembahasnya; DILARANG menghilangkan baris Sumber; (8) 2 paragraf fenomena variabel mediasi (bila ada); (9) 2 paragraf fenomena variabel X1; (10) 2 paragraf fenomena variabel X2; (11) urgensi penelitian; (12) research gap — bandingkan temuan penelitian relevan yang berbeda/berlawanan hasilnya; (13) kalimat penutup; tiap paragraf punya bodynote bila memakai angka/temuan. DILARANG KERAS menyitasi buku teks metodologi penelitian (seperti Sugiyono, Arikunto, Creswell, Sekaran, Ghozali, Moleong, Nazir, dsb.) di dalam Latar Belakang — sitasi di Latar Belakang HANYA dari artikel jurnal empiris terkait topik/variabel atau data/regulasi resmi',
   latar_belakang_umum_khusus: 'alur umum lalu khusus seperti latar_belakang; 15–25 paragraf dengan bodynote bila memakai angka/temuan. DILARANG KERAS menyitasi buku metodologi penelitian (Sugiyono dkk.) di Latar Belakang — sitasi hanya artikel jurnal empiris dan data resmi',
-  identifikasi_masalah: 'Langsung ke inti tanpa narasi panjang dan TANPA KUTIPAN/SITASI. Cukup 1 kalimat pembuka singkat: "Berdasarkan latar belakang di atas, masalah dalam penelitian ini dapat diidentifikasi sebagai berikut:" lalu langsung butir bernomor 1., 2., dst. (ringkas, tegas, spesifik terkait variabel dan fenomena objek)',
-  rumusan_masalah: 'Langsung ke inti tanpa narasi panjang dan TANPA KUTIPAN/SITASI. Cukup 1 kalimat pembuka singkat: "Berdasarkan latar belakang dan identifikasi masalah, rumusan masalah dalam penelitian ini adalah sebagai berikut:" lalu pertanyaan penelitian bernomor 1., 2., dst. yang ringkas dan padat',
-  tujuan_penelitian: 'Langsung ke inti tanpa narasi panjang dan TANPA KUTIPAN/SITASI. Cukup 1 kalimat pembuka singkat: "Sesuai dengan rumusan masalah di atas, tujuan yang ingin dicapai dalam penelitian ini adalah sebagai berikut:" lalu butir tujuan bernomor 1., 2., dst. yang selaras dengan rumusan masalah',
-  manfaat_penelitian: 'dua bagian bernomor: "1. Manfaat Teoretis" (pengembangan literatur, rujukan penelitian lanjutan) dan "2. Manfaat Praktis" (bagi objek penelitian/manajemen, bagi pihak relevan lain) — tiap bagian diuraikan 2–4 kalimat',
-  batasan_masalah: 'daftar bernomor batasan: variabel (X1, X2, mediasi/moderasi bila ada, Y), objek penelitian, periode data, karakteristik responden',
-  sistematika_penulisan: 'daftar per bab (Bab I s.d. Bab V + lampiran) — tiap butir satu kalimat ringkas',
+  identifikasi_masalah: 'Langsung ke inti tanpa narasi panjang/pengantar bertele-tele dan DILARANG KERAS MENGGUNAKAN KUTIPAN/SITASI. WAJIB langsung diawali 1 kalimat pengantar singkat: "Berdasarkan latar belakang di atas, masalah dalam penelitian ini dapat diidentifikasi sebagai berikut:" lalu langsung daftar butir masalah bernomor 1., 2., dst. yang ringkas, tegas, dan spesifik terkait variabel dan fenomena objek',
+  rumusan_masalah: 'Langsung ke inti tanpa narasi bertele-tele dan DILARANG KERAS MENGGUNAKAN KUTIPAN/SITASI. WAJIB langsung diawali 1 kalimat pembuka singkat: "Berdasarkan latar belakang dan identifikasi masalah, rumusan masalah dalam penelitian ini adalah sebagai berikut:" lalu daftar pertanyaan penelitian bernomor 1., 2., dst. yang padat, jelas, dan terarah',
+  tujuan_penelitian: 'Langsung ke inti tanpa narasi bertele-tele dan DILARANG KERAS MENGGUNAKAN KUTIPAN/SITASI. WAJIB langsung diawali 1 kalimat pembuka singkat: "Sesuai dengan rumusan masalah di atas, tujuan yang ingin dicapai dalam penelitian ini adalah sebagai berikut:" lalu daftar butir tujuan penelitian bernomor 1., 2., dst. yang selaras satu per satu dengan rumusan masalah',
+  manfaat_penelitian: 'Dua bagian bernomor: "1. Manfaat Teoretis" (pengembangan literatur, rujukan penelitian lanjutan) dan "2. Manfaat Praktis" (bagi objek penelitian/manajemen, bagi pihak relevan lain) — tiap bagian diuraikan 2–4 kalimat padat. DILARANG menggunakan kutipan/sitasi',
+  batasan_masalah: 'Daftar bernomor batasan: variabel (X1, X2, Y), objek penelitian, periode data, karakteristik responden. Padat dan TANPA kutipan/sitasi',
+  sistematika_penulisan: 'Daftar per bab (Bab I s.d. Bab V + Lampiran) — tiap butir satu kalimat ringkas. TANPA kutipan/sitasi',
   kebaruan_penelitian: 'jelaskan gap/kebaruan dibanding penelitian terdahulu — teks + boleh tabel ringkas',
 };
+
+// Sub-bab yang wajib bebas sitasi / tanpa kutipan dan bernarasi padat langsung ke inti
+const SUB_BEBAS_SITASI = new Set([
+  'identifikasi_masalah',
+  'rumusan_masalah',
+  'tujuan_penelitian',
+  'manfaat_penelitian',
+  'batasan_masalah',
+  'sistematika_penulisan',
+]);
+
+function isSubBebasSitasi(sub: string, key?: string): boolean {
+  if (key && SUB_BEBAS_SITASI.has(key)) return true;
+  const l = String(sub).toLowerCase().replace(/^\d+(\.\d+)*\s*/, '').trim();
+  return (
+    l.includes('identifikasi masalah') ||
+    l.includes('rumusan masalah') ||
+    l.includes('tujuan penelitian') ||
+    l.includes('manfaat penelitian') ||
+    l.includes('batasan masalah') ||
+    l.includes('sistematika penulisan')
+  );
+}
 
 // Panduan isi per-sub untuk endpoint generate sub-bab: label "1.1 Latar Belakang"
 // (nomor dibuang) dicocokkan dengan key sub varian proyek → sertakan PANDUAN_SUB
 // dan target kata. Sub yang labelnya dimodifikasi pengguna → tanpa panduan (netral).
-function subPanduan(p: any, bab: string, sub: string): { panduan: string; kata: string } {
+function subPanduan(p: any, bab: string, sub: string): { panduan: string; kata: string; bebasSitasi: boolean; key?: string } {
   const label = String(sub).replace(/^\d+\.\d+\s*/, '').trim().toLowerCase();
   const v = varianFor(p);
   const d = v[bab] && v[bab].subs.find((s) => s.label.trim().toLowerCase() === label || s.key.toLowerCase() === label.replace(/\s+/g, '_'));
+  const key = d ? d.key : '';
+  const bebas = isSubBebasSitasi(sub, key);
+
+  let kata = '300-600';
+  if (key === 'latar_belakang' || key === 'latar_belakang_umum_khusus') {
+    kata = '600-1000';
+  } else if (key === 'identifikasi_masalah' || label.includes('identifikasi masalah')) {
+    kata = '80-150';
+  } else if (key === 'rumusan_masalah' || label.includes('rumusan masalah')) {
+    kata = '50-100';
+  } else if (key === 'tujuan_penelitian' || label.includes('tujuan penelitian')) {
+    kata = '50-100';
+  } else if (key === 'manfaat_penelitian' || label.includes('manfaat penelitian')) {
+    kata = '120-200';
+  } else if (key === 'batasan_masalah' || label.includes('batasan masalah')) {
+    kata = '80-150';
+  } else if (key === 'sistematika_penulisan' || label.includes('sistematika penulisan')) {
+    kata = '120-200';
+  }
+
+  let panduan = '';
+  if (d && PANDUAN_SUB[d.key]) {
+    panduan = `\nPANDUAN ISI (wajib diikuti): ${PANDUAN_SUB[d.key]}.`;
+  } else if (label.includes('identifikasi masalah')) {
+    panduan = `\nPANDUAN ISI (wajib diikuti): Langsung ke inti tanpa narasi bertele-tele dan DILARANG KERAS MENGGUNAKAN KUTIPAN/SITASI. Cukup 1 kalimat pembuka singkat: "Berdasarkan latar belakang di atas, masalah dalam penelitian ini dapat diidentifikasi sebagai berikut:" lalu langsung butir bernomor 1., 2., dst. yang ringkas dan tegas.`;
+  } else if (label.includes('rumusan masalah')) {
+    panduan = `\nPANDUAN ISI (wajib diikuti): Langsung ke inti tanpa narasi bertele-tele dan DILARANG KERAS MENGGUNAKAN KUTIPAN/SITASI. Cukup 1 kalimat pembuka singkat: "Berdasarkan latar belakang dan identifikasi masalah, rumusan masalah dalam penelitian ini adalah sebagai berikut:" lalu daftar pertanyaan penelitian bernomor 1., 2., dst. yang padat dan terarah.`;
+  } else if (label.includes('tujuan penelitian')) {
+    panduan = `\nPANDUAN ISI (wajib diikuti): Langsung ke inti tanpa narasi bertele-tele dan DILARANG KERAS MENGGUNAKAN KUTIPAN/SITASI. Cukup 1 kalimat pembuka singkat: "Sesuai dengan rumusan masalah di atas, tujuan yang ingin dicapai dalam penelitian ini adalah sebagai berikut:" lalu daftar butir tujuan penelitian bernomor 1., 2., dst. yang selaras satu per satu dengan rumusan masalah.`;
+  }
+
   return {
-    panduan: d && PANDUAN_SUB[d.key] ? `\nPANDUAN ISI (wajib diikuti): ${PANDUAN_SUB[d.key]}.` : '',
-    kata: d && d.key === 'latar_belakang' ? '600-1000' : '300-600',
+    panduan,
+    kata,
+    bebasSitasi: bebas,
+    key,
   };
 }
 
@@ -357,7 +413,13 @@ const SITASI_BAB5 = `BAB V TANPA KUTIPAN: JANGAN menulis bodynote/sitasi/tautan 
 // ringkas, tanpa bagian bab-penuh (caption/judul bab/SITASI_KUTIP) yang tak relevan
 // untuk satu sub; melarang judul/pembuka/---/daftar pustaka bawaan model (terbukti
 // bocor pada uji Bab I 11 Okt).
-const SITASI_SUB = `Aturan output: teks polos siap tempel — TANPA **bold**, TANPA pemisah "---", TANPA judul sub-bab bernomor (judulnya sudah dibuat sistem), TANPA kalimat pembuka/pembungkus seperti "Berikut adalah sub-bab...", dan TANPA bagian "Daftar Pustaka"/referensi di akhir (daftar pustaka disusun terpisah oleh panel). ATURAN SITASI: rentang tahun rujukan wajib 2022-2026 yang relevan; kutipan bodynote wajib disajikan SATU PER SATU per kalimat, DILARANG menumpuk kutipan jamak dalam satu tanda kurung. Tabel markdown hanya bila diminta panduan (pipe di awal & akhir SETIAP baris). DILARANG tag HTML (<br> dll) dan LaTeX ($…$).`;
+const SITASI_SUB = `Aturan output: teks polos siap tempel — TANPA **bold**, TANPA pemisah "---", TANPA judul sub-bab bernomor (judulnya sudah dibuat sistem), TANPA kalimat pembuka/pembungkus seperti "Berikut adalah sub-bab...", dan TANPA bagian "Daftar Pustaka"/referensi di akhir (daftar pustaka disusun terpisah oleh panel). ATURAN SITASI: rentang tahun rujukan wajib 2022-2026 yang relevan; kutipan bodynote wajib disajikan SATU PER SATU per kalimat, DILARANG menumpuk kutipan jamak dalam satu tanda kurung. Bila menyajikan tabel markdown: WAJIB diawali baris judul di atasnya ("Tabel X.Y Judul") dan baris keterangan sumber tepat di bawahnya ("Sumber: Nama Instansi/Peneliti, Tahun"). DILARANG tag HTML (<br> dll) dan LaTeX ($…$).`;
+
+const BEBAS_SITASI_SUB = `Aturan output: teks polos siap tempel — TANPA **bold**, TANPA pemisah "---", TANPA judul sub-bab bernomor (judulnya sudah dibuat sistem), TANPA kalimat pembuka/pembungkus seperti "Berikut adalah...", dan TANPA bagian "Daftar Pustaka"/referensi di akhir.
+ATURAN KHUSUS (MUTLAK):
+1. DILARANG KERAS MENGGUNAKAN KUTIPAN/SITASI/BODYNOTE/TAHUN KURUNG/NAMA TEORI APA PUN. Isi sub-bab murni perumusan logis yang diturunkan dari judul dan variabel penelitian.
+2. DILARANG narasi bertele-tele atau pengantar teoritis. Langsung ke inti sesuai panduan kalimat pembuka dan butir nomor 1., 2., dst.
+3. DILARANG tag HTML (<br> dll) dan LaTeX ($…$).`;
 
 // Pilihan interaktif studio (paritas referensi): bagan Bab II + input metodologi Bab III
 type Ekstra = { bagan?: 'kirim' | 'ai'; baganTeks?: string; populasi?: string; takDiketahui?: boolean; desain?: string; software?: string };
@@ -464,7 +526,13 @@ export function babPrompt(bab: string, p: any, refs: { doi: string; title: strin
     const n = `1.${i + 1} ${s.label}`;
     return nota1[s.key] ? `${n} (${nota1[s.key]})` : n;
   }).join(', ')}.\n`;
-  const struktur1 = struktur1Dasar;
+  const struktur1 = struktur1Dasar +
+    `PETUNJUK KHUSUS SUB-BAB BAB I:\n` +
+    `- Sub-bab 1.1 Latar Belakang: alur umum ke khusus, sitasi hanya artikel jurnal empiris 2022-2026 dan data resmi (DILARANG KERAS menyitasi buku metodologi seperti Sugiyono, Arikunto, Creswell, Sekaran, Ghozali, Moleong, Nazir, dsb.). WAJIB menyajikan Tabel Fenomena (markdown) dengan Judul Tabel di baris atas ("Tabel 1.1 [Nama Judul]") dan baris Sumber di bawah ("Sumber: [Nama Instansi/Peneliti, Tahun]").\n` +
+    `- Sub-bab 1.2 Identifikasi Masalah: LANGSUNG 1 kalimat pengantar singkat ("Berdasarkan latar belakang di atas, masalah dalam penelitian ini dapat diidentifikasi sebagai berikut:") lalu langsung daftar butir masalah bernomor 1., 2., dst. TANPA narasi bertele-tele dan DILARANG KERAS menggunakan kutipan/sitasi.\n` +
+    `- Sub-bab 1.3 Rumusan Masalah: LANGSUNG 1 kalimat pembuka singkat ("Berdasarkan latar belakang dan identifikasi masalah, rumusan masalah dalam penelitian ini adalah sebagai berikut:") lalu daftar pertanyaan penelitian bernomor 1., 2., dst. yang padat dan terarah. DILARANG KERAS menggunakan kutipan/sitasi.\n` +
+    `- Sub-bab 1.4 Tujuan Penelitian: LANGSUNG 1 kalimat pembuka singkat ("Sesuai dengan rumusan masalah di atas, tujuan yang ingin dicapai dalam penelitian ini adalah sebagai berikut:") lalu daftar butir tujuan penelitian bernomor 1., 2., dst. yang selaras satu per satu dengan rumusan masalah. DILARANG KERAS menggunakan kutipan/sitasi.\n` +
+    `- Sub-bab 1.5 Manfaat Penelitian, Batasan Masalah, dan Sistematika Penulisan: sajikan padat dan terstruktur TANPA kutipan.\n`;
 
   const catatan2: Record<string, string> = {
     kualitatif: `Uraikan teori utama tiap konsep kunci penelitian (sub-sub bertingkat bila perlu); TANPA hipotesis. WAJIB: sub Penelitian Terdahulu berupa TABEL markdown persis kolom "No | Nama (Tahun) | Judul | Hasil | Gap" berisi minimal 6 penelitian terdahulu nyata dari referensi yang relevan.\n`,
@@ -987,15 +1055,19 @@ router.post('/:id/generate-subbab', requireAuthOrKey, async (req: AuthRequest, r
         throw e;
       }
     }
-    const minTahun = p.min_year ?? 2022;
-    const refs = (await crossrefTop(`${p.judul} ${sub}`, 8, minTahun)).filter((r) => {
-      const y = parseInt(r.year, 10);
-      return !y || (y >= 2022 && y <= 2026);
-    }).slice(0, 5);
     const sp = subPanduan(p, bab, sub);
-    const text = await generateContent(
-      `Susun sub-bab "${sub}" dari ${(outlineFor(p)[bab] || {}).bab || bab} untuk karya berikut. Judul: ${p.judul}. Metode: ${p.metode}. Bahasa: ${p.language || 'Indonesia'}. Gaya sitasi: ${p.citation_style || 'APA 7th'}.\n${refBlock(refs, bab)}\nTulis ${sp.kata} kata akademik dengan bodynote bila memakai teori. Jangan mengarang DOI.${sp.panduan}\n${SITASI_SUB}`
-    );
+    let prompt = '';
+    if (sp.bebasSitasi) {
+      prompt = `Susun sub-bab "${sub}" dari ${(outlineFor(p)[bab] || {}).bab || bab} untuk karya berikut. Judul: ${p.judul}. Metode: ${p.metode}. Bahasa: ${p.language || 'Indonesia'}.\nTulis ${sp.kata} kata ringkas, padat, dan langsung ke butir nomor.${sp.panduan}\n${BEBAS_SITASI_SUB}`;
+    } else {
+      const minTahun = p.min_year ?? 2022;
+      const refs = (await crossrefTop(`${p.judul} ${sub}`, 8, minTahun)).filter((r) => {
+        const y = parseInt(r.year, 10);
+        return !y || (y >= 2022 && y <= 2026);
+      }).slice(0, 5);
+      prompt = `Susun sub-bab "${sub}" dari ${(outlineFor(p)[bab] || {}).bab || bab} untuk karya berikut. Judul: ${p.judul}. Metode: ${p.metode}. Bahasa: ${p.language || 'Indonesia'}. Gaya sitasi: ${p.citation_style || 'APA 7th'}.\n${refBlock(refs, bab)}\nTulis ${sp.kata} kata akademik dengan bodynote bila memakai teori. Jangan mengarang DOI.${sp.panduan}\n${SITASI_SUB}`;
+    }
+    const text = await generateContent(prompt);
     const content = { ...(p.content || {}), [key]: bersihTeks(text) };
     await d.from('projects').update({ content, updated_at: new Date().toISOString() }).eq('id', id);
     res.json({ text: bersihTeks(text), cost });
@@ -1034,13 +1106,18 @@ router.post('/:id/generate-subbab-stream', requireAuthOrKey, async (req: AuthReq
       }
     }
     send('cost', { cost });
-    const minTahun = p.min_year ?? 2022;
-    const refs = (await crossrefTop(`${p.judul} ${sub}`, 8, minTahun)).filter((r) => {
-      const y = parseInt(r.year, 10);
-      return !y || (y >= 2022 && y <= 2026);
-    }).slice(0, 5);
     const sp = subPanduan(p, bab, sub);
-    const prompt = `Susun sub-bab "${sub}" dari ${(outlineFor(p)[bab] || {}).bab || bab} untuk karya berikut. Judul: ${p.judul}. Metode: ${p.metode}. Bahasa: ${p.language || 'Indonesia'}. Gaya sitasi: ${p.citation_style || 'APA 7th'}.\n${refBlock(refs, bab)}\nTulis ${sp.kata} kata akademik dengan bodynote bila memakai teori. Jangan mengarang DOI.${sp.panduan}\n${SITASI_SUB}`;
+    let prompt = '';
+    if (sp.bebasSitasi) {
+      prompt = `Susun sub-bab "${sub}" dari ${(outlineFor(p)[bab] || {}).bab || bab} untuk karya berikut. Judul: ${p.judul}. Metode: ${p.metode}. Bahasa: ${p.language || 'Indonesia'}.\nTulis ${sp.kata} kata ringkas, padat, dan langsung ke butir nomor.${sp.panduan}\n${BEBAS_SITASI_SUB}`;
+    } else {
+      const minTahun = p.min_year ?? 2022;
+      const refs = (await crossrefTop(`${p.judul} ${sub}`, 8, minTahun)).filter((r) => {
+        const y = parseInt(r.year, 10);
+        return !y || (y >= 2022 && y <= 2026);
+      }).slice(0, 5);
+      prompt = `Susun sub-bab "${sub}" dari ${(outlineFor(p)[bab] || {}).bab || bab} untuk karya berikut. Judul: ${p.judul}. Metode: ${p.metode}. Bahasa: ${p.language || 'Indonesia'}. Gaya sitasi: ${p.citation_style || 'APA 7th'}.\n${refBlock(refs, bab)}\nTulis ${sp.kata} kata akademik dengan bodynote bila memakai teori. Jangan mengarang DOI.${sp.panduan}\n${SITASI_SUB}`;
+    }
     let full = '';
     try {
       for await (const t of generateContentStream(prompt)) {
