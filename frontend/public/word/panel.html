@@ -264,6 +264,7 @@
               localStorage.setItem('spw-api', $('api').value);
               localStorage.setItem('spw-key', sj.key);
             } catch (e) {}
+            try { await kirim('simpanKunci', { key: sj.key, api: $('api').value }); } catch (e) {}
             $('key').value = sj.key;
             await enterMain();
           } else if (sj.status === 'expired') {
@@ -278,11 +279,13 @@
     try {
       localStorage.setItem('spw-api', $('api').value);
       localStorage.setItem('spw-key', key());
+      try { await kirim('simpanKunci', { key: key(), api: $('api').value }); } catch (e) {}
       await enterMain();
     } catch (e) { msg('Error: ' + e.message); }
   };
   $('out').onclick = () => {
     try { localStorage.removeItem('spw-key'); } catch (e) {}
+    try { kirim('simpanKunci', { key: '', api: $('api').value }); } catch (e) {}
     $('key').value = '';
     $('view-main').style.display = 'none';
     $('view-login').style.display = 'block';
@@ -738,7 +741,27 @@
   };
   // Sapa jembatan: pastikan panel terhubung ke add-in & Word
   kirim('ping')
-    .then((r) => lap('ok', '\u2713 Terhubung ke Word ' + r.word + ' · add-in v' + r.versi + '.'))
+    .then(async (r) => {
+      lap('ok', '\u2713 Terhubung ke Word ' + r.word + ' · add-in v' + r.versi + '.');
+      // Sinkronisasi kunci persistensi dari Registry native (mencegah selalu minta hubungkan)
+      try {
+        const nativeKey = await kirim('bacaKunci');
+        if (nativeKey && nativeKey.key && !$('key').value) {
+          $('key').value = nativeKey.key;
+          if (nativeKey.api) $('api').value = nativeKey.api;
+          try {
+            localStorage.setItem('spw-api', $('api').value);
+            localStorage.setItem('spw-key', $('key').value);
+          } catch (e) {}
+        }
+      } catch (e) {}
+      // Auto-login jika kunci sudah tersimpan
+      if (key()) {
+        try { await enterMain(); } catch (e) {
+          console.warn('Auto enterMain gagal, periksa koneksi/kunci:', e);
+        }
+      }
+    })
     .catch((e) => lap('err', e.message));
 })();
 </script>
