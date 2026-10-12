@@ -227,6 +227,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>
             Tutorial
           </Link>
+          <a
+            href="/download/SkripsiPalembangSetup-latest.exe"
+            download
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:text-text-primary hover:bg-bg-surface-hover transition-colors text-sm"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <span className="flex-1">Download Plugin Word</span>
+            <span className="text-[10px] font-semibold bg-brand-primary/10 text-brand-primary px-1.5 py-0.5 rounded">v1.1.2</span>
+          </a>
 
           <div className="pt-5 pb-2 px-3">
             <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">AKUN</p>

@@ -285,10 +285,20 @@ export default function DashboardIndex() {
               Tambah Kredit <IcArrowRight />
             </Link>
 
-            <div className="mt-2.5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t border-[#E6D3A3] pt-2.5 dark:border-[#4C3E1F]">
-              <Link href="/hubungkan" className="flex items-center gap-1.5 text-xs font-semibold text-brand-primary hover:underline">
-                <IcDownload /> Plugin Word
+            <div className="mt-2.5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-[#E6D3A3] pt-2.5 dark:border-[#4C3E1F]">
+              <a
+                href="/download/SkripsiPalembangSetup-latest.exe"
+                download
+                className="flex items-center gap-1.5 text-xs font-semibold text-brand-primary hover:underline"
+                title="Download Installer Plugin Word (v1.1.2)"
+              >
+                <IcDownload /> Unduh Plugin Word
+              </a>
+              <span className="text-[#E6D3A3] dark:text-[#4C3E1F]">·</span>
+              <Link href="/hubungkan" className="text-xs font-medium text-text-secondary hover:text-brand-primary hover:underline" title="Hubungkan Plugin Word">
+                Hubungkan
               </Link>
+              <span className="text-[#E6D3A3] dark:text-[#4C3E1F]">·</span>
               <a
                 href={GRUP_WA || '#'}
                 target={GRUP_WA ? '_blank' : undefined}
