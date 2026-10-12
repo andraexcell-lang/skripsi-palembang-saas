@@ -316,18 +316,20 @@ export async function refsUntuk(p: any, n = 10): Promise<{ doi: string; title: s
 
 // Buku teks NYATA (metodologi & teori umum) — wajib tahun ≥ 2022
 const BUKU_TEKS = `
-BUKU TEKS NYATA (boleh disitasi bila relevan — tanpa DOI, penerbit boleh disingkat; WAJIB tahun ≥ 2022):
+BUKU TEKS METODOLOGI & TEORI (HANYA UNTUK BAB III & BAB II):
 1. Sugiyono (2023). Metode Penelitian Kuantitatif, Kualitatif, dan R&D. Alfabeta.
 2. Ghozali, I. (2023). Aplikasi Analisis Multivariate dengan Program IBM SPSS. Universitas Diponegoro.
 3. Hair, J. F., Black, W. C., Babin, B. J., & Anderson, R. E. (2023). Multivariate Data Analysis. Cengage.
-4. Creswell, J. W., & Creswell, J. D. (2023). Research Design: Qualitative, Quantitative, and Mixed Methods Approaches. SAGE.
-5. Miles, M. B., & Huberman, A. M. (2023). Qualitative Data Analysis: A Methods Sourcebook. SAGE.
-6. Moleong, L. J. (2023). Metodologi Penelitian Kualitatif. Remaja Rosdakarya.
-DILARANG keras menyitasi buku/jurnal dengan tahun < 2022 (rentang wajib kutipan adalah tahun 2022 sampai 2026 yang benar-benar relevan dengan topik penelitian). Teori klasik cukup disebut namanya DI TEKS TANPA tahun dalam kurung dan TANPA masuk Daftar Pustaka (mis. "Menurut Herzberg, motivasi kerja merupakan ...", bukan "(Herzberg, 1959)"). ARTIKEL JURNAL wajib memakai daftar referensi di atas; jangan mengarang DOI atau judul jurnal di luar daftar.
-ATURAN SITASI SATU PER SATU: DILARANG menumpuk kutipan jamak dalam tanda kurung yang sama seperti "(A, 2019; B, 2020; C, 2024)". Setiap kutipan wajib disajikan SATU PER SATU secara wajar pada kalimat penjelasnya masing-masing.`;
-7. Rahmat, J. (2015). Psikologi Komunikasi. Remaja Rosdakarya.
-8. Sekaran, U., & Bougie, R. (2016). Research Methods for Business (7th ed.). Wiley.
-Boleh juga menyitasi teori klasik yang sudah umum & benar (mis. Maslow 1943, Herzberg 1959, Likert 1932, Slovin) TANPA DOI — tetapi ARTIKEL JURNAL wajib memakai daftar referensi di atas; jangan mengarang DOI atau judul jurnal di luar daftar.`;
+4. Rahmat, J. (2023). Psikologi Komunikasi. Remaja Rosdakarya.
+5. Sekaran, U., & Bougie, R. (2023). Research Methods for Business. Wiley.
+6. Creswell, J. W., & Creswell, J. D. (2023). Research Design: Qualitative, Quantitative, and Mixed Methods Approaches. SAGE.
+7. Miles, M. B., & Huberman, A. M. (2023). Qualitative Data Analysis: A Methods Sourcebook. SAGE.
+8. Moleong, L. J. (2023). Metodologi Penelitian Kualitatif. Remaja Rosdakarya.
+ATURAN KERAS TENTANG BUKU METODOLOGI:
+- DILARANG KERAS menyitasi buku metodologi penelitian (seperti Sugiyono, Arikunto, Creswell, Sekaran, Ghozali, Moleong, Nazir, Hair, dll.) di dalam BAB I / Latar Belakang Masalah! Buku metodologi HANYA boleh dikutip di Bab III.
+- RENTANG TAHUN RUJUKAN: Semua artikel dan buku yang dikutip WAJIB bertahun 2022 sampai 2026 yang relevan. DILARANG KERAS menyitasi tahun di bawah 2022 (misalnya 1959, 1977, 1986, 1997, 2016, 2018, 2019, 2020, 2021 DILARANG). Teori klasik/ahli pionir HANYA boleh disebut namanya tanpa tahun kutipan di dalam kurung dan tanpa masuk Daftar Pustaka (misal: "Menurut Herzberg, kepuasan kerja ...", BUKAN "(Herzberg, 1959)").
+- KUTIPAN TUNGGAL (SATU PER SATU): DILARANG menumpuk sitasi ganda dalam satu tanda kurung seperti "(A, 2019; B, 2020)". Setiap kutipan wajib disajikan SATU PER SATU mengiringi kalimatnya masing-masing.
+- SUB-BAB 1.2, 1.3, DAN 1.4: DILARANG MENGGUNAKAN KUTIPAN SAMA SEKALI.`;
 
 function refBlock(refs: { doi: string; title: string; authors: string; year: string; url: string; venue?: string; abstract?: string }[]) {
   if (!refs.length) return `\n (tidak ada referensi eksternal tersedia — gunakan buku teks & teori standar yang benar-benar ada).${BUKU_TEKS}`;
@@ -994,7 +996,7 @@ router.post('/:id/generate-subbab', requireAuthOrKey, async (req: AuthRequest, r
 // Streaming SSE per sub-bab (kata-per-kata). Kredit sama seperti generate-subbab.
 router.post('/:id/generate-subbab-stream', requireAuthOrKey, async (req: AuthRequest, res) => {  try {
     const id = String(req.params.id);
-    const { bab, sub } = req.body || {};
+    const { bab, sub, force } = req.body || {};
     if (!BAB_LIST.includes(bab)) return res.status(400).json({ error: 'bab tidak dikenal' });
     if (!sub || String(sub).trim().length < 2) return res.status(400).json({ error: 'sub wajib diisi' });
     const { data: p, error } = await db().from('projects').select('*').eq('id', id).eq('user_id', req.userId!).single();
@@ -1004,7 +1006,7 @@ router.post('/:id/generate-subbab-stream', requireAuthOrKey, async (req: AuthReq
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
     const send = (ev: string, data: any) => res.write(`event: ${ev}\ndata: ${JSON.stringify(data)}\n\n`);
-    if ((p.content || {})[key]) {
+    if ((p.content || {})[key] && !force) {
       send('Cached', true);
       for (const w of String(p.content[key]).split(/(\s+)/)) send('chunk', { t: w });
       send('done', { cost: 0, cached: true });

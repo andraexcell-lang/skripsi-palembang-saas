@@ -509,7 +509,7 @@
     try {
       const r = await fetch(api() + '/api/projects/' + pid + '/generate-subbab-stream', {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': key() },
-        body: JSON.stringify({ bab, sub })
+        body: JSON.stringify({ bab, sub, force: true })
       });
       if (!r.ok || !r.body) {
         const j = await r.json().catch(() => ({}));
