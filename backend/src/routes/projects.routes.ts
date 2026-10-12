@@ -151,9 +151,9 @@ const PANDUAN_SUB: Record<string, string> = {
 // (nomor dibuang) dicocokkan dengan key sub varian proyek → sertakan PANDUAN_SUB
 // dan target kata. Sub yang labelnya dimodifikasi pengguna → tanpa panduan (netral).
 function subPanduan(p: any, bab: string, sub: string): { panduan: string; kata: string } {
-  const label = String(sub).replace(/^\d+\.\d+\s*/, '').trim();
+  const label = String(sub).replace(/^\d+\.\d+\s*/, '').trim().toLowerCase();
   const v = varianFor(p);
-  const d = v[bab] && v[bab].subs.find((s) => s.label === label);
+  const d = v[bab] && v[bab].subs.find((s) => s.label.trim().toLowerCase() === label || s.key.toLowerCase() === label.replace(/\s+/g, '_'));
   return {
     panduan: d && PANDUAN_SUB[d.key] ? `\nPANDUAN ISI (wajib diikuti): ${PANDUAN_SUB[d.key]}.` : '',
     kata: d && d.key === 'latar_belakang' ? '600-1000' : '300-600',
