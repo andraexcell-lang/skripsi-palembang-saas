@@ -138,9 +138,9 @@ const OVERLAY_DISERTASI: OverlayDef[] = [
 const PANDUAN_SUB: Record<string, string> = {
   latar_belakang: 'alur UMUM → KHUSUS dengan urutan paragraf: (1) fenomena umum/kekinian dengan sitasi; (2) 1 paragraf variabel dependen (Y); (3) 1 paragraf variabel mediasi/moderasi bila ada di judul; (4) 1 paragraf X1; (5) 1 paragraf X2; (6) profil objek penelitian; (7) TABEL FENOMENA (markdown) tentang variabel dependen berisi angka nyata bersumber + 1 paragraf pembahasnya; (8) 2 paragraf fenomena variabel mediasi (bila ada); (9) 2 paragraf fenomena variabel X1; (10) 2 paragraf fenomena variabel X2; (11) urgensi penelitian; (12) research gap — bandingkan temuan penelitian relevan yang berbeda/berlawanan hasilnya; (13) kalimat penutup; tiap paragraf punya bodynote bila memakai angka/temuan. DILARANG KERAS menyitasi buku teks metodologi penelitian (seperti Sugiyono, Arikunto, Creswell, Sekaran, Ghozali, Moleong, Nazir, dsb.) di dalam Latar Belakang — sitasi di Latar Belakang HANYA dari artikel jurnal empiris terkait topik/variabel atau data/regulasi resmi',
   latar_belakang_umum_khusus: 'alur umum lalu khusus seperti latar_belakang; 15–25 paragraf dengan bodynote bila memakai angka/temuan. DILARANG KERAS menyitasi buku metodologi penelitian (Sugiyono dkk.) di Latar Belakang — sitasi hanya artikel jurnal empiris dan data resmi',
-  identifikasi_masalah: 'paragraf pembuka berpola "Sesuai uraian pada latar belakang masalah di atas, dapat diidentifikasi masalah ... antara lain:" lalu daftar bernomor "1.", "2.", ... minimal 6 butir; tiap butir berupa fenomena nyata yang terukit dengan angka/tabel dan variabel penelitian',
-  rumusan_masalah: 'paragraf pembuka "Adapun masalah yang akan diselesaikan dalam penelitian ini adalah sebagai berikut:" lalu pertanyaan bernomor "1.", "2.", ... satu per jalur hipotesis (pengaruh langsung dahulu, lalu mediasi), pola "Apakah terdapat pengaruh <X> terhadap <Z> Pada <objek>?"',
-  tujuan_penelitian: 'paragraf pembuka "Adapun tujuan penelitian yang akan dicapai dalam penelitian ini adalah sebagai berikut:" lalu butir bernomor SELARAS satu-per-satu dengan rumusan masalah, pola "Menganalisis pengaruh <X> terhadap <Z> pada <objek>"',
+  identifikasi_masalah: 'Langsung ke inti tanpa narasi panjang dan TANPA KUTIPAN/SITASI. Cukup 1 kalimat pembuka singkat: "Berdasarkan latar belakang di atas, masalah dalam penelitian ini dapat diidentifikasi sebagai berikut:" lalu langsung butir bernomor 1., 2., dst. (ringkas, tegas, spesifik terkait variabel dan fenomena objek)',
+  rumusan_masalah: 'Langsung ke inti tanpa narasi panjang dan TANPA KUTIPAN/SITASI. Cukup 1 kalimat pembuka singkat: "Berdasarkan latar belakang dan identifikasi masalah, rumusan masalah dalam penelitian ini adalah sebagai berikut:" lalu pertanyaan penelitian bernomor 1., 2., dst. yang ringkas dan padat',
+  tujuan_penelitian: 'Langsung ke inti tanpa narasi panjang dan TANPA KUTIPAN/SITASI. Cukup 1 kalimat pembuka singkat: "Sesuai dengan rumusan masalah di atas, tujuan yang ingin dicapai dalam penelitian ini adalah sebagai berikut:" lalu butir tujuan bernomor 1., 2., dst. yang selaras dengan rumusan masalah',
   manfaat_penelitian: 'dua bagian bernomor: "1. Manfaat Teoretis" (pengembangan literatur, rujukan penelitian lanjutan) dan "2. Manfaat Praktis" (bagi objek penelitian/manajemen, bagi pihak relevan lain) — tiap bagian diuraikan 2–4 kalimat',
   batasan_masalah: 'daftar bernomor batasan: variabel (X1, X2, mediasi/moderasi bila ada, Y), objek penelitian, periode data, karakteristik responden',
   sistematika_penulisan: 'daftar per bab (Bab I s.d. Bab V + lampiran) — tiap butir satu kalimat ringkas',
@@ -294,12 +294,14 @@ export function kataKunci(judul: string): string {
 
 // Referensi prompt: Crossref (DOI) + OpenAlex (venue + abstrak → ulasan pustaka
 // lebih berbobot karena model tahu isi artikelnya), digabung + dedupe, maks 12.
+// Default tahun minimum 2022 (rentang 2022-2026 relevan)
 export async function refsUntuk(p: any, n = 10): Promise<{ doi: string; title: string; authors: string; year: string; url: string; venue?: string; abstract?: string }[]> {
   const q = kataKunci(p.judul);
   const lang = p.ref_origin === 'id' || p.ref_origin === 'en' ? p.ref_origin : null;
+  const minThn = p.min_year ?? 2022;
   const [cr, oa] = await Promise.all([
-    crossrefTop(q, n, p.min_year),
-    openalexTop(q, Math.max(4, Math.ceil(n / 2)), p.min_year, lang),
+    crossrefTop(q, n, minThn),
+    openalexTop(q, Math.max(4, Math.ceil(n / 2)), minThn, lang),
   ]);
   const seen = new Set<string>();
   const out: any[] = [];
@@ -312,16 +314,17 @@ export async function refsUntuk(p: any, n = 10): Promise<{ doi: string; title: s
   return out;
 }
 
-// Buku teks NYATA (metodologi & teori umum) — paritas referensi yang membebaskan
-// buku teori/metodologi dari filter tahun. Tanpa DOI; jurnal tetap wajib dari daftar.
+// Buku teks NYATA (metodologi & teori umum) — wajib tahun ≥ 2022
 const BUKU_TEKS = `
-BUKU TEKS NYATA (boleh disitasi bila relevan — tanpa DOI, penerbit boleh disingkat):
-1. Sugiyono (2019). Metode Penelitian Kuantitatif, Kualitatif, dan R&D. Alfabeta.
-2. Ghozali, I. (2018). Aplikasi Analisis Multivariate dengan Program IBM SPSS 25. Universitas Diponegoro.
-3. Hair, J. F., Black, W. C., Babin, B. J., & Anderson, R. E. (2019). Multivariate Data Analysis (8th ed.). Cengage.
-4. Creswell, J. W., & Creswell, J. D. (2018). Research Design: Qualitative, Quantitative, and Mixed Methods Approaches (5th ed.). SAGE.
-5. Miles, M. B., & Huberman, A. M. (2014). Qualitative Data Analysis: A Methods Sourcebook (3rd ed.). SAGE.
-6. Moleong, L. J. (2017). Metodologi Penelitian Kualitatif. Remaja Rosdakarya.
+BUKU TEKS NYATA (boleh disitasi bila relevan — tanpa DOI, penerbit boleh disingkat; WAJIB tahun ≥ 2022):
+1. Sugiyono (2023). Metode Penelitian Kuantitatif, Kualitatif, dan R&D. Alfabeta.
+2. Ghozali, I. (2023). Aplikasi Analisis Multivariate dengan Program IBM SPSS. Universitas Diponegoro.
+3. Hair, J. F., Black, W. C., Babin, B. J., & Anderson, R. E. (2023). Multivariate Data Analysis. Cengage.
+4. Creswell, J. W., & Creswell, J. D. (2023). Research Design: Qualitative, Quantitative, and Mixed Methods Approaches. SAGE.
+5. Miles, M. B., & Huberman, A. M. (2023). Qualitative Data Analysis: A Methods Sourcebook. SAGE.
+6. Moleong, L. J. (2023). Metodologi Penelitian Kualitatif. Remaja Rosdakarya.
+DILARANG keras menyitasi buku/jurnal dengan tahun < 2022 (rentang wajib kutipan adalah tahun 2022 sampai 2026 yang benar-benar relevan dengan topik penelitian). Teori klasik cukup disebut namanya DI TEKS TANPA tahun dalam kurung dan TANPA masuk Daftar Pustaka (mis. "Menurut Herzberg, motivasi kerja merupakan ...", bukan "(Herzberg, 1959)"). ARTIKEL JURNAL wajib memakai daftar referensi di atas; jangan mengarang DOI atau judul jurnal di luar daftar.
+ATURAN SITASI SATU PER SATU: DILARANG menumpuk kutipan jamak dalam tanda kurung yang sama seperti "(A, 2019; B, 2020; C, 2024)". Setiap kutipan wajib disajikan SATU PER SATU secara wajar pada kalimat penjelasnya masing-masing.`;
 7. Rahmat, J. (2015). Psikologi Komunikasi. Remaja Rosdakarya.
 8. Sekaran, U., & Bougie, R. (2016). Research Methods for Business (7th ed.). Wiley.
 Boleh juga menyitasi teori klasik yang sudah umum & benar (mis. Maslow 1943, Herzberg 1959, Likert 1932, Slovin) TANPA DOI — tetapi ARTIKEL JURNAL wajib memakai daftar referensi di atas; jangan mengarang DOI atau judul jurnal di luar daftar.`;
@@ -340,7 +343,7 @@ const SITASI = `Aturan format: teks bersih — TANPA **bold**, tanpa ---, tanpa 
 (3) daftar bernomor BERTINGKAT — hierarki wajib: tingkat 1 pakai "1." "2." "3."; tingkat 2 (di bawah tingkat 1) pakai "a." "b." "c."; tingkat 3 pakai "1)." "2)."; tingkat 4 pakai "a)." "b).". Tiap butir satu baris, indentasi 4 spasi per tingkat, penomoran tiap tingkat berurutan tanpa melompat; DILARANG memakai bullet "-", "*", atau "•" untuk daftar (semua daftar tetap bernomor); dalam SEL tabel gunakan pemisah " • " pada SATU baris (bukan baris baru); JANGAN menulis "<br>", "<br/>", atau tag HTML apa pun. SEBELUM tiap tabel WAJIB tulis baris "Judul Tabel: <deskripsi isi tabel>", dan SETELAH tiap tabel WAJIB tulis baris "Sumber: <sumber data/rujukan>" tepat di baris berikutnya tanpa jarak kosong; sebelum tiap bagan/gambar WAJIB tulis baris "Judul Gambar: <deskripsi>" — tanpa nomor di depannya; judul harus mencerminkan ISI objeknya (apa yang dibahas + siapa/periode/ukurannya) dan DILARANG sama persis dengan judul sub-babnya. JANGAN tulis caption "Tabel x.y" atau "Gambar x.y" langsung — penomoran tabel & gambar (termasuk Daftar Tabel/Gambar) dibuat otomatis oleh sistem. Rumus ditulis karakter biasa/Unicode (mis. "n = N/(1 + N·e²)", "Y = β₀ + β₁X + e", "r = Σ(x−x̄)(y−ȳ)/√…") — JANGAN format LaTeX ($…$, \\frac, \\sqrt, \\( … \\)); sisa LaTeX akan dibuang sistem sehingga angka/rumusnya jadi rusak. Tulis isi teks dengan huruf normal — JANGAN semua huruf kapital; judul artikel referensi ditulis dengan huruf normal (bukan HURUF BESAR semua). Bagan: satu kotak per baris, panah "↓" atau "→" di baris tersendiri. Langsung mulai dari judul bab. Jangan tulis kata "Ilustratif": tabel fenomena hanya boleh berisi data nyata bersumber, bila tidak ada maka hapus tabelnya.`;
 
 // Bagian sitasi/kutip — Bab V dikecualikan (permintaan owner: tanpa kutipan di Bab 5)
-const SITASI_KUTIP = `Wajib: (1) tulis dalam bahasa yang diminta, (2) bodynote sesuai gaya sitasi yang diminta di setiap sub-bab yang memakai teori/temuan, (3) akhiri dengan sub-bagian "Daftar Pustaka Bab Ini" berisi referensi di atas dalam format gaya sitasi yang diminta lengkap dengan link DOI yang bisa diklik. Untuk ARTIKEL JURNAL: hanya dari daftar referensi (jangan mengarang DOI/judul di luar daftar); untuk BUKU TEKS: hanya dari daftar buku atau teori klasik yang benar-benar ada.`;
+const SITASI_KUTIP = `Wajib: (1) tulis dalam bahasa yang diminta, (2) bodynote sesuai gaya sitasi yang diminta di setiap sub-bab yang memakai teori/temuan (rentang tahun 2022-2026; kutipan wajib SATU PER SATU, dilarang menumpuk sitasi ganda dalam satu tanda kurung; sub-bab 1.2 Identifikasi Masalah, 1.3 Rumusan Masalah, dan 1.4 Tujuan Penelitian DILARANG memakai sitasi), (3) akhiri dengan sub-bagian "Daftar Pustaka Bab Ini" berisi referensi di atas dalam format gaya sitasi yang diminta lengkap dengan link DOI yang bisa diklik. Untuk ARTIKEL JURNAL: hanya dari daftar referensi (jangan mengarang DOI/judul di luar daftar); untuk BUKU TEKS: hanya dari daftar buku teks tahun ≥ 2022 di atas (teori klasik disebut nama ahli tanpa tahun sitasi, tidak masuk daftar pustaka).`;
 const SITASI_BAB5 = `BAB V TANPA KUTIPAN: JANGAN menulis bodynote/sitasi/tautan DOI apa pun, dan JANGAN menyertakan sub-bab "Daftar Pustaka Bab Ini" — kesimpulan, implikasi, dan saran murni diturunkan dari isi Bab I–IV. Wajib: (1) tulis dalam bahasa yang diminta, (2) ringkas dan tegas.`;
 
 // Aturan format khusus generate PER SUB-BAB (endpoint generate-subbab/-stream) —
