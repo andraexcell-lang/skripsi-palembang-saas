@@ -331,11 +331,16 @@ ATURAN KERAS TENTANG BUKU METODOLOGI:
 - KUTIPAN TUNGGAL (SATU PER SATU): DILARANG menumpuk sitasi ganda dalam satu tanda kurung seperti "(A, 2019; B, 2020)". Setiap kutipan wajib disajikan SATU PER SATU mengiringi kalimatnya masing-masing.
 - SUB-BAB 1.2, 1.3, DAN 1.4: DILARANG MENGGUNAKAN KUTIPAN SAMA SEKALI.`;
 
-function refBlock(refs: { doi: string; title: string; authors: string; year: string; url: string; venue?: string; abstract?: string }[]) {
-  if (!refs.length) return `\n (tidak ada referensi eksternal tersedia — gunakan buku teks & teori standar yang benar-benar ada).${BUKU_TEKS}`;
-  return '\nDAFTAR REFERENSI JURNAL WAJIB (untuk bodynote + Daftar Pustaka, format APA 7th, URL bisa diklik — hanya artikel di bawah yang boleh punya DOI):\n' +
-    refs.map((r, i) => `${i + 1}. ${r.authors} (${r.year}). ${r.title}.${r.venue ? ` ${r.venue}.` : ''} https://doi.org/${r.doi}${r.abstract ? `\n   Abstrak: ${r.abstract}` : ''}`).join('\n') +
-    `\n${BUKU_TEKS}`;
+function refBlock(refs: { doi: string; title: string; authors: string; year: string; url: string; venue?: string; abstract?: string }[], bab?: string) {
+  const refsValid = refs.filter((r) => {
+    const y = parseInt(r.year, 10);
+    return !y || (y >= 2022 && y <= 2026);
+  });
+  const bukuTeksBagian = bab === 'bab1' ? `\n(PERHATIAN UNTUK BAB I: DILARANG KERAS menyitasi buku metodologi penelitian apa pun seperti Sugiyono, Ghozali, Sekaran, Creswell, dsb. Hanya gunakan artikel jurnal ilmiah tahun 2022-2026 di atas atau regulasi/data instansi resmi).` : `\n${BUKU_TEKS}`;
+  if (!refsValid.length) return `\n (tidak ada referensi eksternal tersedia — gunakan artikel jurnal terbitan 2022-2026 yang benar-benar ada).${bukuTeksBagian}`;
+  return '\nDAFTAR REFERENSI JURNAL WAJIB (rentang tahun 2022-2026, format APA 7th, URL bisa diklik):\n' +
+    refsValid.map((r, i) => `${i + 1}. ${r.authors} (${r.year}). ${r.title}.${r.venue ? ` ${r.venue}.` : ''} https://doi.org/${r.doi}${r.abstract ? `\n   Abstrak: ${r.abstract}` : ''}`).join('\n') +
+    bukuTeksBagian;
 }
 
 const SITASI = `Aturan format: teks bersih — TANPA **bold**, tanpa ---, tanpa preamble seperti "Berikut adalah...". Markdown yang boleh hanya: (1) judul sub-bab bernomor pola "N.M Judul" (mis. "2.4 Penelitian Terdahulu") — boleh bertingkat "N.M.K" dan "N.M.K.L" (maksimal 4 tingkat, mis. "2.1.1.1 Prestasi Kerja"), tanpa ** dan tanpa #; penomoran tiap tingkat WAJIB berurutan 1,2,3… tanpa melompat, tiap judul induk wajib punya minimal 2 anak, dan tiap anak wajib punya induk (dilarang nomor duplikat, lompat, atau yatim); (2) TABEL markdown format standar — WAJIB pipe di awal dan di akhir SETIAP baris, termasuk baris pemisah, contoh:
@@ -429,7 +434,7 @@ export function babPrompt(bab: string, p: any, refs: { doi: string; title: strin
   const style = p.citation_style || 'APA 7th';
   const lang = p.language || 'Indonesia';
   const base = `Judul: ${p.judul}\nJenis: ${p.jenis}\nMetode: ${p.metode}\nBahasa penulisan: ${lang}\nGaya sitasi: ${style}\n${p.initial_data ? `Data awal penelitian: ${String(p.initial_data).slice(0, 1000)}\n` : ''}`;
-  const ref = refBlock(refs);
+  const ref = refBlock(refs, bab);
   const scopeNote = p.ref_scope && p.ref_scope !== 'umum' ? `Prioritaskan referensi ${p.ref_scope}.\n` : '';
   const outlineNote = p.custom_outline ? `Ikuti struktur bab kustom berikut (jangan pakai struktur standar):\n${String(p.custom_outline).slice(0, 2000)}\n` : '';
   const fenomena = p.fetch_fenomena && bab === 'bab1'
@@ -982,10 +987,14 @@ router.post('/:id/generate-subbab', requireAuthOrKey, async (req: AuthRequest, r
         throw e;
       }
     }
-    const refs = await crossrefTop(`${p.judul} ${sub}`, 5, p.min_year);
+    const minTahun = p.min_year ?? 2022;
+    const refs = (await crossrefTop(`${p.judul} ${sub}`, 8, minTahun)).filter((r) => {
+      const y = parseInt(r.year, 10);
+      return !y || (y >= 2022 && y <= 2026);
+    }).slice(0, 5);
     const sp = subPanduan(p, bab, sub);
     const text = await generateContent(
-      `Susun sub-bab "${sub}" dari ${(outlineFor(p)[bab] || {}).bab || bab} untuk karya berikut. Judul: ${p.judul}. Metode: ${p.metode}. Bahasa: ${p.language || 'Indonesia'}. Gaya sitasi: ${p.citation_style || 'APA 7th'}.\n${refBlock(refs)}\nTulis ${sp.kata} kata akademik dengan bodynote bila memakai teori. Jangan mengarang DOI.${sp.panduan}\n${SITASI_SUB}`
+      `Susun sub-bab "${sub}" dari ${(outlineFor(p)[bab] || {}).bab || bab} untuk karya berikut. Judul: ${p.judul}. Metode: ${p.metode}. Bahasa: ${p.language || 'Indonesia'}. Gaya sitasi: ${p.citation_style || 'APA 7th'}.\n${refBlock(refs, bab)}\nTulis ${sp.kata} kata akademik dengan bodynote bila memakai teori. Jangan mengarang DOI.${sp.panduan}\n${SITASI_SUB}`
     );
     const content = { ...(p.content || {}), [key]: bersihTeks(text) };
     await d.from('projects').update({ content, updated_at: new Date().toISOString() }).eq('id', id);
@@ -1025,9 +1034,13 @@ router.post('/:id/generate-subbab-stream', requireAuthOrKey, async (req: AuthReq
       }
     }
     send('cost', { cost });
-    const refs = await crossrefTop(`${p.judul} ${sub}`, 5, p.min_year);
+    const minTahun = p.min_year ?? 2022;
+    const refs = (await crossrefTop(`${p.judul} ${sub}`, 8, minTahun)).filter((r) => {
+      const y = parseInt(r.year, 10);
+      return !y || (y >= 2022 && y <= 2026);
+    }).slice(0, 5);
     const sp = subPanduan(p, bab, sub);
-    const prompt = `Susun sub-bab "${sub}" dari ${(outlineFor(p)[bab] || {}).bab || bab} untuk karya berikut. Judul: ${p.judul}. Metode: ${p.metode}. Bahasa: ${p.language || 'Indonesia'}. Gaya sitasi: ${p.citation_style || 'APA 7th'}.\n${refBlock(refs)}\nTulis ${sp.kata} kata akademik dengan bodynote bila memakai teori. Jangan mengarang DOI.${sp.panduan}\n${SITASI_SUB}`;
+    const prompt = `Susun sub-bab "${sub}" dari ${(outlineFor(p)[bab] || {}).bab || bab} untuk karya berikut. Judul: ${p.judul}. Metode: ${p.metode}. Bahasa: ${p.language || 'Indonesia'}. Gaya sitasi: ${p.citation_style || 'APA 7th'}.\n${refBlock(refs, bab)}\nTulis ${sp.kata} kata akademik dengan bodynote bila memakai teori. Jangan mengarang DOI.${sp.panduan}\n${SITASI_SUB}`;
     let full = '';
     try {
       for await (const t of generateContentStream(prompt)) {
