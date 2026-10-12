@@ -350,7 +350,7 @@ const SITASI_BAB5 = `BAB V TANPA KUTIPAN: JANGAN menulis bodynote/sitasi/tautan 
 // ringkas, tanpa bagian bab-penuh (caption/judul bab/SITASI_KUTIP) yang tak relevan
 // untuk satu sub; melarang judul/pembuka/---/daftar pustaka bawaan model (terbukti
 // bocor pada uji Bab I 11 Okt).
-const SITASI_SUB = `Aturan output: teks polos siap tempel — TANPA **bold**, TANPA pemisah "---", TANPA judul sub-bab bernomor (judulnya sudah dibuat sistem), TANPA kalimat pembuka/pembungkus seperti "Berikut adalah sub-bab...", dan TANPA bagian "Daftar Pustaka"/referensi di akhir (daftar pustaka disusun terpisah oleh panel). Tabel markdown hanya bila diminta panduan (pipe di awal & akhir SETIAP baris). DILARANG tag HTML (<br> dll) dan LaTeX ($…$).`;
+const SITASI_SUB = `Aturan output: teks polos siap tempel — TANPA **bold**, TANPA pemisah "---", TANPA judul sub-bab bernomor (judulnya sudah dibuat sistem), TANPA kalimat pembuka/pembungkus seperti "Berikut adalah sub-bab...", dan TANPA bagian "Daftar Pustaka"/referensi di akhir (daftar pustaka disusun terpisah oleh panel). ATURAN SITASI: rentang tahun rujukan wajib 2022-2026 yang relevan; kutipan bodynote wajib disajikan SATU PER SATU per kalimat, DILARANG menumpuk kutipan jamak dalam satu tanda kurung. Tabel markdown hanya bila diminta panduan (pipe di awal & akhir SETIAP baris). DILARANG tag HTML (<br> dll) dan LaTeX ($…$).`;
 
 // Pilihan interaktif studio (paritas referensi): bagan Bab II + input metodologi Bab III
 type Ekstra = { bagan?: 'kirim' | 'ai'; baganTeks?: string; populasi?: string; takDiketahui?: boolean; desain?: string; software?: string };
