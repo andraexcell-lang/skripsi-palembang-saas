@@ -162,8 +162,11 @@ const V_TESIS_TRIDINANTI: Varian = {
     judul: 'Lampiran',
     subs: [
       S('kisi_kisi', 'Kisi-Kisi Instrumen Penelitian'),
-      S('kuisioner', 'Kuesioner Penelitian'),
-      S('tabulasi_data', 'Tabulasi Data Responden & Output SmartPLS'),
+      S('kuisioner', 'Lembar Kuesioner Penelitian'),
+      S('hasil_deskriptif', 'Hasil Deskriptif Variabel'),
+      S('output_smartpls', 'Output SmartPLS'),
+      S('tabulasi_data', 'Tabulasi Data Responden'),
+      S('turnitin', 'Laporan Hasil Turnitin'),
     ],
   },
 };
@@ -214,6 +217,10 @@ const PANDUAN_SUB: Record<string, string> = {
   pembahasan_7_jalur: 'Pembahasan komprehensif untuk SELURUH 7 HIPOTESIS (H1 sampai H7). WAJIB MENGGUNAKAN FORMULA 4 PILAR PADA SETIAP HIPOTESIS: (Pilar 1) Fakta Hasil Statistik: sebutkan nilai path coefficient beta, t-stat > 1.96, p-value < 0.05, status diterima; (Pilar 2) Konfirmasi Grand Theory: jelaskan keselarasan temuan dengan teori utama; (Pilar 3) Dukungan Riset Terdahulu: kutip minimal 2-3 jurnal empiris terdahulu yang relevan dan sejalan; (Pilar 4) Analisis Fenomena Faktual Lapangan: jelaskan kondisi nyata operasional di objek penelitian yang menjelaskan mengapa pengaruh tersebut terjadi',
   implikasi_penelitian: 'Dua bagian bernomor: "1. Implikasi Teoritis" (sumbangan bagi pengembangan ilmu manajemen sumber daya manusia/organisasi) dan "2. Implikasi Manajerial" (rekomendasi kebijakan strategis bagi instansi objek penelitian)',
   tabulasi_data: 'Sajikan ringkasan format tabulasi data mentah responden (Skala Likert 1-5) untuk setiap butir indikator X1, X2, M, dan Y, serta rekapitulasi output report SmartPLS',
+  kuisioner: 'Susun LEMBAR KUESIONER berupa TABEL persis 7 kolom "NO | PERNYATAAN | SS | S | KS | TS | STS" (SS = Sangat Setuju, S = Setuju, KS = Kurang Setuju, TS = Tidak Setuju, STS = Sangat Tidak Setuju). Pernyataan bernomor urut per variabel (X1, X2, M, Y) diturunkan dari indikator/kisi-kisi Bab III; kolom SS–STS dikosongkan sebagai ruang isian responden; beri paragraf petunjuk pengisian singkat sebelum tabel',
+  hasil_deskriptif: 'Sajikan TABEL statistik deskriptif per variabel dan per indikator: mean, standar deviasi, nilai minimum, nilai maksimum, serta kategori capaian. Diawali 1 paragraf pengantar dan diakhiri paragraf interpretasi ringkas',
+  output_smartpls: 'Sajikan ringkasan laporan output SmartPLS dalam bentuk tabel markdown rapi: (a) Model Path (ringkas), (b) Outer Loadings, (c) Construct Reliability & Validity (Alpha, CR, AVE), (d) Fornell-Larcker Matrix, (e) HTMT, (f) Path Coefficients, (g) Bootstrapping Results. Cantumkan catatan kecil bahwa angka bersifat contoh format dan WAJIB diganti dengan angka riil milik penulis setelah mengunggah data asli',
+  turnitin: 'Susun LAPORAN HASIL TURNITIN: tabel ringkas berisi Judul Dokumen, Nama Penulis, Institusi, Tanggal Submit, Similarity Index (%), dan Grand Total; diawali 1 paragraf penjelasan tentang pentingnya orisinalitas dan batas similarity yang umumnya ditetapkan program pascasarjana (<= 20-25%). Cantumkan catatan bahwa persentase contoh harus diganti dengan hasil Turnitin riil milik penulis',
 };
 
 // Sub-bab yang wajib bebas sitasi / tanpa kutipan dan bernarasi padat langsung ke inti
@@ -679,7 +686,7 @@ export function babPrompt(bab: string, p: any, refs: { doi: string; title: strin
   };
   const struktur2Tridinanti = `Susun BAB II KAJIAN PUSTAKA DAN HIPOTESIS PENELITIAN untuk TESIS MAGISTER MANAJEMEN UNIVERSITAS TRIDINANTI dengan TEPAT 4 sub-bagian berurutan:\n` +
     `2.1 Kajian Pustaka: Uraikan grand theory dan tinjauan teoritis untuk SETIAP variabel (Y, M, X1, X2) mencakup pengertian para ahli, dimensi, indikator, dan faktor yang memengaruhi.\n` +
-    `2.2 Hasil Penelitian yang Relevan: Sajikan TABEL 2.1 Hasil Penelitian yang Relevan (minimal 7-10 jurnal terakreditasi SINTA / internasional bereputasi) kolom: "No | Peneliti & Tahun | Judul Penelitian | Variabel | Alat Analisis | Hasil Penelitian", diawali narasi pengantar singkat.\n` +
+    `2.2 Hasil Penelitian yang Relevan: Sajikan TABEL 2.1 Hasil Penelitian yang Relevan (minimal 7-10 jurnal terakreditasi SINTA / internasional bereputasi) dengan TEPAT 5 kolom: "No | Peneliti & Judul Penelitian | Persamaan | Perbedaan | Hasil Penelitian" — kolom Persamaan memuat kesamaan variabel/metode dengan penelitian ini, kolom Perbedaan memuat perbedaan (objek, periode, model, atau hasil); diawali narasi pengantar singkat.\n` +
     `2.3 Kerangka Berpikir: Uraikan hubungan logis antar variabel secara terstruktur untuk ke-7 jalur hipotesis mediasi, dan akhiri dengan DIAGRAM KERANGKA BERPIKIR TEKS model mediasi (X1, X2 -> M -> Y) terstruktur dengan kotak dan panah →.\n` +
     `2.4 Hipotesis Penelitian: Rumuskan TEPAT 7 HIPOTESIS KERJA TERARAH (H1 s.d H7): H1 (X1->Y positif signifikan), H2 (X2->Y positif signifikan), H3 (X1->M positif signifikan), H4 (X2->M positif signifikan), H5 (M->Y positif signifikan), H6 (X1 berpengaruh terhadap Y melalui M sebagai variabel intervening), H7 (X2 berpengaruh terhadap Y melalui M sebagai variabel intervening).\n`;
   const struktur2 = isTridinanti ? struktur2Tridinanti : (kuant
@@ -766,7 +773,7 @@ export function babPrompt(bab: string, p: any, refs: { doi: string; title: strin
     ? `Susun BAB V PENUTUP (kesimpulan menjawab rumusan masalah + saran praktis/metodologis). Sub-bagian urut: ${subsNum('bab5').join(', ')}${adaAgenda ? ' — Agenda Penelitian Lanjutan berisi arah penelitian berikutnya berbasis keterbatasan penelitian' : ''}.\n`
     : `Susun ${((v.bab5 && v.bab5.judul.toUpperCase()) || 'BAB V')} dengan sub-bagian urut: ${subsNum('bab5').join(', ')} — Simpulan menjawab rumusan masalah satu per satu; Saran praktis/teknis/akademis${adaAgenda ? '; Agenda Penelitian Lanjutan berisi arah penelitian berikutnya berbasis keterbatasan penelitian' : ''}.\n`);
   const s6 = subsNum('lampiran');
-  const strukturLTridinanti = `Susun LAMPIRAN TESIS MAGISTER MANAJEMEN: 6.1 Kisi-Kisi Instrumen Penelitian (tabel variabel, dimensi, indikator, butir soal); 6.2 Lembar Kuesioner Penelitian Skala Likert 1-5; 6.3 Rekapitulasi Tabulasi Data Responden & Lembar Output Analisis SmartPLS.\n`;
+  const strukturLTridinanti = `Susun LAMPIRAN TESIS MAGISTER MANAJEMEN dengan sub-bagian urut: 6.1 Kisi-Kisi Instrumen Penelitian (TABEL variabel | dimensi | indikator | nomor butir); 6.2 Lembar Kuesioner Penelitian (TABEL persis 7 kolom "NO | PERNYATAAN | SS | S | KS | TS | STS" — SS Sangat Setuju, S Setuju, KS Kurang Setuju, TS Tidak Setuju, STS Sangat Tidak Setuju; pernyataan per variabel X1, X2, M, Y turunan indikator Bab III; kolom SS–STS dikosongkan sebagai ruang isian responden); 6.3 Hasil Deskriptif Variabel (TABEL mean, simpangan baku, min, maks per variabel); 6.4 Output SmartPLS (ringkasan tabel Outer Loadings, Construct Reliability & Validity, Fornell-Larcker, HTMT, Path Coefficients, Bootstrapping); 6.5 Tabulasi Data Mentah Responden (tabel format penomoran responden per butir skala Likert); 6.6 Laporan Hasil Turnitin (tabel Judul, Penulis, Similarity Index, Grand Total — angka contoh dengan catatan WAJIB diganti hasil riil).\n`;
   const strukturL = isTridinanti ? strukturLTridinanti : (!kuant && s6.length
     ? `Sub-bagian urut: ${s6.join(', ')} — tiap sub diisi instrumen penelitian NYATA sesuai labelnya (kisi-kisi, pedoman/lembar observasi-keahlian, pernyataan responden, lembar validasi) yang diturunkan dari kajian pustaka dan metode artikelmu, gunakan tabel Markdown bila membantu.\n`
     : '');
