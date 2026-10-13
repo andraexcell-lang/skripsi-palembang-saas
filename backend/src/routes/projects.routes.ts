@@ -272,7 +272,13 @@ function subPanduan(p: any, bab: string, sub: string): { panduan: string; kata: 
   } else if (key === 'tujuan_penelitian' || label.includes('tujuan penelitian')) {
     kata = p?.jenis === 'tesis_tridinanti' ? '120-220' : '50-100';
   } else if (key === 'hipotesis' || label.includes('hipotesis')) {
-    kata = p?.jenis === 'tesis_tridinanti' ? '250-450' : '150-300';
+    kata = p?.jenis === 'tesis_tridinanti' ? '400-700' : '150-300';
+  } else if (key === 'landasan_teori' || label.includes('kajian pustaka')) {
+    kata = p?.jenis === 'tesis_tridinanti' ? '2500-4000' : '600-1200';
+  } else if (key === 'penelitian_terdahulu_naratif' || label.includes('hasil penelitian yang relevan')) {
+    kata = p?.jenis === 'tesis_tridinanti' ? '400-800' : '300-600';
+  } else if (key === 'kerangka_berpikir' || label.includes('kerangka berpikir')) {
+    kata = p?.jenis === 'tesis_tridinanti' ? '500-1000' : '300-600';
   } else if (key === 'manfaat_penelitian' || label.includes('manfaat penelitian') || label.includes('kegunaan penelitian')) {
     kata = '120-200';
   } else if (key === 'batasan_masalah' || label.includes('batasan masalah')) {
@@ -309,6 +315,17 @@ function subPanduan(p: any, bab: string, sub: string): { panduan: string; kata: 
 6. Untuk mengetahui dan menganalisis pengaruh [X1] terhadap [Y] melalui [M] sebagai variabel intervening pada [Objek Penelitian].
 7. Untuk mengetahui dan menganalisis pengaruh [X2] terhadap [Y] melalui [M] sebagai variabel intervening pada [Objek Penelitian].
 (Sesuaikan nama variabel [X1], [X2], [M], [Y] dan [Objek] dengan judul tesis). DILARANG KERAS MENGGUNAKAN KUTIPAN/SITASI.`;
+    } else if (key === 'landasan_teori' || label.includes('kajian pustaka')) {
+      panduan = `\nPANDUAN ISI (wajib diikuti): BAB II 2.1 KAJIAN PUSTAKA dengan TEPAT 4 sub-sub bernomor 2.1.1 s.d 2.1.4, urutan WAJIB dari variabel dependen dulu:
+- 2.1.1 [Variabel Y / Terikat]: (a) Pengertian menurut 2-3 pakar dengan sitasi, (b) Teori/tinjauan pendukung yang mendasari variabel ini (termasuk grand theory yang relevan, misal Social Cognitive Theory/Two-Factor Theory bila sesuai), (c) Dimensi-dimensinya, (d) Indikator-indikatornya.
+- 2.1.2 [Variabel M / Intervening]: pola sama (pengertian para ahli, teori pendukung seperti Equity/Discrepancy/Two-Factor bila relevan, dimensi, indikator).
+- 2.1.3 [Variabel X1 / Bebas 1]: pola sama.
+- 2.1.4 [Variabel X2 / Bebas 2]: pola sama.
+Tiap sub-sub minimal 800-1200 kata dengan penjelasan BERBEDA antar variabel (dilarang mengulang kalimat sama). DILARANG MENGGUNAKAN KUTIPAN DI LUAR KAJIAN TEORI INI.`;
+    } else if (key === 'penelitian_terdahulu_naratif' || label.includes('hasil penelitian yang relevan')) {
+      panduan = `\nPANDUAN ISI (wajib diikuti): 1 paragraf pengantar singkat lalu TABEL 2.1 HASIL PENELITIAN YANG RELEVAN minimal 10 jurnal bereputasi (SINTA 2-4 dan/atau internasional Scopus), TEPAT 5 kolom: "No | Peneliti & Judul Penelitian | Persamaan | Perbedaan | Hasil Penelitian" — kolom Persamaan memuat kesamaan variabel/metode dengan penelitian ini, kolom Perbedaan memuat perbedaan objek/periode/model/hasil. WAJIB ditutup 1-2 paragraf NARASI NOVELTY: menjelaskan posisi dan orisinalitas penelitian saat ini dibanding 10 riset terdahulu tersebut (research gap yang menjustifikasi model mediasi ini).`;
+    } else if (key === 'kerangka_berpikir' || label.includes('kerangka berpikir')) {
+      panduan = `\nPANDUAN ISI (wajib diikuti): Uraikan 7 alur keterkaitan logis model mediasi SATU PER SATU bernomor 1-7 dengan argumentasi teoretis tiap alur: (1) X1 -> M, (2) X2 -> M, (3) X1 -> Y, (4) X2 -> Y, (5) M -> Y, (6) mediasi M pada pengaruh X1 -> Y, (7) mediasi M pada pengaruh X2 -> Y. Akhiri dengan kalimat "Kerangka berpikir tersebut disajikan pada Gambar berikut." lalu BAGAN TEKS kerangka berpikir model mediasi (X1, X2 -> M -> Y) terstruktur kotak dan panah ->.`;
     } else if (key === 'hipotesis' || label.includes('hipotesis')) {
       panduan = `\nPANDUAN ISI (wajib diikuti): Rumuskan TEPAT 7 HIPOTESIS KERJA TERARAH (H1 sampai H7) model mediasi:
 H1: [X1] berpengaruh positif dan signifikan terhadap [Y].
@@ -685,10 +702,10 @@ export function babPrompt(bab: string, p: any, refs: { doi: string; title: strin
     eksakta: `Landasan teori sistem/rekayasa & konsep pendukung. WAJIB: sub Penelitian Terdahulu berupa TABEL markdown persis kolom "No | Nama (Tahun) | Judul | Hasil | Gap" berisi minimal 6 literatur nyata dari referensi.\n`,
   };
   const struktur2Tridinanti = `Susun BAB II KAJIAN PUSTAKA DAN HIPOTESIS PENELITIAN untuk TESIS MAGISTER MANAJEMEN UNIVERSITAS TRIDINANTI dengan TEPAT 4 sub-bagian berurutan:\n` +
-    `2.1 Kajian Pustaka: Uraikan grand theory dan tinjauan teoritis untuk SETIAP variabel (Y, M, X1, X2) mencakup pengertian para ahli, dimensi, indikator, dan faktor yang memengaruhi.\n` +
-    `2.2 Hasil Penelitian yang Relevan: Sajikan TABEL 2.1 Hasil Penelitian yang Relevan (minimal 7-10 jurnal terakreditasi SINTA / internasional bereputasi) dengan TEPAT 5 kolom: "No | Peneliti & Judul Penelitian | Persamaan | Perbedaan | Hasil Penelitian" — kolom Persamaan memuat kesamaan variabel/metode dengan penelitian ini, kolom Perbedaan memuat perbedaan (objek, periode, model, atau hasil); diawali narasi pengantar singkat.\n` +
-    `2.3 Kerangka Berpikir: Uraikan hubungan logis antar variabel secara terstruktur untuk ke-7 jalur hipotesis mediasi, dan akhiri dengan DIAGRAM KERANGKA BERPIKIR TEKS model mediasi (X1, X2 -> M -> Y) terstruktur dengan kotak dan panah →.\n` +
-    `2.4 Hipotesis Penelitian: Rumuskan TEPAT 7 HIPOTESIS KERJA TERARAH (H1 s.d H7): H1 (X1->Y positif signifikan), H2 (X2->Y positif signifikan), H3 (X1->M positif signifikan), H4 (X2->M positif signifikan), H5 (M->Y positif signifikan), H6 (X1 berpengaruh terhadap Y melalui M sebagai variabel intervening), H7 (X2 berpengaruh terhadap Y melalui M sebagai variabel intervening).\n`;
+    `2.1 Kajian Pustaka: Buka dengan 1-2 paragraf GRAND THEORY / TEORI INDUK model penelitian (teori keperilakuan organisasi yang mendasari seluruh model, misal Social Cognitive Theory / Two-Factor Theory bila relevan dengan topik). Lalu uraikan TEPAT 4 sub-sub bernomor 2.1.1 s.d 2.1.4 dengan urutan WAJIB dari variabel dependen: 2.1.1 [Variabel Y/Terikat], 2.1.2 [Variabel M/Intervening], 2.1.3 [Variabel X1/Bebas 1], 2.1.4 [Variabel X2/Bebas 2] — TIAP sub-sub terbuka dengan heading sub-sub lalu urut: (a) Pengertian menurut 2-3 pakar dengan sitasi, (b) Teori/tinjauan pendukung yang mendasari variabel tersebut, (c) Dimensi-dimensinya, (d) Indikator-indikatornya. Nama variabel di setiap sub-sub WAJIB disesuaikan dengan variabel pada judul tesis.\n` +
+    `2.2 Hasil Penelitian yang Relevan: Sajikan TABEL 2.1 Hasil Penelitian yang Relevan berisi MINIMAL 10 jurnal bereputasi (terakreditasi SINTA 2-4 dan/atau internasional Scopus) dengan TEPAT 5 kolom: "No | Peneliti & Judul Penelitian | Persamaan | Perbedaan | Hasil Penelitian" — kolom Persamaan memuat kesamaan variabel/metode dengan penelitian ini, kolom Perbedaan memuat perbedaan (objek, periode, model, atau hasil); diawali 1 paragraf pengantar singkat; WAJIB ditutup 1-2 paragraf NARASI NOVELTY yang menyimpulkan posisi dan orisinalitas penelitian saat ini dibanding 10 riset terdahulu tersebut (research gap yang menjustifikasi model mediasi ini).\n` +
+    `2.3 Kerangka Berpikir: Uraikan 7 alur keterkaitan logis model mediasi SATU PER SATU bernomor 1-7 dengan argumentasi teoretis tiap alur: (1) X1 terhadap M, (2) X2 terhadap M, (3) X1 terhadap Y, (4) X2 terhadap Y, (5) M terhadap Y, (6) peran mediasi M pada pengaruh X1 terhadap Y, (7) peran mediasi M pada pengaruh X2 terhadap Y. Akhiri dengan kalimat "Kerangka berpikir tersebut disajikan pada Gambar berikut." lalu BAGAN TEKS kerangka berpikir model mediasi (X1, X2 -> M -> Y) terstruktur kotak dan panah →.\n` +
+    `2.4 Hipotesis Penelitian: 1 paragraf pembuka singkat, lalu Rumuskan TEPAT 7 HIPOTESIS KERJA TERARAH (H1 s.d H7), masing-masing DIDAHULUI 1 paragraf singkat SINTESIS TEORITIS (teori dari 2.1 + bukti empiris ringkas dari 2.2 yang mendukung arah pengaruh): H1 (X1->Y positif signifikan), H2 (X2->Y positif signifikan), H3 (X1->M positif signifikan), H4 (X2->M positif signifikan), H5 (M->Y positif signifikan), H6 (X1 berpengaruh terhadap Y melalui M sebagai variabel intervening), H7 (X2 berpengaruh terhadap Y melalui M sebagai variabel intervening).\n`;
   const struktur2 = isTridinanti ? struktur2Tridinanti : (kuant
     ? `Struktur wajib BAB II: 2.1 Landasan Teori — untuk SETIAP konstruk/variabel penelitian buat sub-sub BERTINGKAT 5 tingkat dengan pola: "2.1.1.1 Teori yang Mendasari <variabel>", "2.1.1.2 Pengertian <variabel>", "2.1.1.3 Dimensi <variabel>", "2.1.1.4 Indikator <variabel>", "2.1.1.5 Faktor-Faktor yang Memengaruhi <variabel>" (sub-sub berikutnya lanjut 2.1.2, 2.1.3, dst.); 2.2 Kerangka Teori; 2.3 Hubungan Antar Variabel (satu sub tiap pasangan hubungan termasuk mediasi); 2.4 Penelitian Terdahulu; 2.5 Kerangka Berpikir; 2.6 Hipotesis.\nWAJIB: sub 2.4 Penelitian Terdahulu berupa TABEL markdown persis kolom "No | Nama (Tahun) | Judul | Hasil | Gap" berisi 10 penelitian terdahulu nyata dari referensi yang relevan (1 paragraf penjelasan pendahulu tabel juga boleh).\n`
     : `Struktur wajib ${((v.bab2 && v.bab2.judul.toUpperCase()) || 'BAB II')}: ${subsNum('bab2').join(', ')}.\n${catatan2[vk] || ''}`);
@@ -782,7 +799,9 @@ export function babPrompt(bab: string, p: any, refs: { doi: string; title: strin
   // (Bab I 33rb, Bab II 56rb, Bab III 41rb karakter; uji 6 Okt 2026). Tanpa target
   // eksplisit model menulis "cukup" dangkal (Bab III kita cuma 12rb / 29% paritas).
   const target1 = `TARGET KEDALAMAN (wajib — jangan berhenti sebelum tercapai): total BAB I minimal 25.000 karakter; sub pertama (latar belakang/pendahuluan) sendiri minimal 12.000 karakter dengan alur umum → khusus → fokus penelitian, tiap paragraf ada sitasi bila memakai angka/temuan; sub lain ditulis mendalam, bukan ringkasan. LARANGAN KERAS BAB I: DILARANG menyitasi buku metodologi penelitian (seperti Sugiyono, Arikunto, Creswell, Sekaran, Ghozali, Moleong, Nazir, dll.) di Bab I / Latar Belakang — buku metodologi HANYA untuk Bab III; sitasi di Bab I wajib murni artikel jurnal ilmiah terkait topik penelitian dan data/regulasi resmi.\n`;
-  const target2 = kuant
+  const target2 = isTridinanti
+    ? `TARGET KEDALAMAN (wajib — jangan berhenti sebelum tercapai): total BAB II minimal 40.000 karakter (15-25 halaman); sub 2.1 Kajian Pustaka minimal 25.000 karakter dengan TEPAT 4 sub-sub per variabel (2.1.1 Y, 2.1.2 M, 2.1.3 X1, 2.1.4 X2) — tiap sub-sub minimal 800-1200 kata dan pembahasannya BERBEDA antar variabel (dilarang mengulang kalimat sama), tiap variabel memuat pengertian pakar, teori pendukung, dimensi, dan indikator; sub 2.2 minimal 10 jurnal pada tabel + narasi novelty penutup; sub 2.3 uraikan 7 alur logis satu per satu + bagan; sub 2.4 tiap hipotesis didahului paragraf sintesis teoritis.\n`
+    : kuant
     ? `TARGET KEDALAMAN (wajib): total BAB II minimal 40.000 karakter; tiap konstruk/variabel pada 2.1 dibuka 5 tingkat, tiap tingkat 300–500 kata dengan penjelasan BERBEDA (dilarang mengulang kalimat sama); tabel 2.4 minimal 10 studi; tiap hipotesis bernomor H1, H2, … + 1 paragraf justifikasi teoretis.\n`
     : `TARGET KEDALAMAN (wajib): total BAB II minimal 35.000 karakter; tiap teori utama diuraikan rinci (definisi, dimensi, penerapan pada topik penelitianmu) — bukan ringkasan; tabel penelitian terdahulu tetap minimal 6 studi.\n`;
   const target3 = kuant
