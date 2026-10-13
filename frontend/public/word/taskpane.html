@@ -276,7 +276,11 @@
   $('proj').onchange = renderOutline;
   async function insertEnd(text) {
     await Word.run(async (ctx) => {
-      ctx.document.body.insertParagraph(text.slice(0, 15000), Word.InsertLocation.end);
+      // Per paragraf tanpa batas 15.000 karakter — sub panjang jangan terpotong.
+      for (const para of String(text).split(/\r?\n\s*\r?\n/)) {
+        const t = para.replace(/\r?\n/g, ' ').trim();
+        if (t) ctx.document.body.insertParagraph(t, Word.InsertLocation.end);
+      }
       await ctx.sync();
     });
   }
@@ -329,7 +333,13 @@
       await Word.run(async (ctx) => {
         const h = ctx.document.body.insertParagraph(sub, Word.InsertLocation.end);
         h.font.bold = true; h.font.size = 13;
-        ctx.document.body.insertParagraph(full.slice(0, 15000), Word.InsertLocation.end);
+        // Sisipkan SELURUH isi per paragraf — dulu dibatasi slice(0, 15000)
+        // karakter sehingga sub panjang (mis. 2.1 Kajian Pustaka 25.000+
+        // karakter) terpotong di tengah walau AI menulis lengkap.
+        for (const para of full.split(/\r?\n\s*\r?\n/)) {
+          const t = para.replace(/\r?\n/g, ' ').trim();
+          if (t) ctx.document.body.insertParagraph(t, Word.InsertLocation.end);
+        }
         await ctx.sync();
       });
       msg2(sub + ' selesai (' + nwords + ' kata).');

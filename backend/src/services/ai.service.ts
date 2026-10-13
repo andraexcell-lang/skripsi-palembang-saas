@@ -180,15 +180,22 @@ function opsi(e: EntriModel) {
 }
 
 async function bukaStream(e: EntriModel, prompt: string) {
-  try {
-    return await sdk(e).getGenerativeModel({ model: e.id, generationConfig: { maxOutputTokens: MAX_OUT } }, opsi(e)).generateContentStream(prompt);
-  } catch (err: any) {
-    if (/maxOutputTokens|invalid[_ ]?argument/i.test(String(err?.message || ""))) {
-      console.warn(`[ai] ${e.id} menolak maxOutputTokens=${MAX_OUT} — ulang tanpa konfigurasi`);
-      return await sdk(e).getGenerativeModel({ model: e.id }, opsi(e)).generateContentStream(prompt);
+  // Model tertentu punya plafon lebih kecil — jangan langsung buang konfigurasi
+  // (dulu fallback tanpa config → Gemini pakai default 8.192 token → BAB panjang
+  // terpotong). Coba nilai bertingkat, baru terakhir tanpa konfigurasi.
+  const nilai = [MAX_OUT, 16384, 8192];
+  let lastErr: any;
+  for (const n of nilai) {
+    try {
+      return await sdk(e).getGenerativeModel({ model: e.id, generationConfig: { maxOutputTokens: n } }, opsi(e)).generateContentStream(prompt);
+    } catch (err: any) {
+      lastErr = err;
+      if (!/maxOutputTokens|invalid[_ ]?argument/i.test(String(err?.message || ""))) throw err;
+      console.warn(`[ai] ${e.id} menolak maxOutputTokens=${n} — coba nilai lebih kecil`);
     }
-    throw err;
   }
+  console.warn(`[ai] ${e.id} semua maxOutputTokens ditolak — ulang tanpa konfigurasi (${String(lastErr?.message || '').slice(0, 80)})`);
+  return await sdk(e).getGenerativeModel({ model: e.id }, opsi(e)).generateContentStream(prompt);
 }
 
 // —— Gateway OpenAI-compatible (OpenRouter/OneAPI/NewAPI/LiteLLM/dll): streaming SSE ——
@@ -343,8 +350,22 @@ export const generateContent = async (prompt: string, retries = 2): Promise<stri
       catatHasil(e.id, response);
       return response.text();
     } catch (error: any) {
-      // Nilai maxOutputTokens ditolak model ini → coba ulang tanpa konfigurasi
-      if (e.provider === "gemini" && /maxOutputTokens|invalid[_ ]?argument/i.test(String(error?.message || "")) && retries > 0) {
+      // Nilai maxOutputTokens ditolak model ini → turunkan bertingkat
+      // (jangan langsung tanpa config: Gemini default 8.192 token → bab panjang
+      // terpotong). 16384 → 8192 → terakhir tanpa konfigurasi.
+      if (e.provider === "gemini" && /maxOutputTokens|invalid[_ ]?argument/i.test(String(error?.message || ""))) {
+        for (const n of [16384, 8192]) {
+          try {
+            const m = sdk(e).getGenerativeModel({ model: e.id, generationConfig: { maxOutputTokens: n } }, opsi(e));
+            const result = await m.generateContent(prompt);
+            const response = await result.response;
+            console.log(`[ai] via ${e.id} (maxOutputTokens=${n})`);
+            catatHasil(e.id, response);
+            return response.text();
+          } catch (e2: any) {
+            if (!/maxOutputTokens|invalid[_ ]?argument/i.test(String(e2?.message || ""))) { last = e2; break; }
+          }
+        }
         try {
           const m = sdk(e).getGenerativeModel({ model: e.id }, opsi(e));
           const result = await m.generateContent(prompt);

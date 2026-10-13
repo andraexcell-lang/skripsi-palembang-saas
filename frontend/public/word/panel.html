@@ -135,16 +135,19 @@
   // protokol: web -> {id, cmd, data}   native -> {id, ok, data|error}
   let _brId = 0;
   const _brPending = {};
-  function kirim(cmd, data) {
+  function kirim(cmd, data, detik) {
     return new Promise((resolve, reject) => {
       if (!window.chrome || !window.chrome.webview) {
         reject(new Error('Panel ini hanya berjalan di plugin desktop Skripsi Palembang. Buka lewat tab "Skripsi Palembang" di Word.'));
         return;
       }
       const id = ++_brId;
+      // sisipSub bab panjang (2.1 Kajian Pustaka 30.000+ karakter) bisa >30 detik
+      // di Word — timeout perintah boleh dipanjangkan oleh pemanggil.
+      const batas = (detik || 30) * 1000;
       const timer = setTimeout(() => {
-        if (_brPending[id]) { delete _brPending[id]; reject(new Error('Tidak ada balasan dari Word (30 detik).')); }
-      }, 30000);
+        if (_brPending[id]) { delete _brPending[id]; reject(new Error('Tidak ada balasan dari Word (' + (detik || 30) + ' detik).')); }
+      }, batas);
       _brPending[id] = {
         resolve: (v) => { clearTimeout(timer); resolve(v); },
         reject: (e) => { clearTimeout(timer); reject(e); }
@@ -554,11 +557,27 @@
       // Judul sub-bab sudah ada → native menyisipkan isi tepat SETELAH judulnya;
       // belum ada → judul Heading 2 16pt (entri DAFTAR ISI) + isi di posisi kursor.
       full = bersihSub(full, sub);
+      // Sisipkan SELURUH isi. Dulu dibatasi slice(0, 15000) karakter — sub panjang
+      // seperti 2.1 Kajian Pustaka (3.000-5.000 kata ≈ 25.000-35.000 karakter)
+      // terpotong di tengah walau AI sudah menulis lengkap. Pecah jadi beberapa
+      // blok per ~12.000 karakter DI BATAS PARAGRAF (dua newline) agar teks utuh;
+      // native SisipBlok merender tiap blok paragraf demi paragraf, jadi aman.
+      const blokIsi = [];
+      let s = 0;
+      while (s < full.length) {
+        let e = Math.min(s + 12000, full.length);
+        if (e < full.length) {
+          const batas = full.lastIndexOf('\n\n', e);
+          if (batas > s + 2000) e = batas;
+        }
+        blokIsi.push({ teks: full.slice(s, e), size: 12 });
+        s = e;
+      }
       await kirim('sisipSub', {
         label: sub,
         judul: sub,
-        blok: [{ teks: full.slice(0, 15000), size: 12 }]
-      });
+        blok: blokIsi
+      }, 300);
       SCAN = null;
       $('gen-kosong').style.display = 'none';
       $('scan-info').textContent = 'Dokumen berubah — pindai ulang untuk memperbarui status sub-bab.';

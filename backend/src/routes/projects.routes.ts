@@ -958,6 +958,21 @@ router.post('/:id/generate-bab-stream', requireAuthOrKey, async (req: AuthReques
       send('error', { error: e.message || 'Gagal generate' });
       return res.end();
     }
+    // BAB PANJANG: streaming bisa berhenti di tengah karena batas output model
+    // (finishReason MAX_TOKENS atau kuota). Deteksi output KEKURANGAN dari target
+    // prompt → minta model MELANJUTKAN dari kalimat terakhir dan sambungkan,
+    // hingga target (±5%) tercapai atau model menyerah (maks 4 sambungan).
+    const targetChars = Number((babPrompt(bab, p, refs, ekstra).match(/minimal\s?([\d.,]+)\s?k[ae]rakter/)?.[1] || '').replace(/\D/g, '')) || 0;
+    let lanjut = 0;
+    while (targetChars > 0 && full.replace(/\s/g, '').length < targetChars * 0.95 && lanjut < 4) {
+      const ekor = full.split(/\s+/).slice(-40).join(' ');
+      send('lanjut', { lanjut: lanjut + 1, targetChars: full.length });
+      const sambung = await generateContent(babPrompt(bab, p, refs, ekstra) + `\n\n=== LANJUTAN ===\nTeks di atas belum selesai (terpotong). LANJUTKAN langsung dari kalimat terakhir berikut, JANGAN mengulang bagian sebelumnya, tetap ikuti seluruh struktur/target kedalaman di atas:\n...${ekor}\n`, 2).catch(() => '');
+      if (!sambung || sambung.trim().length < 50) break;
+      lanjut++;
+      full += '\n\n' + sambung;
+      for (const w of String(sambung).split(/(\s+)/)) send('chunk', { t: bersihTeks(w) });
+    }
     const content = { ...(p.content || {}), [bab]: normalisasiBab(full) };
     await db().from('projects').update({ content, updated_at: new Date().toISOString() }).eq('id', id);
     send('done', { cost });
