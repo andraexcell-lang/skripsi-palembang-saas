@@ -62,7 +62,7 @@ export async function muatPengaturanModel(): Promise<void> {
       return;
     }
     if (Array.isArray(v) && v.length) {
-      daftarEntri = v
+      const baru: EntriModel[] = v
         .filter((x: any) => x && typeof x.id === "string" && x.id)
         .map((x: any) => ({
           id: String(x.id),
@@ -71,6 +71,19 @@ export async function muatPengaturanModel(): Promise<void> {
           apiKey: x.apiKey ? String(x.apiKey) : undefined,
           aktif: x.aktif !== false,
         }));
+      // Hanya terapkan bila daftar berubah — muatPengaturanModel() dipanggil
+      // berkala (setInterval) agar perubahan Dashboard Admin tanpa restart;
+      // tanpa cek ini, `mulai` (urutan rotasi) & log direset tiap menit.
+      const sama =
+        baru.length === daftarEntri.length &&
+        baru.every((e, i) => {
+          const d = daftarEntri[i];
+          return d && e.id === d.id && e.provider === d.provider &&
+            (e.baseUrl || "") === (d.baseUrl || "") &&
+            (e.apiKey || "") === (d.apiKey || "") && e.aktif === d.aktif;
+        });
+      if (sama) return;
+      daftarEntri = baru;
       mulai = 0;
       console.log(`[ai] pengaturan model dimuat: ${daftarEntri.length} entri (${daftarEntri.filter((e) => e.aktif).length} aktif)`);
     }

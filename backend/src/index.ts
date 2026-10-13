@@ -61,4 +61,7 @@ app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
   // Muat daftar model dari Dashboard Admin (app_settings 'ai_models'); gagal = pakai default
   void muatPengaturanModel();
+  // Sinkron berkala dengan DB: perubahan daftar model di Dashboard Admin
+  // (mis. menambah entri gateway/cadangan) langsung terpakai tanpa restart proses.
+  setInterval(() => { void muatPengaturanModel(); }, 60_000);
 });
